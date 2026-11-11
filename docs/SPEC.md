@@ -1,6 +1,6 @@
 # Harborfall: Game Spec (Version 1 slice)
 
-Status: approved (Phase 0 gate, 2026-11-10).
+Status: approved (Phase 0 gate, 2026-11-10). Updated in Phase 1 where the build filled in a detail. Each change is listed in `DECISIONS.md`.
 
 This document says what the game does. It is written so you can check the rules without reading code. Every number in it lives in a JSON file in `data/`, and the file is named next to each rule so you know where to tune it.
 
@@ -31,7 +31,8 @@ File: `data/map.json`.
 | Forest | No | Lumberjacks need it nearby. Forest never runs out and cannot be cleared. |
 
 - The generator must guarantee enough forest, coast and fertile land to win (`guarantees` in `map.json`). A test checks this.
-- The game starts with **one free warehouse already placed** on open land with coast, forest and fertile land all close by.
+- The game starts with **one free warehouse already placed** on open grass, with coast, forest and fertile land each within 7 tiles by road. Among the spots that qualify, the generator picks the one with the most open grass around it, so there is room for a town.
+- If a seed cannot meet the guarantees, the generator tries the next seed number, up to 50 times, then stops with a clear error. The shipped seed needs no retry.
 
 ## 4. Goods and storage
 
@@ -87,6 +88,9 @@ Each producer repeats a cycle:
 - You get back 50% of its cost in coins and goods, rounded down (`config.json` → `demolishRefundRatio`). A road returns nothing.
 - Residents of a demolished house are removed.
 - The last remaining warehouse cannot be demolished.
+- The free starting warehouse cost nothing, so it returns nothing.
+- Demolishing a warehouse lowers the storage limit. Goods already above the new limit are kept, but nothing more of that good is produced until stock drops below the limit.
+- Refunded goods that do not fit in storage are lost.
 
 ## 7. Population
 
@@ -116,8 +120,11 @@ File: `data/population.json`.
 
 You upgrade a Farmer house by clicking it and paying 5 planks and 20 coins. The upgrade is allowed only when all of these are true:
 - The house is full (4 of 4 Farmers).
+- It is served by a market.
 - Its fish need is met.
-- It is served by a market and there is at least 1 bread in the stockpile.
+- There is at least 1 bread in the stockpile.
+
+If an upgrade is refused, the game says which of these failed.
 
 After the upgrade the house holds 8 Workers. The 4 existing residents stay and 4 more move in over time while fish and bread are both met.
 
@@ -172,6 +179,11 @@ These are estimates done by hand. Phase 2 replaces them with measured bot result
 **Total cost of that city:** about 1,230 coins (roads about 100, production 620, houses 130, upgrades 260, markets 120). You start with 500, so about 730 must come from income.
 
 **Estimated time to win for an efficient player:** about 28 to 32 minutes at 1x. This sits inside the 25 to 40 minute target, but a slow first-time player may run over 40. That is the main balance risk and Phase 2 will measure it.
+
+**Measured in Phase 1:**
+- One fisherman keeps exactly 20 Farmers fed for 30 game minutes with none leaving. With 24 Farmers the town settles at 21.
+- One sawmill uses 10 wood a minute and one lumberjack cuts 7.5. With one of each, wood stays at 0 or 1 for over 25 minutes and nothing that costs wood can be built. Two lumberjacks fix it. This is a trap for a new player and is the first thing to tune in Phase 2.
+- A small town with the full bread chain and one Worker house loses about 8 coins a minute. The bread chain only pays for itself once several houses are upgraded.
 
 ## 11. Screen and controls (Phases 3 and 4)
 

@@ -1,0 +1,10 @@
+{
+  "name": "harborfall",
+  "version": "0.1.0",
+  "description": "A small Anno-style city builder demo. Plain JavaScript, no dependencies.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}

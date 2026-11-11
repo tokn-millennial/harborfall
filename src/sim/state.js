@@ -1,0 +1,64 @@
+// Builds a new game: the rules (fixed) and the state (everything that changes).
+//
+// game = { rules, state }
+//   rules  comes from the data files and never changes.
+//   state  is plain numbers, text and lists, so it can be saved or copied.
+
+import { compileRules } from './rules.js';
+import { generateMap } from './mapgen.js';
+import { addBuilding } from './buildings.js';
+import { refresh } from './refresh.js';
+
+// options.map lets tests (or a future hand-made level) supply the island
+// instead of generating it: { width, height, terrain[], start: { x, y } | null }
+export function createGame(rawData, options = {}) {
+  const rules = compileRules(rawData);
+  const freeDef = rules.start.freeBuilding ? rules.buildings[rules.start.freeBuilding] : null;
+  const map = options.map
+    ? checkCustomMap(options.map, rules)
+    : generateMap(rules.map, freeDef ? [freeDef.w, freeDef.h] : [1, 1]);
+
+  const total = map.width * map.height;
+  const goods = {};
+  for (const id of rules.goodIds) goods[id] = rules.start.goods[id] ?? 0;
+
+  const state = {
+    tick: 0,
+    coinsMilli: rules.start.coinsMilli,
+    goods,
+    storageCap: 0,
+    map,
+    roads: new Array(total).fill(0),
+    occupancy: new Array(total).fill(0),
+    buildings: [],
+    nextId: 1,
+    incomeTimer: 0,
+    lastIncome: null,
+    won: false,
+    wonAtTick: null,
+  };
+  const game = { rules, state };
+
+  if (freeDef && map.start) addBuilding(game, freeDef.id, map.start.x, map.start.y, { free: true });
+  refresh(game);
+  return game;
+}
+
+function checkCustomMap(map, rules) {
+  if (!Number.isInteger(map.width) || !Number.isInteger(map.height) || !Array.isArray(map.terrain)) {
+    throw new Error('A custom map needs width, height and a terrain list');
+  }
+  if (map.terrain.length !== map.width * map.height) {
+    throw new Error(`A custom map needs ${map.width * map.height} terrain entries, got ${map.terrain.length}`);
+  }
+  for (const t of map.terrain) {
+    if (!rules.map.terrain[t]) throw new Error(`A custom map uses unknown terrain "${t}"`);
+  }
+  return {
+    width: map.width,
+    height: map.height,
+    seed: null,
+    terrain: [...map.terrain],
+    start: map.start ? { x: map.start.x, y: map.start.y } : null,
+  };
+}

@@ -50,18 +50,22 @@ Harborfall/
   src/
     sim/                  The simulation. No browser code, no Node code.
       index.js            The public face: createGame, step, execute, queries.
+      rules.js            Turns the data files into the rules the game runs on.
+      validate.js         Checks the data files for mistakes at startup.
       state.js            Builds the starting game state.
       rng.js              Seeded random numbers.
       mapgen.js           Generates the island from the seed.
       grid.js             Tile helpers: neighbours, distance, footprints.
+      buildings.js        Adds, removes and finds buildings.
       placement.js        Can this building go here? Returns yes or a reason.
       roads.js            Works out which buildings connect to a warehouse.
+      refresh.js          Recalculates connections, storage and coverage after a change.
       production.js       Producer cycles: take inputs, work, deliver.
       population.js       Market coverage, buying goods, moving in and out, upgrades.
       economy.js          Taxes, base income, upkeep, paying costs, refunds.
       commands.js         Applies a command: place, road, demolish, upgrade.
       win.js              The win check.
-      validate.js         Checks the data files for mistakes at startup.
+      summary.js          The numbers the HUD, bot and reports read.
 
     render/               Drawing. Reads state, never changes it.
       iso.js              Tile to screen math and back. Pure math, tested in Node.
@@ -85,10 +89,13 @@ Harborfall/
     main.js               Browser start-up: load data, create game, wire layers.
 
   tools/
+    print-map.mjs         Prints the island as text, to check it without a browser.
     bot.mjs               Plays the game headless with a build order (Phase 2).
     report.mjs            Prints time to win and the coin curve (Phase 2).
 
   tests/                  One file per system. Run with: node --test
+    helpers.js            A small hand-drawn test island and shortcuts.
+    scenario.js           A scripted mini-city that runs the whole chain.
 
   docs/
     SPEC.md  ARCHITECTURE.md  DECISIONS.md  TESTLOG.md
@@ -102,41 +109,57 @@ Everything outside `src/sim/` uses only these.
 
 | Function | What it does |
 |---|---|
-| `createGame(data)` | Takes the five data files as objects. Returns a new game state with the map generated and the free warehouse placed. |
+| `createGame(data, options)` | Takes the five data files as objects. Returns a game, `{ rules, state }`, with the map generated and the free warehouse placed. `options.map` supplies a hand-made map instead of a generated one. |
 | `step(game)` | Advances the game by exactly one tick. |
 | `execute(game, command)` | Applies one command right away. Returns `{ ok: true }` or `{ ok: false, reason }`. |
-| `canPlace(game, type, x, y)` | Checks a placement without doing it. Used for the green and red preview. |
+| `canPlace(game, building, x, y)` | Checks a placement, site and cost, without doing it. Used for the green and red preview. |
+| `siteReason(game, building, x, y)` | Checks the site only, ignoring cost. |
 | `canUpgrade(game, buildingId)` | Checks an upgrade without doing it. |
-| `getSummary(game)` | Totals for the HUD: coins, income per minute, goods, storage limit, Farmers, Workers. |
+| `getSummary(game)` | Totals for the HUD: coins, income per minute, goods, storage limit, Farmers, Workers, win progress. |
+| `buildingAt(game, x, y)`, `buildingById(game, id)` | Look up a building, for the info panel. |
+
+A game has two parts. `game.rules` is built from the data files and is locked, so nothing can change it. `game.state` is everything that changes during play.
 
 ### Commands
 
 | Command | Fields |
 |---|---|
-| `place` | `type`, `x`, `y` (top-left tile of the building) |
-| `road` | `tiles` (a list of `[x, y]`). Places as many as valid and affordable, in order. |
+| `place` | `building`, `x`, `y` (top-left tile of the building) |
+| `road` | `tiles` (a list of `[x, y]`). Places as many as valid and affordable, in order. Tiles that are already road are skipped for free. |
 | `demolish` | `x`, `y` |
 | `upgrade` | `id` (a house) |
 
-Failure reasons are short fixed codes, for example `not_enough_coins`, `not_enough_goods`, `blocked`, `not_buildable`, `needs_forest`, `needs_coast`, `needs_fertile`, `house_not_full`, `needs_unmet`, `no_bread`, `last_warehouse`. The UI turns each code into a sentence.
+A command looks like `{ action: "place", building: "sawmill", x: 12, y: 30 }`. A failed command changes nothing.
+
+Failure reasons are short fixed codes. The UI turns each code into a sentence.
+
+| Where | Codes |
+|---|---|
+| Placing | `out_of_bounds`, `not_buildable`, `blocked`, `needs_forest`, `needs_coast`, `needs_fertile`, `unknown_building` |
+| Paying | `not_enough_coins`, `not_enough_goods` |
+| Demolishing | `nothing_here`, `last_warehouse`, `out_of_bounds` |
+| Upgrading | `not_a_house`, `max_tier`, `house_not_full`, `no_market`, `needs_unmet`, `no_bread` |
+| Any | `unknown_command`, `bad_command` |
+
+The `needs_...` and `no_...` codes are built from the terrain or good named in the data files, so a new placement rule or need gets its own code with no code change.
 
 ### What happens in one tick, in order
 
-1. Recalculate road connections, only if a road or building changed.
-2. Producers advance their cycles.
-3. Houses check market coverage and buy goods.
-4. Residents move in or out, when a house's timer is due.
-5. Income is settled, when the 6 second interval is due.
-6. The win check runs.
-7. The tick counter goes up by one.
+1. The tick counter goes up by one.
+2. Producers advance their cycles, oldest building first.
+3. Houses buy goods, then residents move in or out, oldest house first.
+4. Income is settled, when the 6 second interval is due.
+5. The win check runs.
 
 The order is fixed so results are repeatable.
+
+Road connections, storage room and market coverage are not recalculated every tick. They are recalculated at once whenever a command adds or removes a building or road, so they are always correct, even while the game is paused.
 
 ## 5. The data model
 
 ### Game state
 
-The whole game is one plain object. It holds only numbers, text, lists and simple objects, so it can be saved, copied or moved to another engine later.
+`game.state` is one plain object. It holds only numbers, text, lists and simple objects, so it can be saved, copied or moved to another engine later. A test proves this: a copy made through JSON carries on exactly like the original.
 
 | Field | Meaning |
 |---|---|
@@ -151,11 +174,9 @@ The whole game is one plain object. It holds only numbers, text, lists and simpl
 | `occupancy` | One number per tile: the id of the building on it, or 0 |
 | `buildings` | List of buildings, in the order they were built |
 | `nextId` | The id the next building will get |
-| `connectionsDirty` | True when roads must be recalculated |
-| `incomeTimer` | Ticks until the next income settlement |
+| `incomeTimer` | Ticks since the last income settlement |
 | `lastIncome` | The breakdown of the last settlement, for the HUD |
 | `won`, `wonAtTick` | Win flag and when it happened |
-| `events` | Things that happened this tick (built, upgraded, won), for the UI |
 
 ### A building
 
@@ -165,8 +186,9 @@ The whole game is one plain object. It holds only numbers, text, lists and simpl
 | `type` | Key into `buildings.json`, for example `sawmill` |
 | `x`, `y` | Top-left tile |
 | `connected` | Linked by road to a warehouse |
-| `production` | Producers only: `status`, `progress` in ticks, `holding` (finished goods waiting for storage space) |
-| `house` | Houses only: `tier`, `residents`, `served`, per-need `hunger` counter and `met` flag, `timer` for moving in and out |
+| `free` | True only for the free starting building. It gives no refund. |
+| `production` | Producers only: `status`, `active` (a cycle is under way), `progress` in ticks |
+| `house` | Houses only: `tier`, `residents`, `served`, per-need `hunger` counter and `met` flag, `growTimer` and `declineTimer` for moving in and out |
 
 ### The data files
 
@@ -178,9 +200,9 @@ Each file is described by the notes inside it (keys starting with `_`). In short
 | `goods.json` | One entry per good: `name`, `color` |
 | `buildings.json` | One entry per building: `name`, `category`, `size`, `cost` (coins, goods), `upkeepPerMinute`, `requiresRoad`, then optional `placement`, `production`, `storagePerGood`, `housing`, `market`, `visual` |
 | `population.json` | Growth and decline intervals, `minResidents`, and `tiers`, each with `capacity`, `taxPerResidentPerMinute`, `needs`, optional `upgrade` (to, cost) |
-| `map.json` | `width`, `height`, `seed`, `terrain` types, `generation` targets, `guarantees` |
+| `map.json` | `width`, `height`, `seed`, `terrain` types, `generation` settings (land, forest and fertile shares, coast roughness, patch size), `guarantees` |
 
-Adding a new producer, such as a second kind of farm, should need only a new entry in `buildings.json` and a new good in `goods.json`. Adding a new kind of rule, such as a building that needs workers, needs code.
+Adding a new producer, such as a second kind of farm, needs only a new entry in `buildings.json` and a new good in `goods.json`. A test proves this by adding a quarry that makes stone, using data alone. Adding a new kind of rule, such as a building that needs workers, needs code.
 
 `validate.js` checks the files when the game starts: every good named in a cost, input, output or need must exist, every tier named must exist, and numbers must be in a sensible range. A typo gives a clear message instead of a strange bug.
 
@@ -214,8 +236,9 @@ All tests run with `node --test` and need no browser.
 | `economy.test.js` | Taxes, base income and upkeep match the data to the thousandth of a coin. Coins stop at zero. Building is refused at zero and works again after income. Demolish refunds half and removes upkeep. The last warehouse cannot be demolished. |
 | `win.test.js` | The game is not won at 99 Workers and is won at 100. Farmers do not count. The win tick is recorded once. |
 | `determinism.test.js` | Two games given the same commands end in exactly the same state. |
-| `integration.test.js` | A scripted mini-city runs the full chain: wood, planks, fish, grain, bread, a Worker house. |
-| `boundaries.test.js` | No file in `src/sim/` mentions browser or Node features. |
+| `integration.test.js` | A scripted mini-city runs the full chain from the real starting resources: wood, planks, fish, grain, bread, a Worker house. Also checks that the real generated island has reachable sites for every building. |
+| `boundaries.test.js` | No file in `src/sim/` uses browser or Node features, the clock, or the built-in random function, and none imports from outside the folder. |
+| `balance.test.js` | The balance targets from the brief, checked against the shipped data: starting stock, one fisherman per 20 residents (on paper and in play), about +40 coins a minute for the winning city, and no dead ends. |
 | `iso.test.js` (Phase 3) | Tile to screen and back returns the same tile, at several zoom and pan settings. |
 
 Later phases add:

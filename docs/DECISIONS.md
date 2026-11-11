@@ -43,3 +43,20 @@ You can veto any of these. Items marked **(rule)** change how the game plays and
 ## Later phases
 
 Decisions made after Phase 0 are added below, with the phase they belong to.
+
+### Phase 1: Simulation core
+
+| # | Decision | Why | How to change |
+|---|---|---|---|
+| D22 | **(rule)** The start site must have coast, forest and fertile land within 7 tiles by road, down from 10. The generator picks the qualifying spot with the most open grass. | At 10 the first island put the warehouse a long walk from everything. 7 gives a tighter, friendlier start. | `map.json` → `startMaxDistance`. |
+| D23 | Two new map settings: `coastRoughness` (0.5) and `patchSize` (7). | The first island had two huge forests and one huge field. Smaller patches look better and spread resources around. I warned in Phase 0 that these field names might change. | `map.json` → `generation`. |
+| D24 | If a seed fails the guarantees, the generator tries the next seed, up to 50 times, then stops with an error. | A bad seed should never produce a broken or unwinnable island. | The retry limit is in `mapgen.js`. |
+| D25 | **(rule)** The free starting warehouse gives no refund when demolished. | It cost nothing. A refund would be free coins. | `commands.js`, one line. |
+| D26 | **(rule)** Demolishing a warehouse does not destroy goods above the new storage limit. | Losing goods for tidying up would feel like a punishment. | `economy.js`. |
+| D27 | **(rule)** Goods refunded by a demolish are lost if storage is full. | Otherwise demolish could push stock over the limit. | `economy.js`. |
+| D28 | An upgrade refused for lack of a market says `no_market`, separate from `needs_unmet`. | The player can fix the two problems in different ways, so the game should tell them apart. | `population.js`. |
+| D29 | Commands use the shape `{ action, building, x, y }`. Phase 0 wrote `type` for both the command and the building, which clashed. | A naming fix found while writing the code. | Internal. |
+| D30 | Road connections, storage and market coverage are recalculated when something is built or removed, not every tick. The planned per-tick event list was dropped. | The values are then correct even while paused, and nothing needed the event list. | Internal. |
+| D31 | A game is `{ rules, state }`. Rules are locked after loading. State is plain data. | Keeps tunable rules and changing state apart, which makes saving and porting simpler. | Internal. |
+| D32 | Tests read expected numbers from the data files, not from fixed values. Only `balance.test.js` holds the targets from the brief. | You can retune the data without breaking the rule tests. If a balance target drifts, exactly one file tells you. | Edit the targets in `balance.test.js`. |
+

@@ -14,9 +14,13 @@
     "forest":  { "name": "Forest",       "buildable": false, "color": "#3d7a45" }
   },
 
-  "_generation": "Rough shares of the island's land. The generator aims for these; exact results vary a little with the seed.",
+  "_generation": "How the island is shaped. landFraction is the share of the whole map that is land. The forest and fertile numbers are shares of that land.",
   "generation": {
     "landFraction": 0.55,
+    "_coastRoughness": "0 gives a round island. Higher numbers give a more ragged shoreline.",
+    "coastRoughness": 0.5,
+    "_patchSize": "Rough width, in tiles, of forest and fertile patches. Smaller means more, smaller patches.",
+    "patchSize": 7,
     "forestFractionOfLand": 0.22,
     "fertileFractionOfLand": 0.18
   },
@@ -26,7 +30,7 @@
     "minForestTiles": 250,
     "minFertileBlocks2x2": 12,
     "minCoastTiles": 60,
-    "_startMaxDistance": "The free starting warehouse is placed on open land with coast, forest and fertile land each within this many tiles.",
-    "startMaxDistance": 10
+    "_startMaxDistance": "The free starting warehouse is placed on open land with coast, forest and fertile land each within this many tiles by road.",
+    "startMaxDistance": 7
   }
 }
