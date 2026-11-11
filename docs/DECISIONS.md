@@ -60,3 +60,18 @@ Decisions made after Phase 0 are added below, with the phase they belong to.
 | D31 | A game is `{ rules, state }`. Rules are locked after loading. State is plain data. | Keeps tunable rules and changing state apart, which makes saving and porting simpler. | Internal. |
 | D32 | Tests read expected numbers from the data files, not from fixed values. Only `balance.test.js` holds the targets from the brief. | You can retune the data without breaking the rule tests. If a balance target drifts, exactly one file tells you. | Edit the targets in `balance.test.js`. |
 
+
+### Phase 2: Bot and balance
+
+| # | Decision | Why | How to change |
+|---|---|---|---|
+| D33 | **(rule)** Lumberjack cycle 8 s to 5 s. Sawmill cycle 12 s to 16 s. | With the old numbers a sawmill used wood faster than a lumberjack cut it. The first bot run spent 24 of its 28 minutes waiting for wood while planks piled up unused. | `buildings.json` → `cycleSeconds`. |
+| D34 | **(rule)** Base income 10 to 20 coins a minute. | At 10, building the bread chain before any house left the bot at zero coins and -10 a minute for good, on 12 of 12 islands. At 20 the same opening recovers by itself. | `config.json` → `baseIncomePerMinute`. |
+| D35 | **(rule)** Worker tax 1.0 to 0.85. Farmer tax stays 0.8. | Offsets the higher base income, so the winning city still earns about +40. | `population.json`. |
+| D36 | **(rule)** Farm upkeep 5 to 4. Bakery upkeep 8 to 6. | A bread chain's upkeep lands before the Workers it feeds. This makes that dip shallower. | `buildings.json` → `upkeepPerMinute`. |
+| D37 | No cost listed in the brief was changed. | Every target could be met with numbers the brief left to me: production times, taxes, upkeep and base income. | Not applicable. |
+| D38 | I aimed the bot at 26 to 29 minutes, not the middle of the 25 to 40 window. | A person plays slower than the bot. Aiming low leaves them room to stay under 40. | Retune and re-run `node tools/bot.mjs`. |
+| D39 | The bot follows a fixed build order from a JSON file and never demolishes. | The brief asked for a simple build order. A rigid bot also exposes dead ends that a clever one would dodge. | Edit or add files in `tools/bot/orders/`. |
+| D40 | The bot lays towns out on a grid with road lanes, and adds a market when houses run out of room. | Without lanes it could wall itself in. Without the market reflex, a full town stopped the order on an obstacle that any player would walk around. | `tools/bot/planner.js`, `tools/bot/bot.js`. |
+| D41 | The bot tests are part of the normal test run. | They are the Phase 2 gate. If later tuning breaks the timing or brings back a dead end, a test fails and says so. | Change the targets at the top of `tests/bot.test.js`. |
+| D42 | I did not add a new rule to rescue a broke player. | I considered one. Raising base income fixed the dead ends with data alone, which keeps the scope small. | See the Phase 2 gate report if you want it reconsidered. |

@@ -90,8 +90,12 @@ Harborfall/
 
   tools/
     print-map.mjs         Prints the island as text, to check it without a browser.
-    bot.mjs               Plays the game headless with a build order (Phase 2).
-    report.mjs            Prints time to win and the coin curve (Phase 2).
+    bot.mjs               Plays a full game headless and prints a report.
+    tune.mjs              Plays several games with changed numbers, to compare them.
+    bot/
+      bot.js              Follows a build order, waits when it cannot afford a step.
+      planner.js          Picks building sites and road routes.
+      orders/             Build orders as JSON: standard, careless, bread-first.
 
   tests/                  One file per system. Run with: node --test
     helpers.js            A small hand-drawn test island and shortcuts.
@@ -239,10 +243,11 @@ All tests run with `node --test` and need no browser.
 | `integration.test.js` | A scripted mini-city runs the full chain from the real starting resources: wood, planks, fish, grain, bread, a Worker house. Also checks that the real generated island has reachable sites for every building. |
 | `boundaries.test.js` | No file in `src/sim/` uses browser or Node features, the clock, or the built-in random function, and none imports from outside the folder. |
 | `balance.test.js` | The balance targets from the brief, checked against the shipped data: starting stock, one fisherman per 20 residents (on paper and in play), about +40 coins a minute for the winning city, and no dead ends. |
+| `bot.test.js` | The Phase 2 gate. The bot wins on the shipped island in 25 to 40 minutes, with no long waits, income near +40 at the win and never below +10 after minute 5. It also wins on five other islands and from three bad openings. |
 | `iso.test.js` (Phase 3) | Tile to screen and back returns the same tile, at several zoom and pan settings. |
 
 Later phases add:
-- **Phase 2:** the bot run is the balance test. It reports time to win, the coin curve, and any point where the bot waited more than a set time with nothing it could afford.
+- **Phase 2:** the bot run is the balance test. It reports time to win, the coin curve, and any step that waited more than 5 minutes.
 - **Phases 3 and 4:** I open the game in a browser, drive it with mouse and keyboard, and check the screen and the error console. These checks are manual and are recorded in `TESTLOG.md`.
 
 ## 9. Honest limits of this design
@@ -253,3 +258,16 @@ Later phases add:
 - **Forest never runs out**, so several lumberjacks can share one patch of trees.
 - **The balance numbers are untested estimates** until the bot runs in Phase 2.
 - **Mac is supported by design but not tested.** I only have a Windows machine here.
+
+## 10. The bot
+
+The bot lives in `tools/bot/`, outside the simulation. It uses only the simulation's public face, the same checks and commands the UI will use, so it cannot cheat.
+
+- **Build order.** A JSON list such as "build 2 lumberjacks, build a market, upgrade 6 houses". The bot does the steps in order and waits when it cannot afford one. It records what it waited for.
+- **Layout.** Houses, markets, sawmills and bakeries go on a pattern of 2x2 cells with every third row and column kept clear for roads, so the town never walls itself in. Lumberjacks, fishermen and farms go wherever the terrain allows.
+- **Roads.** For each building the bot finds the cheapest route from the existing road network and pays for it.
+- **One reflex.** If there is no room left for a house near any market, the bot builds another market first. Apart from that it never deviates from the order and never demolishes.
+
+A fixed order is deliberate. When a game goes badly, the cause is the order or the balance numbers, not a clever bot hiding a problem.
+
+Limits: the bot cannot place buildings larger than 2x2, and it plays far more cleanly than a person.

@@ -1,0 +1,24 @@
+{
+  "name": "Bread first",
+  "description": "A reckless start: the whole bread chain is built before any house. Tests whether heavy upkeep with no taxes is a dead end.",
+  "steps": [
+    { "build": "lumberjack", "count": 2 },
+    { "build": "sawmill" },
+    { "build": "farm", "count": 2 },
+    { "build": "bakery" },
+    { "build": "fisherman" },
+    { "build": "market" },
+    { "build": "house", "count": 5 },
+    { "build": "fisherman" },
+    { "build": "house", "count": 5 },
+    { "build": "fisherman" },
+    { "build": "house", "count": 4 },
+    { "build": "fisherman" },
+    { "upgrade": 6 },
+    { "build": "fisherman" },
+    { "build": "farm", "count": 2 },
+    { "build": "bakery" },
+    { "build": "fisherman" },
+    { "upgrade": 8 }
+  ]
+}

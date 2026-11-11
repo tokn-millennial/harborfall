@@ -5,6 +5,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "bot": "node tools/bot.mjs",
+    "map": "node tools/print-map.mjs"
   }
 }

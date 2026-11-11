@@ -1,0 +1,24 @@
+{
+  "name": "Careless",
+  "description": "A plausible first-timer: only one lumberjack, the sawmill built at once, fishermen added late. Tests whether common mistakes still lead to a win.",
+  "steps": [
+    { "build": "lumberjack" },
+    { "build": "sawmill" },
+    { "build": "fisherman" },
+    { "build": "market" },
+    { "build": "house", "count": 8 },
+    { "build": "fisherman" },
+    { "build": "house", "count": 6 },
+    { "build": "fisherman" },
+    { "build": "farm", "count": 2 },
+    { "build": "bakery" },
+    { "upgrade": 4 },
+    { "build": "fisherman" },
+    { "upgrade": 3 },
+    { "build": "fisherman" },
+    { "build": "farm", "count": 2 },
+    { "build": "bakery" },
+    { "build": "fisherman" },
+    { "upgrade": 7 }
+  ]
+}

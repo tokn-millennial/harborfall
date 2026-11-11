@@ -25,7 +25,7 @@
     "worker": {
       "name": "Worker",
       "capacity": 8,
-      "taxPerResidentPerMinute": 1.0,
+      "taxPerResidentPerMinute": 0.85,
       "needs": { "fish": 0.2, "bread": 0.075 },
       "visual": { "color": "#e8a25c", "height": 1.3 }
     }

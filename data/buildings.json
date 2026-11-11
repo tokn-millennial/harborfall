@@ -32,7 +32,7 @@
     "requiresRoad": true,
     "_placement": "Needs at least minTiles forest tiles within the radius.",
     "placement": { "terrainInRadius": { "terrain": "forest", "radius": 4, "minTiles": 8 } },
-    "production": { "cycleSeconds": 8, "inputs": {}, "outputs": { "wood": 1 } },
+    "production": { "cycleSeconds": 5, "inputs": {}, "outputs": { "wood": 1 } },
     "visual": { "color": "#4f7a3a", "height": 0.7 }
   },
 
@@ -43,7 +43,7 @@
     "cost": { "coins": 40, "goods": { "wood": 5 } },
     "upkeepPerMinute": 3,
     "requiresRoad": true,
-    "production": { "cycleSeconds": 12, "inputs": { "wood": 2 }, "outputs": { "planks": 1 } },
+    "production": { "cycleSeconds": 16, "inputs": { "wood": 2 }, "outputs": { "planks": 1 } },
     "visual": { "color": "#b5803f", "height": 0.9 }
   },
 
@@ -65,7 +65,7 @@
     "category": "producer",
     "size": [2, 2],
     "cost": { "coins": 50, "goods": { "wood": 10, "planks": 5 } },
-    "upkeepPerMinute": 5,
+    "upkeepPerMinute": 4,
     "requiresRoad": true,
     "_placement": "Every tile under the building must be fertile land.",
     "placement": { "footprintTerrain": "fertile" },
@@ -78,7 +78,7 @@
     "category": "producer",
     "size": [2, 2],
     "cost": { "coins": 80, "goods": { "planks": 10 } },
-    "upkeepPerMinute": 8,
+    "upkeepPerMinute": 6,
     "requiresRoad": true,
     "production": { "cycleSeconds": 15, "inputs": { "grain": 1 }, "outputs": { "bread": 1 } },
     "visual": { "color": "#c46f3a", "height": 1.0 }

@@ -1,0 +1,24 @@
+{
+  "name": "Standard",
+  "description": "A sensible build order: wood first, then fish and houses, then planks, then the bread chain, then upgrades.",
+  "steps": [
+    { "build": "lumberjack", "count": 2 },
+    { "build": "fisherman" },
+    { "build": "market" },
+    { "build": "house", "count": 5 },
+    { "build": "sawmill" },
+    { "build": "fisherman" },
+    { "build": "house", "count": 5 },
+    { "build": "fisherman" },
+    { "build": "house", "count": 4 },
+    { "build": "farm", "count": 2 },
+    { "build": "bakery" },
+    { "build": "fisherman" },
+    { "upgrade": 6 },
+    { "build": "fisherman" },
+    { "build": "farm", "count": 2 },
+    { "build": "bakery" },
+    { "build": "fisherman" },
+    { "upgrade": 8 }
+  ]
+}

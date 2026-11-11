@@ -14,7 +14,7 @@
     "_incomeIntervalSeconds": "How often taxes, base income and upkeep are settled.",
     "incomeIntervalSeconds": 6,
     "_baseIncomePerMinute": "Coins the island earns with no residents at all. This is the safety net that stops a player getting stuck at zero.",
-    "baseIncomePerMinute": 10,
+    "baseIncomePerMinute": 20,
     "_demolishRefundRatio": "Share of a building's cost (coins and goods) returned on demolish, rounded down.",
     "demolishRefundRatio": 0.5
   },
