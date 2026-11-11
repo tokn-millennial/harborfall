@@ -8,7 +8,7 @@ This is the one document to read when you come back to the project, or when you 
 
 - **What it is:** a small Anno-style city builder that runs in a desktop browser. One island, 9 buildings, 5 goods, two kinds of resident. You win at 100 Workers, in about 30 minutes.
 - **How it is made:** plain JavaScript, with no framework, no build step and nothing to install except Node. All game rules are in five data files. All art is drawn by code.
-- **Size:** about 8,750 lines of code, tests and tools in 110 files.
+- **Size:** about 8,750 lines of code, tests and tools. The whole project is 115 files, counting documents and screenshots.
 - **State:** Phases 0 to 7 are done, approved and on GitHub. 236 automated tests pass.
 - **Where:** the folder `Harborfall` in your Documents, and the private GitHub repository `tokn-millennial/harborfall`, branch `main`.
 
