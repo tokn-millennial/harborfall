@@ -62,13 +62,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
 #hint { color: #cfd9e2; max-width: min(900px, 100%); text-align: center; padding: 5px 12px; }
 #menu { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; padding: 8px; }
 .tool {
-  display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 78px;
-  background: rgba(255, 255, 255, 0.08); border: 2px solid transparent; border-radius: 8px; padding: 5px 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 70px; max-width: 98px;
+  background: rgba(255, 255, 255, 0.08); border: 2px solid transparent; border-radius: 8px; padding: 5px 7px;
 }
 .tool:hover { background: rgba(255, 255, 255, 0.18); }
 .tool.active { border-color: #ffe27a; background: rgba(255, 226, 122, 0.18); }
 .tool-name { font-weight: 600; }
-.tool-cost { font-size: 12px; color: #b9c6d2; }
+.tool-cost { font-size: 12px; line-height: 1.2; color: #b9c6d2; text-align: center; }
 .tool.unaffordable .tool-cost { color: #ff8a8a; }
 .tool .swatch { width: 22px; height: 9px; margin-bottom: 2px; }
 .message { padding: 6px 14px; border-radius: 6px; font-weight: 600; background: rgba(140, 30, 30, 0.95); color: #fff; }
@@ -114,4 +114,18 @@ button { font: inherit; color: inherit; cursor: pointer; }
 #error {
   top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 520px;
   white-space: pre-wrap; background: rgba(120, 20, 20, 0.95); font-size: 15px; user-select: text;
+}
+
+/* ---- ground legend in the help panel ---- */
+.legend-item { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; white-space: nowrap; }
+
+/* ---- narrower windows: goods show a color and a number, with the name on hover ---- */
+@media (max-width: 1500px) {
+  .hud-goods .hud-label { display: none; }
+  .hud-goods { gap: 11px; }
+  #hud-main { gap: 6px 16px; }
+}
+@media (max-width: 1150px) {
+  .progress { width: 60px; }
+  .tool { min-width: 64px; padding: 4px 6px; }
 }

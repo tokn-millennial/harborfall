@@ -20,7 +20,9 @@ import { centerOnTile, worldToScreen } from '../src/render/camera.js';
 import { tileToWorld } from '../src/render/iso.js';
 import { buildingVisual } from '../src/render/visuals.js';
 
-export async function playThroughUi({ game, camera, renderer, ui }, orderName = 'standard', { maxMinutes = 60 } = {}) {
+// Options: maxMinutes (give up after this much game time), zoom (the zoom
+// level to click at, to check that picking is exact when zoomed far in or out).
+export async function playThroughUi({ game, camera, renderer, ui }, orderName = 'standard', { maxMinutes = 60, zoom = 1 } = {}) {
   const { rules, state } = game;
   const order = await fetch(new URL(`./bot/orders/${orderName}.json`, import.meta.url)).then((r) => r.json());
   const steps = expandOrder(order);
@@ -43,8 +45,8 @@ export async function playThroughUi({ game, camera, renderer, ui }, orderName = 
     return worldToScreen(camera, renderer.view, world.x, world.y - lift);
   };
   const lookAt = (tx, ty) => {
+    camera.zoom = zoom;
     centerOnTile(camera, tx, ty);
-    camera.zoom = 1;
   };
   const clickMap = (x, y) => {
     fire('pointermove', x, y);

@@ -105,3 +105,14 @@ Decisions made after Phase 0 are added below, with the phase they belong to.
 | D60 | Demolish has no confirmation. | A misclick costs half a building, which is recoverable. A prompt on every demolish would be tiresome. | `src/ui/gameUi.js`. |
 | D61 | The demo town link from Phase 3 now lives in the ? panel. | It stays useful for looking at a finished town, and it is out of the way. | Remove the link in `index.html`. |
 | D62 | A test tool plays a full game through the real UI. | It is the closest I can get to "play from start to win" without a person at the mouse. | `tools/ui-playthrough.js`. |
+
+### Phase 5: Review
+
+| # | Decision | Why | How to change |
+|---|---|---|---|
+| D63 | Picking Farm or Fisherman lights up the ground it can use. The ? panel gained a key to the ground colors. | Phase 4 removed the line that named the ground under the pointer, so fertile land and grass could not be told apart. | `requiredTerrain` in `src/ui/tools.js`. |
+| D64 | A green ▲ marks houses that can be upgraded, and a new Upgrade tool upgrades with one click per house. | You did not list either. A win needs at least 13 upgrades, and each took two clicks with no sign of which houses were ready. The Upgrade button in the info panel still works. | Remove the Upgrade entry in `src/ui/buildMenu.js`. |
+| D65 | The ground and trees are painted once and reused. When zoomed out, trees are part of that picture and are not sorted among the buildings. | The whole-island view took 27 to 80 ms a frame in my test pane. A tree directly in front of a building can now overlap it by a few pixels less than it should. | `CACHE_MAX_SCALE` in `src/render/renderer.js`. Set it to 0 to always draw directly. |
+| D66 | Building boxes are about a quarter lower, and buildings are see-through while placing. | Small buildings disappeared behind tall ones. | `HEIGHT_UNIT` in `src/render/iso.js`. |
+| D67 | The top bar shortens itself on narrower windows, and income reads "+42.2 / min". | It wrapped to two or three rows and covered the map. | The media queries at the end of `ui.css`. |
+| D68 | "I can win by hand" is scored as a pass on your approval of the Phase 4 gate, and is marked as not seen by me. | I cannot play at human speed, and I will not claim to have watched something I did not. | Tell me if you did not win a game, and I will change the score. |

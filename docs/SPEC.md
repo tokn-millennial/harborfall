@@ -219,7 +219,8 @@ Before tuning, the bread-first opening left the bot at zero coins and -10 a minu
 **View**
 - Isometric view with flat-color placeholder shapes. No final art.
 - Houses show their number of residents on the roof. Other buildings show the first two letters of their name.
-- A red ! above a building means it has no road or no market. An amber ! means it is waiting for something.
+- A red ! above a building means it has no road or no market. An amber ! means it is waiting for something. A green ▲ means a house is ready to upgrade.
+- While you are placing a building or a road, existing buildings are drawn see-through, so nothing hides behind them.
 
 **Moving the view**
 - Drag with the left, middle or right mouse button. With the Road tool picked, a left drag lays road instead.
@@ -231,8 +232,10 @@ Before tuning, the bread-first opening left the bot at zero coins and -10 a minu
 - Pick a building in the menu along the bottom. A strip above the menu says what it does and what it costs.
 - Move the pointer over the map. A see-through copy of the building follows it, centred on the pointer, outlined in green where it can go and red where it cannot. A note at the pointer gives the reason.
 - Markets and lumberjacks show the area they reach.
+- Picking Farm or Fisherman lights up every tile of the ground it needs. The ? panel has a key to the ground colors.
 - Click to place. The tool stays picked, so you can place several.
 - Road: click for one tile, or drag for an L-shaped line. The note shows the tile count and cost.
+- Upgrade: pick it, then click any house marked with a green ▲. One click per house.
 - Demolish: pick it, then click a building or road. The note shows what you get back.
 - Right-click, Esc, or the same menu button again puts the tool away.
 
@@ -242,7 +245,7 @@ Before tuning, the bread-first opening left the bot at zero coins and -10 a minu
 
 **Top bar**
 - Coins and net income per minute. Income turns red when negative, with a line saying what to do.
-- Each good with its storage limit.
+- Each good with its storage limit. On windows narrower than 1500 pixels a good shows as its color and number, with the name on hover.
 - Farmers and Workers, each with housing capacity, and a bar toward the goal of 100 Workers.
 - Game time, Pause, 1x, 2x, 4x, and a ? button for the controls.
 

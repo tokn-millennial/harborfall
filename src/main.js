@@ -47,6 +47,17 @@ async function start() {
   window.addEventListener('resize', () => renderer.resize());
 
   byId('help-toggle').addEventListener('click', () => { byId('help').hidden = !byId('help').hidden; });
+  // A key to the ground colors, straight from map.json.
+  byId('legend').append('Ground: ');
+  for (const terrain of Object.values(game.rules.map.terrain)) {
+    const swatch = document.createElement('span');
+    swatch.className = 'swatch';
+    swatch.style.background = terrain.color;
+    const item = document.createElement('span');
+    item.className = 'legend-item';
+    item.append(swatch, ` ${terrain.name}`);
+    byId('legend').append(item);
+  }
   byId('loading').hidden = true;
 
   let last = performance.now();

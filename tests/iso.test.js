@@ -181,8 +181,8 @@ test('picking: pointing at a roof picks the building, even though the ground til
   const warehouse = game.state.buildings[0];
   const def = game.rules.buildings.warehouse;
   const rise = buildingVisual(game.rules, warehouse).risePx;
-  // The middle of the roof.
-  const roof = tileToWorld(warehouse.x + def.w / 2, warehouse.y + def.h / 2);
+  // A point on the roof, near its back corner.
+  const roof = tileToWorld(warehouse.x + 0.3, warehouse.y + 0.3);
   const s = worldToScreen(camera, VIEW, roof.x, roof.y - rise);
   const hit = pick(game, camera, VIEW, s.x, s.y);
   assert.equal(hit.building, warehouse);

@@ -102,6 +102,7 @@ Harborfall/
     bot.mjs               Plays a full game headless and prints a report.
     tune.mjs              Plays several games with changed numbers, to compare them.
     ui-playthrough.js     Plays a whole game through the real UI, in the browser.
+    ui-monkey.js          Throws thousands of random clicks, drags and keys at the UI.
     bot/
       bot.js              Follows a build order, waits when it cannot afford a step.
       planner.js          Picks building sites and road routes.
@@ -234,7 +235,9 @@ Adding a new producer, such as a second kind of farm, needs only a new entry in 
 - Terrain is a flat colored diamond. A building is a colored box whose color and height come from the data files.
 - Tile picking gives two answers for a screen point: the ground tile under it, and the building the pointer is over. A point on a drawn box counts as that building, even though the ground tile behind the box is a different one. Where two boxes overlap on screen, the nearer one wins. Phase 0 planned to accept wrong picks on roofs. That turned out to be easy to do properly, so it was.
 - Four of the five render files are pure math with no canvas, so they are tested in Node. Only `renderer.js` touches the canvas, and it is checked by eye in the browser.
-- The renderer draws in world pixels and lets the canvas apply pan and zoom. Ground tiles are batched into one shape per terrain type, so a frame has only a handful of fills. Trees and buildings are drawn far to near.
+- The renderer draws in world pixels and lets the canvas apply pan and zoom.
+- The ground and the forest never change, so they are painted once into a hidden picture, and each frame draws that picture. Zoomed far in, where the picture would look soft and few tiles are on screen, tiles and trees are drawn directly, with trees sorted among the buildings. This was added in Phase 5 and made the whole-island view about 30 times faster.
+- Buildings are drawn far to near. While a building or road is being placed they are drawn see-through.
 - `http://localhost:5173/?demo` shows a finished town built by the bot, so the building shapes can be checked before the build menu exists.
 
 ## 8. Test plan
@@ -302,3 +305,7 @@ Two queries were added to the simulation's public face for the UI: `buildingIssu
 `tools/ui-playthrough.js` plays the standard build order through the real UI. It clicks menu buttons, clicks and drags on the canvas, selects houses by their roofs and presses Upgrade. Only the passing of time is done directly. It is run from the browser console and takes about a fifth of a second.
 
 It ends in exactly the same game state as the headless bot. That is strong evidence that every UI action does what the matching command does. It is not evidence about how the game feels to a person.
+
+### The random-input test
+
+`tools/ui-monkey.js` sends thousands of seeded random clicks, drags, scrolls and key presses to the page. After every action it checks that the game still makes sense: coins not negative, goods whole numbers, no house over capacity, every building on exactly the tiles it claims, the camera within its limits. A failure can be repeated exactly by using the same seed. It runs from the browser console.

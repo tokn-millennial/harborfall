@@ -2,7 +2,7 @@
 // These only read the game, through the same checks the commands use, so the
 // preview always agrees with what a click will do. Tested in Node.
 
-import { buildingAt, canPlace, inMarketRange, siteReason } from '../sim/index.js';
+import { buildingAt, canPlace, canUpgrade, inMarketRange, siteReason } from '../sim/index.js';
 import { MILLI } from '../sim/rules.js';
 
 // An L-shaped line of tiles from A to B: along the longer side first.
@@ -125,4 +125,35 @@ export function rangeTiles(game, building, x, y) {
     }
   }
   return tiles;
+}
+
+// The terrain a building's placement rule points at ("fertile" for a farm,
+// "coast" for a fisherman), or null if it can go on any buildable ground.
+export function requiredTerrain(rules, building) {
+  const rule = rules.buildings[building].placement;
+  return rule?.footprintTerrain ?? rule?.adjacentTerrain ?? null;
+}
+
+// Every tile of one terrain. The map never changes, so callers may keep the result.
+export function terrainTiles(game, terrain) {
+  const map = game.state.map;
+  const tiles = [];
+  for (let i = 0; i < map.terrain.length; i++) {
+    if (map.terrain[i] === terrain) tiles.push([i % map.width, Math.floor(i / map.width)]);
+  }
+  return tiles;
+}
+
+// What an upgrade click on `building` would do.
+export function previewUpgrade(game, building) {
+  if (!building?.house) return { kind: 'none', building: null, ok: false, reason: 'not_a_house', cost: null };
+  const { rules } = game;
+  const tier = rules.tiers[building.house.tier];
+  const def = rules.buildings[building.type];
+  const check = canUpgrade(game, building.id);
+  return {
+    kind: 'house', building, x: building.x, y: building.y, w: def.w, h: def.h,
+    ok: check.ok, reason: check.ok ? null : check.reason,
+    cost: tier.upgrade?.cost ?? null, to: tier.upgrade?.to ?? null,
+  };
 }

@@ -4,7 +4,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execute, buildingIssue } from '../src/sim/index.js';
 import { clock, costText, shortfallText, refundText, buildingBlurb, placementText, reasonText, issueLevel } from '../src/ui/text.js';
-import { roadLine, anchorFor, previewBuild, previewRoad, previewDemolish, rangeTiles } from '../src/ui/tools.js';
+import {
+  roadLine, anchorFor, previewBuild, previewRoad, previewDemolish, previewUpgrade, rangeTiles, requiredTerrain, terrainTiles,
+} from '../src/ui/tools.js';
 import { panelModel } from '../src/ui/panelModel.js';
 import { testGame, richGame, place, road, line, run, buildMarket, fillHouse, snapshot } from './helpers.js';
 
@@ -287,4 +289,41 @@ test('building the panel never changes the game', () => {
   previewRoad(game, line(12, 9, 16, 9));
   previewDemolish(game, 16, 11, house);
   assert.equal(snapshot(game), before);
+});
+
+// ---- added in the Phase 5 review ------------------------------------------------
+
+test('a building tied to a kind of ground names it, so that ground can be lit up', () => {
+  const game = richGame();
+  assert.equal(requiredTerrain(game.rules, 'farm'), 'fertile');
+  assert.equal(requiredTerrain(game.rules, 'fisherman'), 'coast');
+  assert.equal(requiredTerrain(game.rules, 'house'), null);
+  assert.equal(requiredTerrain(game.rules, 'lumberjack'), null, 'its forest is shown as a reach circle instead');
+
+  const fertile = terrainTiles(game, 'fertile');
+  assert.equal(fertile.length, 16, 'the test island has a 4 by 4 fertile patch');
+  for (const [x, y] of fertile) assert.equal(game.state.map.terrain[y * game.state.map.width + x], 'fertile');
+  assert.deepEqual(terrainTiles(game, 'forest').length, 16);
+});
+
+test('the upgrade tool preview agrees with what the click then does', () => {
+  const game = richGame();
+  buildMarket(game);
+  const house = place(game, 'house', 16, 11);
+
+  assert.deepEqual([previewUpgrade(game, null).kind, previewUpgrade(game, null).reason], ['none', 'not_a_house']);
+  assert.equal(previewUpgrade(game, game.state.buildings[0]).kind, 'none', 'a warehouse is not a house');
+
+  let preview = previewUpgrade(game, house);
+  assert.deepEqual([preview.kind, preview.ok, preview.reason, preview.to], ['house', false, 'house_not_full', 'worker']);
+  assert.equal(execute(game, { action: 'upgrade', id: house.id }).reason, preview.reason);
+
+  fillHouse(game, house);
+  preview = previewUpgrade(game, house);
+  assert.deepEqual([preview.ok, preview.reason], [true, null]);
+  assert.deepEqual(preview.cost, game.rules.tiers.farmer.upgrade.cost);
+  assert.equal(execute(game, { action: 'upgrade', id: house.id }).ok, true);
+
+  preview = previewUpgrade(game, house);
+  assert.deepEqual([preview.ok, preview.reason, preview.cost], [false, 'max_tier', null]);
 });

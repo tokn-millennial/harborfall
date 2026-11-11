@@ -4,7 +4,7 @@
 import { el, setText } from './dom.js';
 import { buildingBlurb, costText, shortfallText } from './text.js';
 
-// A tool is { mode: 'select' | 'build' | 'road' | 'demolish', building }.
+// A tool is { mode: 'select' | 'build' | 'road' | 'upgrade' | 'demolish', building }.
 export const sameTool = (a, b) => a.mode === b.mode && a.building === b.building;
 
 export function createBuildMenu(root, hintRoot, game, { onPick }) {
@@ -32,6 +32,16 @@ export function createBuildMenu(root, hintRoot, game, { onPick }) {
     swatch.style.background = def.visual?.color ?? '#999';
     entry.button.prepend(swatch);
     entry.def = def;
+  }
+  // One Upgrade tool, priced from the first tier that can be upgraded.
+  const upgradable = Object.values(rules.tiers).find((tier) => tier.upgrade);
+  if (upgradable) {
+    const next = rules.tiers[upgradable.upgrade.to];
+    const entry = add({ mode: 'upgrade', building: null }, 'Upgrade', costText(rules, upgradable.upgrade.cost), [
+      `Click a full, fed house to turn it into a ${next.name} house, which holds ${next.capacity}.`,
+      'A green ▲ marks houses that are ready.',
+    ]);
+    entry.def = { cost: upgradable.upgrade.cost };
   }
   add({ mode: 'demolish', building: null }, 'Demolish', 'Half back', ['Click a building or road to remove it. Half its cost is returned.']);
 

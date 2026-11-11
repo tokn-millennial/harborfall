@@ -344,3 +344,78 @@ No bug was found in the simulation, for the fourth phase running.
 **What I would change**
 - I would write the UI playthrough before the panels, not after. It found the pointer capture bug in seconds and would have guarded every later change.
 - I would never again assert awkward output in a test just because the code produced it. Bug 1 passed its test.
+
+## Phase 5: Review
+
+Date: 2026-11-10. Status: complete. This phase ends with a summary, not an approval gate.
+
+**Turns used:** 1 (the approval of Phase 4 started it).
+
+**What was done**
+- A 73-item playtest checklist, recorded in `PLAYTEST.md`.
+- A random-input test tool, `tools/ui-monkey.js`.
+- The UI playthrough repeated at the nearest and furthest zoom.
+- Two checks of the "tune without code" promise, with the data files restored afterward.
+- The top 5 problems fixed, plus one small sixth.
+- The final report, `FINAL_REPORT.md`.
+
+**Automated tests: 204 pass, 0 fail.** That is 202 from before plus 2 for the new tool logic.
+
+**Playtest checklist: 61 pass, 6 pass after a fix, 6 not tested, 0 fail.**
+
+| Stress check | Result |
+|---|---|
+| Random input: about 39,000 actions over 8 runs, state checked after each | No crash, no corrupted state. One display slip found. |
+| UI playthrough at 1x zoom | Won at 28.58 minutes. Final state identical to the headless bot. |
+| UI playthrough at 0.35x zoom | Same |
+| UI playthrough at 3x zoom | Same |
+| A typo in a data file | Clear message on screen naming both mistakes |
+| A new good and building added in data alone | Appeared in the menu, placed by click, produced goods |
+
+**The top 5 problems, and the fixes**
+
+| # | Problem | Fix | Checked by |
+|---|---|---|---|
+| 1 | Fertile land and coast could not be told from other ground | Picking Farm or Fisherman lights up the ground it can use. A key to the ground colors is in the ? panel. | Screenshot, 2 new tests |
+| 2 | No sign of which houses could be upgraded, and two clicks each | Green ▲ marks, and an Upgrade tool | Real clicks, screenshot |
+| 3 | Whole-island view drew slowly | Ground and trees painted once and reused | Timed side by side: 6.3 ms down to 0.2 ms |
+| 4 | Small buildings hidden behind tall ones | Lower boxes, see-through while placing | Screenshot |
+| 5 | Top bar wrapped to several rows | Shorter labels on narrow windows | Measured: 70 pixels down to 44 at 1280 wide |
+
+After the fixes, all 204 tests pass, the UI playthrough still matches the headless bot exactly, and 18,000 more random actions found nothing.
+
+**Bugs found: 7. Bugs fixed: 6.** The seventh is a wrong number I reported, which I can correct but not undo.
+
+| # | Bug | Fix |
+|---|---|---|
+| 1 to 5 | The five problems above | As above |
+| 6 | For one frame after picking a tool, the info panel stayed open with nothing selected. Found by the random-input test. | Clearing the selection now closes the panel in the same instant. |
+| 7 | My Phase 3 figure of 9.5 ms to draw the whole island was too optimistic. The same view later took 27 to 80 ms in the same pane, with the Phase 3 code. | The drawing is now fast enough that the question is moot. The Phase 3 entry above is left as written, so the record is honest. |
+
+No bug was found in the simulation in any phase.
+
+**Decisions made:** 6 (D63 to D68). None changes the game rules.
+
+**Weak or unfinished**
+- **Every "playtest" here was a machine.** Tests, a bot, scripted clicks and random input. They show the game does not break. They cannot show whether it is clear or fun.
+- **"I can win by hand" rests on your approval of Phase 4**, not on anything I saw.
+- **The Upgrade tool and the green marks are additions you did not ask for.**
+- **The ground picture uses about 34 MB of memory** and makes trees slightly less exact when zoomed out.
+- **Seven problems from the checklist are still open.** They are listed in `PLAYTEST.md`.
+- **Six checklist items could not be tested**: the two start files, opening the page as a file, smoothness at full speed, trackpads, and a person winning.
+
+**What I would change**
+- I would run the random-input test from the first day the UI existed. It costs seconds and found a slip that 22 hand checks missed.
+- I would ask you for ten minutes of play notes at the Phase 4 gate. An approval tells me it works. It does not tell me what confused you.
+
+## Totals across the project
+
+| Phase | Turns | Tests at the end | Bugs found | Decisions |
+|---|---|---|---|---|
+| 0. Spec | 2 | 0 (data checks only) | 0 | 5 yours, 21 mine |
+| 1. Simulation | 1 | 145 | 4 | 11 |
+| 2. Bot and balance | 1 | 155 | 3, plus 2 dead ends and 2 design problems | 10 |
+| 3. Renderer | 1 | 180 | 4 | 8 |
+| 4. UI and play | 1 | 202 | 7 | 12 |
+| 5. Review | 1 | 204 | 7 | 6 |
+| **Total** | **7** | **204** | **25 bugs, 5 design problems** | **73** |

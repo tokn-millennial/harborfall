@@ -10,7 +10,9 @@
 
 export const TILE_W = 64;
 export const TILE_H = 32;
-export const HEIGHT_UNIT = 30; // pixels of rise, at zoom 1, per unit of a building's visual height
+// Pixels of rise, at zoom 1, per unit of a building's visual height. Kept low on
+// purpose: tall boxes hide the small buildings behind them.
+export const HEIGHT_UNIT = 22;
 
 const HALF_W = TILE_W / 2;
 const HALF_H = TILE_H / 2;

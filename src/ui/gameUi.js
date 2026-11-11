@@ -13,7 +13,7 @@ import { createInfoPanel } from './infoPanel.js';
 import { createSpeedControls } from './speedControls.js';
 import { createWinScreen } from './winScreen.js';
 import { panelModel } from './panelModel.js';
-import { anchorFor, previewBuild, previewDemolish, previewRoad, rangeTiles, roadLine } from './tools.js';
+import { anchorFor, previewBuild, previewDemolish, previewRoad, previewUpgrade, rangeTiles, requiredTerrain, roadLine, terrainTiles } from './tools.js';
 import { clock, costText, reasonText, refundText } from './text.js';
 import { setText } from './dom.js';
 
@@ -21,6 +21,7 @@ const TINT = {
   ok: 'rgba(70, 215, 115, 0.5)',
   bad: 'rgba(235, 70, 70, 0.55)',
   range: 'rgba(120, 195, 255, 0.24)',
+  terrain: 'rgba(255, 244, 140, 0.42)',
   roadNew: 'rgba(250, 232, 170, 0.85)',
   roadExisting: 'rgba(255, 255, 255, 0.3)',
   roadShort: 'rgba(245, 165, 36, 0.6)',
@@ -40,27 +41,34 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
   let roadDrag = null;      // { start: {x, y}, end: {x, y} } while a road is being dragged out
   let messageTimer = 0;
   let winShown = state.won; // a game loaded already won (the demo town) does not announce it
+  const terrainCache = {};  // terrain name -> its tiles, for highlighting where a building may go
 
   // ---- panels ---------------------------------------------------------------
   const hud = createHud(elements.hud, rules);
   const speed = createSpeedControls(elements.speed, loop, rules.speeds);
   const menu = createBuildMenu(elements.menu, elements.hint, game, { onPick: setTool });
   const info = createInfoPanel(elements.info, {
-    onClose: () => { selectedId = null; },
+    onClose: () => deselect(),
     onAction: (id) => {
       const building = buildingById(game, selectedId);
       if (!building) return;
       if (id === 'upgrade') act({ action: 'upgrade', id: building.id }, { cost: rules.tiers[building.house.tier].upgrade?.cost });
-      if (id === 'demolish' && act({ action: 'demolish', x: building.x, y: building.y })) selectedId = null;
+      if (id === 'demolish' && act({ action: 'demolish', x: building.x, y: building.y })) deselect();
     },
   });
   const win = createWinScreen(elements.win, { onContinue: () => speed.setSpeed(rules.speeds[0] ?? 1) });
 
   // ---- helpers --------------------------------------------------------------
+  // Clears the selection and closes its panel at once, not a frame later.
+  function deselect() {
+    selectedId = null;
+    info.hide();
+  }
+
   function setTool(next) {
     tool = sameTool(next, tool) && next.mode !== 'select' ? SELECT : next;
     roadDrag = null;
-    if (tool.mode !== 'select') selectedId = null;
+    if (tool.mode !== 'select') deselect();
     canvas.style.cursor = tool.mode === 'select' ? '' : 'crosshair';
   }
 
@@ -136,7 +144,7 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
       if (moved) return; // it was a drag of the view, not a click
       if (button === 2) {
         if (tool.mode !== 'select') setTool(SELECT);
-        else selectedId = null;
+        else deselect();
         return;
       }
       if (button !== 0) return;
@@ -149,8 +157,13 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
       } else if (tool.mode === 'demolish') {
         const target = previewDemolish(game, t.x, t.y, pick(game, camera, view, x, y).building);
         act({ action: 'demolish', x: target.x, y: target.y });
+      } else if (tool.mode === 'upgrade') {
+        const target = previewUpgrade(game, pick(game, camera, view, x, y).building);
+        if (target.kind === 'house') act({ action: 'upgrade', id: target.building.id }, { cost: target.cost });
+        else say(reasonText(game, target.reason));
       } else {
         selectedId = pick(game, camera, view, x, y).building?.id ?? null;
+        if (selectedId === null) info.hide();
       }
     },
   });
@@ -158,7 +171,7 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       if (tool.mode !== 'select') setTool(SELECT);
-      else selectedId = null;
+      else deselect();
     }
   });
   // Keep keyboard focus off the buttons, so Space always means pause.
@@ -172,11 +185,22 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
 
     const pointer = controls.pointer;
     const active = pointer.inside && !controls.panning;
-    const overlay = { tints: [] };
+    // While placing things, buildings are drawn see-through so the ground,
+    // the roads and any small building behind a tall one stay visible.
+    const overlay = { tints: [], fadeBuildings: tool.mode === 'build' || tool.mode === 'road' };
     let tip = null; // { text, level } shown next to the pointer
 
+    // A building tied to a kind of ground lights that ground up for as long as
+    // its tool is picked, so it is plain where it can go.
+    if (tool.mode === 'build') {
+      const terrain = requiredTerrain(rules, tool.building);
+      if (terrain) {
+        for (const [x, y] of (terrainCache[terrain] ??= terrainTiles(game, terrain))) overlay.tints.push({ x, y, color: TINT.terrain });
+      }
+    }
+
     const selected = selectedId === null ? null : buildingById(game, selectedId);
-    if (selectedId !== null && !selected) selectedId = null; // it was demolished
+    if (selectedId !== null && !selected) deselect(); // it was demolished
 
     if (tool.mode === 'select') {
       if (active) {
@@ -217,6 +241,17 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
       else if (preview.reason) tip = { text: `Road: ${preview.newCount} tiles for ${preview.costCoins} coins. Some tiles cannot be built.`, level: 'warn' };
       else if (preview.newCount > 0) tip = { text: `Road: ${preview.newCount} ${preview.newCount === 1 ? 'tile' : 'tiles'} for ${preview.costCoins} ${preview.costCoins === 1 ? 'coin' : 'coins'}`, level: 'ok' };
       else tip = { text: 'There is already a road here.', level: 'ok' };
+    } else if (tool.mode === 'upgrade' && active) {
+      const target = previewUpgrade(game, pick(game, camera, view, pointer.x, pointer.y).building);
+      if (target.kind === 'house') {
+        overlay.hoverBuilding = target.building;
+        overlay.tints.push({ x: target.x, y: target.y, w: target.w, h: target.h, color: target.ok ? TINT.ok : TINT.bad });
+        tip = target.ok
+          ? { text: `Upgrade to ${rules.tiers[target.to].name} house: ${costText(rules, target.cost)}`, level: 'ok' }
+          : { text: reasonText(game, target.reason, { cost: target.cost }), level: 'bad' };
+      } else {
+        tip = { text: 'Point at a house to upgrade it.', level: 'warn' };
+      }
     } else if (tool.mode === 'demolish' && active) {
       const here = groundTile(pointer.x, pointer.y);
       const target = previewDemolish(game, here.x, here.y, pick(game, camera, view, pointer.x, pointer.y).building);

@@ -5,7 +5,7 @@ import { clock } from './text.js';
 
 export function createHud(root, rules) {
   const coins = el('span', 'hud-big');
-  const net = el('span', 'hud-net');
+  const net = el('span', { class: 'hud-net', title: 'Coins gained or lost each minute: taxes plus base income, minus upkeep' });
   const warning = el('div', 'hud-warning');
   warning.hidden = true;
 
@@ -46,7 +46,7 @@ export function createHud(root, rules) {
     update(summary) {
       setText(coins, String(summary.coins));
       const n = summary.income.net;
-      setText(net, `${n >= 0 ? '+' : ''}${n.toFixed(1)} a minute`);
+      setText(net, `${n >= 0 ? '+' : ''}${n.toFixed(1)} / min`);
       net.classList.toggle('bad', n < 0);
       warning.hidden = n >= 0;
       if (n < 0) setText(warning, 'You are losing money. Build houses, or demolish something.');
@@ -59,7 +59,8 @@ export function createHud(root, rules) {
       for (const id of Object.keys(tiers)) setText(tiers[id], `${summary.residents[id]} / ${summary.housing[id]}`);
 
       const { target, current, tier } = summary.win;
-      setText(goal, `Goal: ${Math.min(current, target)} of ${target} ${rules.tiers[tier].name}s`);
+      setText(goal, `Goal ${target}`);
+      bar.title = `${Math.min(current, target)} of ${target} ${rules.tiers[tier].name}s`;
       fill.style.width = `${Math.min(100, (current / target) * 100)}%`;
       setText(time, clock(summary.seconds));
     },
