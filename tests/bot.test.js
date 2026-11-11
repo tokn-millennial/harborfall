@@ -7,6 +7,7 @@ import { loadData } from '../src/platform/loadData.node.js';
 import { createGame, getSummary } from '../src/sim/index.js';
 import { runBot } from '../tools/bot/bot.js';
 import { loadOrder } from '../tools/tune.mjs';
+import { readFileSync } from 'node:fs';
 import { snapshot } from './helpers.js';
 
 const TARGET_MIN = 25;
@@ -118,4 +119,34 @@ test('a player with nothing at all (zero coins, empty stockpile) can still build
   assert.equal(result.won, true, `did not win: stuck on ${result.stuckOn?.label} (${result.stuckOn?.waitedFor})`);
   assert.ok(lowestNet > 0, `income fell to ${lowestNet.toFixed(1)} a minute on the way`);
   assert.ok(result.wonAtMinutes <= 75, `won at ${result.wonAtMinutes.toFixed(1)} minutes`);
+});
+
+// ---- a person's pace (added in Phase 6) -----------------------------------------
+// The delays in tools/bot/paces.json are guesses about how fast people act.
+
+const paces = JSON.parse(readFileSync(new URL('../tools/bot/paces.json', import.meta.url), 'utf8'));
+
+test('at a typical person\'s pace the standard order still wins inside 40 minutes', () => {
+  for (const seed of [1, 2, 3]) {
+    const game = createGame(loadData());
+    const result = runBot(game, loadOrder('standard'), { pace: { seed, ...paces.typical } });
+    assert.equal(result.won, true, `seed ${seed} did not win`);
+    assert.ok(result.thinkingMinutes > 4, 'the bot really did pause between actions');
+    assert.ok(result.wonAtMinutes <= TARGET_MAX, `seed ${seed} won at ${result.wonAtMinutes.toFixed(1)} minutes`);
+  }
+});
+
+test('even at a slow pace the standard order wins inside 40 minutes', () => {
+  for (const seed of [1, 2, 3]) {
+    const game = createGame(loadData());
+    const result = runBot(game, loadOrder('standard'), { pace: { seed, ...paces.slow } });
+    assert.equal(result.won, true, `seed ${seed} did not win`);
+    assert.ok(result.wonAtMinutes <= TARGET_MAX, `seed ${seed} won at ${result.wonAtMinutes.toFixed(1)} minutes`);
+  }
+});
+
+test('a paced run is repeatable for the same seed and differs for another', () => {
+  const run = (seed) => runBot(createGame(loadData()), loadOrder('standard'), { pace: { seed, ...paces.typical } }).wonAtMinutes;
+  assert.equal(run(5), run(5));
+  assert.notEqual(run(5), run(6));
 });

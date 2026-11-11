@@ -6,6 +6,7 @@
 //   node tools/bot.mjs standard --steps also print every step the bot took
 //   node tools/bot.mjs standard --map   also print the finished town as text
 //   node tools/bot.mjs standard --seed 42   play on a different island
+//   node tools/bot.mjs standard --pace typical   act at a person's speed (brisk, typical or slow)
 import { readFileSync } from 'node:fs';
 import { loadData } from '../src/platform/loadData.node.js';
 import { createGame } from '../src/sim/index.js';
@@ -14,19 +15,23 @@ import { runBot } from './bot/bot.js';
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(`--${name}`);
 const value = (name) => (args.includes(`--${name}`) ? args[args.indexOf(`--${name}`) + 1] : undefined);
-const orderName = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--seed') ?? 'standard';
+const orderName = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--seed' && args[i - 1] !== '--pace') ?? 'standard';
 
 const order = JSON.parse(readFileSync(new URL(`./bot/orders/${orderName}.json`, import.meta.url), 'utf8'));
 const data = loadData();
 if (value('seed') !== undefined) data.map.seed = Number(value('seed'));
 const game = createGame(data);
-const result = runBot(game, order);
+const paces = JSON.parse(readFileSync(new URL('./bot/paces.json', import.meta.url), 'utf8'));
+const paceName = value('pace');
+if (paceName !== undefined && !paces[paceName]) throw new Error(`Unknown pace "${paceName}". Use brisk, typical or slow.`);
+const result = runBot(game, order, paceName ? { pace: { seed: 1, ...paces[paceName] } } : {});
 
 const clock = (seconds) => `${String(Math.floor(seconds / 60)).padStart(2, ' ')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 const pad = (v, n) => String(v).padStart(n, ' ');
 
 console.log(`Build order: ${result.order}. ${order.description ?? ''}`);
 console.log(`Island seed: ${game.state.map.seed}`);
+if (paceName) console.log(`Pace: ${paceName}. The bot spent ${result.thinkingMinutes.toFixed(1)} minutes "thinking" between actions, as a person would.`);
 console.log('');
 if (result.won) {
   const m = result.wonAtMinutes;

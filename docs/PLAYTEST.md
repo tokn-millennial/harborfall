@@ -153,12 +153,12 @@ Ranking is by how much each would hurt a first-time player. The top five were fi
 | 4 | Small buildings vanished behind tall ones. | The two lumberjacks behind the warehouse in the Phase 3 demo town. | **Fixed.** Boxes are about a quarter lower, and buildings turn see-through while you are placing something. |
 | 5 | The top bar wrapped to two or three rows and covered the map. | Measured: 70 pixels tall at 1280 wide. | **Fixed.** One row at 1280 wide (44 pixels). The build menu also fits one row. |
 | 6 | For one frame after picking a tool, the info panel stayed open with nothing selected. | Random-input test, 2 hits in 6,000 actions. | **Fixed** as well. It was a three-line change. |
-| 7 | Demolish has no undo and no confirmation. | Design review. | Open |
-| 8 | No shortcut keys for the build menu. | Design review. | Open |
-| 9 | Roads can only be dragged as an L shape. | Design review. | Open |
-| 10 | A market's panel counts houses served by all markets, not by that one. | Reading the panel. | Open |
-| 11 | In the last third of a game the bot waits about 8 minutes for planks. A second sawmill fixes it, but nothing tells the player. | Bot report. | Open |
-| 12 | No new-game button. | Design review. | Open |
+| 7 | Demolish has no undo and no confirmation. | Design review. | **Fixed in Phase 6.** A building takes two clicks. There is still no undo. |
+| 8 | No shortcut keys for the build menu. | Design review. | **Fixed in Phase 6.** |
+| 9 | Roads can only be dragged as an L shape. | Design review. | **Eased in Phase 6.** Shift flips the corner. Still one bend per drag. |
+| 10 | A market's panel counts houses served by all markets, not by that one. | Reading the panel. | **Fixed in Phase 6.** |
+| 11 | In the last third of a game the bot waits about 8 minutes for planks. A second sawmill fixes it, but nothing tells the player. | Bot report. | **Fixed in Phase 6.** A tip line names the shortage and what to build. |
+| 12 | No new-game button. | Design review. | **Fixed in Phase 6.** |
 | 13 | Bad openings recover slowly: over 50 minutes to win. | Bot runs. | Open |
 
 ## What this playtest cannot tell you

@@ -28,6 +28,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .hud-big { font-size: 20px; font-weight: 700; color: #ffe27a; min-width: 2.2em; }
 .hud-net { color: #8fe3a8; }
 .hud-net.bad { color: #ff8a8a; font-weight: 600; }
+.hud-tip { flex-basis: 100%; background: rgba(150, 100, 10, 0.92); padding: 4px 10px; border-radius: 6px; font-weight: 600; }
+.speed.danger { background: #7d3434; border-color: #ff8a8a; }
 .hud-warning { flex-basis: 100%; background: rgba(140, 30, 30, 0.95); padding: 4px 10px; border-radius: 6px; font-weight: 600; }
 .hud-goods, .hud-pop { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .hud-good { display: inline-flex; align-items: center; gap: 5px; }
@@ -71,6 +73,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tool-cost { font-size: 12px; line-height: 1.2; color: #b9c6d2; text-align: center; }
 .tool.unaffordable .tool-cost { color: #ff8a8a; }
 .tool .swatch { width: 22px; height: 9px; margin-bottom: 2px; }
+.tool { position: relative; }
+.tool-key {
+  position: absolute; top: 2px; right: 4px; font-size: 10px; font-weight: 700; color: #ffe27a; opacity: 0.85;
+}
 .message { padding: 6px 14px; border-radius: 6px; font-weight: 600; background: rgba(140, 30, 30, 0.95); color: #fff; }
 .message.warn { background: rgba(150, 100, 10, 0.95); }
 

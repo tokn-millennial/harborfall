@@ -58,6 +58,8 @@ const badCases = [
   ['refund ratio above 1', (d) => { d.config.economy.demolishRefundRatio = 1.5; }, /demolishRefundRatio must be at most 1/],
   ['missing terrain type', (d) => { delete d.map.terrain.forest; }, /missing the "forest" terrain type/],
   ['a whole file missing', (d) => { delete d.goods; }, /goods\.json is missing/],
+  ['two buildings on one shortcut key', (d) => { d.buildings.farm.key = 'h'; }, /farm\.key "h" is already used by house|house\.key "H" is already used by farm/],
+  ['a shortcut key that is not one character', (d) => { d.buildings.farm.key = 'F1'; }, /farm\.key must be a single letter or digit/],
 ];
 
 for (const [name, breakIt, expected] of badCases) {
@@ -70,3 +72,13 @@ for (const [name, breakIt, expected] of badCases) {
     assert.throws(() => compileRules(data), /The data files have/);
   });
 }
+
+test('shortcut keys are optional, unique, and stored in lower case', () => {
+  const rules = compileRules(loadData());
+  const keys = Object.values(rules.buildings).map((b) => b.key).filter(Boolean);
+  assert.equal(new Set(keys).size, keys.length, 'no key is used twice');
+  assert.equal(rules.buildings.house.key, 'h');
+  const data = fresh();
+  delete data.buildings.house.key;
+  assert.equal(compileRules(data).buildings.house.key, null);
+});

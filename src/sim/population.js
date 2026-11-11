@@ -42,6 +42,21 @@ export function inMarketRange(game, x, y, w, h) {
   return connectedMarkets(game).some((m) => footprintWithinRadius(m.cx, m.cy, m.radius, x, y, w, h));
 }
 
+// How many houses have a tile within range of this one market, connected or not.
+export function housesInRangeOf(game, market) {
+  const { rules, state } = game;
+  const def = rules.buildings[market.type];
+  if (!(def.marketRadius > 0)) return 0;
+  const [cx, cy] = footprintCenter(market.x, market.y, def.w, def.h);
+  let count = 0;
+  for (const b of state.buildings) {
+    if (!b.house) continue;
+    const size = rules.buildings[b.type];
+    if (footprintWithinRadius(cx, cy, def.marketRadius, b.x, b.y, size.w, size.h)) count++;
+  }
+  return count;
+}
+
 // A house is served when any of its tiles is within range of a connected market.
 export function recomputeCoverage(game) {
   const { rules, state } = game;

@@ -1,8 +1,9 @@
 {
-  "_about": "Every building type. Costs are paid once. Upkeep is coins per minute. Times are in seconds. 'size' is [width, height] in tiles. 'visual' only affects how the placeholder shape is drawn. Keys starting with _ are notes and are ignored by the game.",
+  "_about": "Every building type. Costs are paid once. Upkeep is coins per minute. Times are in seconds. 'size' is [width, height] in tiles. 'visual' only affects how the placeholder shape is drawn. 'key' is the keyboard shortcut that picks the building; W A S D, C and the number keys are taken. Keys starting with _ are notes and are ignored by the game.",
 
   "road": {
     "name": "Road",
+    "key": "R",
     "category": "road",
     "size": [1, 1],
     "cost": { "coins": 1, "goods": {} },
@@ -13,6 +14,7 @@
 
   "warehouse": {
     "name": "Warehouse",
+    "key": "E",
     "category": "storage",
     "size": [2, 2],
     "cost": { "coins": 50, "goods": { "wood": 20 } },
@@ -25,6 +27,7 @@
 
   "lumberjack": {
     "name": "Lumberjack",
+    "key": "L",
     "category": "producer",
     "size": [1, 1],
     "cost": { "coins": 20, "goods": {} },
@@ -38,6 +41,7 @@
 
   "sawmill": {
     "name": "Sawmill",
+    "key": "I",
     "category": "producer",
     "size": [2, 2],
     "cost": { "coins": 40, "goods": { "wood": 5 } },
@@ -49,6 +53,7 @@
 
   "fisherman": {
     "name": "Fisherman",
+    "key": "F",
     "category": "producer",
     "size": [1, 1],
     "cost": { "coins": 30, "goods": { "wood": 10 } },
@@ -62,6 +67,7 @@
 
   "farm": {
     "name": "Farm",
+    "key": "G",
     "category": "producer",
     "size": [2, 2],
     "cost": { "coins": 50, "goods": { "wood": 10, "planks": 5 } },
@@ -75,6 +81,7 @@
 
   "bakery": {
     "name": "Bakery",
+    "key": "B",
     "category": "producer",
     "size": [2, 2],
     "cost": { "coins": 80, "goods": { "planks": 10 } },
@@ -86,6 +93,7 @@
 
   "house": {
     "name": "House",
+    "key": "H",
     "category": "house",
     "size": [2, 2],
     "cost": { "coins": 10, "goods": { "wood": 5 } },
@@ -98,6 +106,7 @@
 
   "market": {
     "name": "Market",
+    "key": "M",
     "category": "market",
     "size": [2, 2],
     "cost": { "coins": 60, "goods": { "planks": 10 } },

@@ -14,7 +14,7 @@ import { createRng } from '../src/sim/rng.js';
 import { getSummary } from '../src/sim/index.js';
 import { MAX_ZOOM, MIN_ZOOM } from '../src/render/camera.js';
 
-const KEYS = ['Escape', ' ', '1', '2', '3', 'c', 'w', 'a', 's', 'd', '+', '-', 'Home', 'ArrowLeft', 'ArrowUp'];
+const KEYS = ['Escape', ' ', '1', '2', '3', 'c', 'w', 'a', 's', 'd', '+', '-', 'Home', 'ArrowLeft', 'ArrowUp', 'q', 'r', 'h', 'm', 'l', 'f', 'u', 'x', 'x', 'Shift'];
 
 export function monkey({ game, camera, renderer, ui }, { actions = 5000, seed = 1 } = {}) {
   const { rules, state } = game;
@@ -60,7 +60,7 @@ export function monkey({ game, camera, renderer, ui }, { actions = 5000, seed = 
     }],
     [10, 'key', () => { const k = pick(KEYS); key(k, 'keydown'); key(k, 'keyup'); }],
     [8, 'panel button', () => {
-      const buttons = [...document.querySelectorAll('#info button, #win button, #help-toggle')].filter((b) => !b.disabled && b.offsetParent !== null);
+      const buttons = [...document.querySelectorAll('#info button, #win button, #help-toggle')].filter((b) => !b.disabled && b.offsetParent !== null && b.id !== 'new-game');
       if (buttons.length) pick(buttons).click();
     }],
     [25, 'time passes', () => ui.frame(random() * 0.6)],

@@ -208,6 +208,21 @@ Before tuning, the bread-first opening left the bot at zero coins and -10 a minu
 | Farm upkeep | 5 | 4 | Makes the dip when a bread chain is built shallower. |
 | Bakery upkeep | 8 | 6 | Same. |
 
+### A person's pace
+
+The bot above acts the instant it can afford something. To estimate a person, Phase 6 added delays: a few seconds of thought after each action, time for each road tile, and the odd long pause. The delays are guesses, held in `tools/bot/paces.json`. Each row is 20 games.
+
+| Build order | Pace | Thinking time added | Fastest | Median | Slowest |
+|---|---|---|---|---|---|
+| Standard | Instant | 0 min | 28.6 | 28.6 | 28.6 |
+| Standard | Brisk | 3.4 min | 29.1 | 29.1 | 29.6 |
+| Standard | Typical | 7.7 min | 29.5 | 30.2 | 31.3 |
+| Standard | Slow | 17.8 min | 30.9 | 32.5 | 34.8 |
+| Careless | Typical | 7.6 min | 30.6 | 30.8 | 31.2 |
+| Careless | Slow | 17.5 min | 30.6 | 31.2 | 32.0 |
+
+All 120 paced games finished inside the 25 to 40 minute target. A slow player with nearly 18 minutes of added thinking finishes only about 4 minutes later, because the game is paced by coins and planks, and most thinking happens while waiting for those anyway. What this does not model is a player who does not know what to build next.
+
 ### What the bot does not prove
 
 - The bot is not a person. It acts the instant it can afford something and never misplaces a building. A person will be slower. My estimate for a first-time player is 30 to 40 minutes, and that is still a guess until you play in Phase 4.
@@ -234,20 +249,23 @@ Before tuning, the bread-first opening left the bot at zero coins and -10 a minu
 - Markets and lumberjacks show the area they reach.
 - Picking Farm or Fisherman lights up every tile of the ground it needs. The ? panel has a key to the ground colors.
 - Click to place. The tool stays picked, so you can place several.
-- Road: click for one tile, or drag for an L-shaped line. The note shows the tile count and cost.
+- Road: click for one tile, or drag for an L-shaped line. Hold Shift while dragging to put the corner on the other side. The note shows the tile count and cost.
 - Upgrade: pick it, then click any house marked with a green ▲. One click per house.
-- Demolish: pick it, then click a building or road. The note shows what you get back.
+- Demolish: pick it, then click a road once or a building twice. The second click must come within 4 seconds. The note shows what you get back.
+- Every tool has a shortcut key, shown in the corner of its button. Building keys are set in `buildings.json`.
 - Right-click, Esc, or the same menu button again puts the tool away.
 
 **Selecting**
 - With no tool picked, click a building to open its panel on the right: status, what it makes, and for a house its residents, needs and taxes.
-- The panel has an Upgrade button for Farmer houses and a Demolish button. A button that cannot be used says why.
+- The panel has an Upgrade button for Farmer houses and a Demolish button, which must be pressed twice. A button that cannot be used says why.
+- A market's panel shows how many houses are in its own range.
 
 **Top bar**
 - Coins and net income per minute. Income turns red when negative, with a line saying what to do.
 - Each good with its storage limit. On windows narrower than 1500 pixels a good shows as its color and number, with the name on hover.
 - Farmers and Workers, each with housing capacity, and a bar toward the goal of 100 Workers.
-- Game time, Pause, 1x, 2x, 4x, and a ? button for the controls.
+- Game time, Pause, 1x, 2x, 4x, and a ? button for the controls. The ? panel also has a Start a new game button, which must be pressed twice.
+- A tip line appears when something has been short for 30 game seconds, for example "Fish keeps running out. Build another fisherman." It names the root of the shortage: if bread is out because the bakery has no grain, it talks about grain.
 
 **Keys**
 - Space pauses and resumes. 1, 2 and 3 set speed 1x, 2x and 4x.
@@ -257,4 +275,4 @@ Before tuning, the bread-first opening left the bot at zero coins and -10 a minu
 
 ## 12. Not in Version 1
 
-Save and load, a new-game button (refresh the page), undo, sound, more islands, ships and trade, combat, visible carriers, workforce requirements for buildings, building rotation, a tutorial, touch controls, and final art.
+Save and load, undo, sound, more islands, ships and trade, combat, visible carriers, workforce requirements for buildings, building rotation, a tutorial, touch controls, and final art.

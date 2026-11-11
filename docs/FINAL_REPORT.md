@@ -90,3 +90,14 @@ You sent seven messages in all: the brief, one answer to my questions, and five 
 - **Keep as they are:** everything in `src/sim/`, the five data files, and the tests. Together they are the game.
 - **Rebuild:** the renderer and the UI. The pure math in `src/render/` and the logic in `src/ui/text.js`, `tools.js` and `panelModel.js` can be ported line by line.
 - **Keep as a safety net:** the bot. Run it after every change to the rules. It turns "does the game still work?" into a ten-second question.
+
+## Addendum: Phase 6, after this report
+
+You asked me to keep building. Phase 6 worked through the open list above. The report itself is left as written at the end of Phase 5.
+
+- **Fixed:** demolish now takes two clicks on a building, every tool has a shortcut key, a tip line names shortages and what to build, there is a new-game button, and a market's panel counts its own houses. Shift flips a road's corner.
+- **Estimated:** a person's time to win. With human delays added to the bot, 120 of 120 games finished in 29 to 35 minutes. The delays are my guesses.
+- **Still open:** no undo, bad openings still take over 50 minutes, and nobody has yet told me how a hand-played game went.
+- **Not done:** the push to GitHub, which needs a repository from you.
+
+Tests at the end of Phase 6: 220 of 220.

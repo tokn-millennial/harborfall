@@ -6,6 +6,7 @@
 
 import { execute, canUpgrade, getSummary, step as simStep } from '../../src/sim/index.js';
 import { createPlanner } from './planner.js';
+import { createRng } from '../../src/sim/rng.js';
 
 // { steps: [{ build: 'house', count: 4 }, { upgrade: 2 }] } becomes one entry per action.
 export function expandOrder(order) {
@@ -28,7 +29,10 @@ const RETRY = Symbol('retry');
 const UPGRADE_REASON_RANK = ['not_enough_coins', 'not_enough_goods', 'no_bread', 'needs_unmet', 'house_not_full', 'no_market', 'max_tier'];
 
 export function runBot(game, order, options = {}) {
-  const { maxMinutes = 90, decisionSeconds = 1, stallMinutes = 5 } = options;
+  // options.pace makes the bot act at a person's speed, not instantly. It is
+  // { seed, startSeconds, thinkSeconds: [min, max], roadTileSeconds, pauseChance, pauseSeconds: [min, max] }.
+  // See tools/bot/paces.json. Without it the bot acts the moment it can afford a step.
+  const { maxMinutes = 90, decisionSeconds = 1, stallMinutes = 5, pace = null } = options;
   const { rules, state } = game;
   const planner = createPlanner(game);
   const steps = expandOrder(order);
@@ -45,6 +49,19 @@ export function runBot(game, order, options = {}) {
   let zeroCoinTicks = 0;
   let lossTicks = 0;
   let roadsBuilt = 0;
+
+  // A person's hands: after each action, a random time passes before the next.
+  const random = pace ? createRng(pace.seed ?? 1) : null;
+  const between = ([min, max]) => min + random() * (max - min);
+  let readyAtTick = pace ? Math.round((pace.startSeconds ?? 0) * rules.ticksPerSecond) : 0;
+  let thinkingTicks = 0;
+  function think(roadTiles) {
+    let seconds = between(pace.thinkSeconds) + roadTiles * (pace.roadTileSeconds ?? 0);
+    if (random() < (pace.pauseChance ?? 0)) seconds += between(pace.pauseSeconds);
+    const ticks = Math.round(seconds * rules.ticksPerSecond);
+    thinkingTicks += ticks;
+    readyAtTick = state.tick + ticks;
+  }
 
   const sample = () => {
     const s = getSummary(game);
@@ -110,7 +127,7 @@ export function runBot(game, order, options = {}) {
 
   sample();
   while (state.tick < maxTicks && !state.won) {
-    if (state.tick % decisionTicks === 0) {
+    if (state.tick % decisionTicks === 0 && state.tick >= readyAtTick) {
       while (index < steps.length) {
         const current = steps[index];
         const reason = attempt(current);
@@ -136,6 +153,11 @@ export function runBot(game, order, options = {}) {
         if (waitedTicks > stallMinutes * rules.ticksPerMinute) stalls.push(entry);
         waiting = null;
         index++;
+        // At a person's pace, one action at a time.
+        if (pace) {
+          think(entry.roads);
+          break;
+        }
       }
     }
     simStep(game);
@@ -174,6 +196,7 @@ export function runBot(game, order, options = {}) {
     summary,
     counts,
     roadsBuilt,
+    thinkingMinutes: thinkingTicks / rules.ticksPerMinute,
     zeroCoinMinutes: zeroCoinTicks / rules.ticksPerMinute,
     lossMinutes: lossTicks / rules.ticksPerMinute,
   };

@@ -83,6 +83,7 @@ Harborfall/
       tools.js            What a build, road or demolish click would do. Pure, tested in Node.
       text.js             Every sentence the player reads, built from the data. Pure.
       panelModel.js       What the info panel says about a building. Pure.
+      advice.js           The tip line: what is short, traced to its root. Pure.
       hud.js              Coins and income, goods, population, clock.
       buildMenu.js        The tool buttons and the hint strip above them.
       infoPanel.js        Shows a panel model, reports button presses.
@@ -101,12 +102,14 @@ Harborfall/
     print-map.mjs         Prints the island as text, to check it without a browser.
     bot.mjs               Plays a full game headless and prints a report.
     tune.mjs              Plays several games with changed numbers, to compare them.
+    pace.mjs              Estimates a person's time to win by adding human delays to the bot.
     ui-playthrough.js     Plays a whole game through the real UI, in the browser.
     ui-monkey.js          Throws thousands of random clicks, drags and keys at the UI.
     bot/
       bot.js              Follows a build order, waits when it cannot afford a step.
       planner.js          Picks building sites and road routes.
       orders/             Build orders as JSON: standard, careless, bread-first.
+      paces.json          How fast a person acts: brisk, typical, slow. These are guesses.
 
   tests/                  One file per system. Run with: node --test
     helpers.js            A small hand-drawn test island and shortcuts.
@@ -285,6 +288,7 @@ The bot lives in `tools/bot/`, outside the simulation. It uses only the simulati
 - **Layout.** Houses, markets, sawmills and bakeries go on a pattern of 2x2 cells with every third row and column kept clear for roads, so the town never walls itself in. Lumberjacks, fishermen and farms go wherever the terrain allows.
 - **Roads.** For each building the bot finds the cheapest route from the existing road network and pays for it.
 - **One reflex.** If there is no room left for a house near any market, the bot builds another market first. Apart from that it never deviates from the order and never demolishes.
+- **A person's pace, optionally.** Given a pace from `paces.json`, the bot waits a random few seconds after each action, as a person would. The waits are seeded, so a run can be repeated.
 
 A fixed order is deliberate. When a game goes badly, the cause is the order or the balance numbers, not a clever bot hiding a problem.
 

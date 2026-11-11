@@ -6,11 +6,12 @@ import { buildingAt, canPlace, canUpgrade, inMarketRange, siteReason } from '../
 import { MILLI } from '../sim/rules.js';
 
 // An L-shaped line of tiles from A to B: along the longer side first.
-export function roadLine(ax, ay, bx, by) {
+// `flip` puts the corner on the other side (the shorter side first).
+export function roadLine(ax, ay, bx, by, flip = false) {
   const tiles = [];
   const sx = Math.sign(bx - ax);
   const sy = Math.sign(by - ay);
-  if (Math.abs(bx - ax) >= Math.abs(by - ay)) {
+  if (Math.abs(bx - ax) >= Math.abs(by - ay) !== flip) {
     for (let x = ax; ; x += sx) {
       tiles.push([x, ay]);
       if (x === bx) break;

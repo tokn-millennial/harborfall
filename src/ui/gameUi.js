@@ -16,6 +16,7 @@ import { panelModel } from './panelModel.js';
 import { anchorFor, previewBuild, previewDemolish, previewRoad, previewUpgrade, rangeTiles, requiredTerrain, roadLine, terrainTiles } from './tools.js';
 import { clock, costText, reasonText, refundText } from './text.js';
 import { setText } from './dom.js';
+import { createAdvisor } from './advice.js';
 
 const TINT = {
   ok: 'rgba(70, 215, 115, 0.5)',
@@ -30,6 +31,7 @@ const GHOST_BAD_COLOR = '#d9534f';
 const GHOST_OUTLINE = { ok: '#5df08a', bad: '#ff5a5a' };
 const SELECT = { mode: 'select', building: null };
 const MESSAGE_SECONDS = 3;
+const CONFIRM_SECONDS = 4; // how long a first demolish click waits for the second
 
 export function createGameUi({ game, camera, renderer, loop, canvas, elements }) {
   const { rules, state } = game;
@@ -42,6 +44,9 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
   let messageTimer = 0;
   let winShown = state.won; // a game loaded already won (the demo town) does not announce it
   const terrainCache = {};  // terrain name -> its tiles, for highlighting where a building may go
+  let armed = null;         // { id, seconds }: a building clicked once with Demolish, waiting for the second click
+  let flipCorner = false;   // Shift is held: put a dragged road's corner on the other side
+  const advisor = createAdvisor(rules);
 
   // ---- panels ---------------------------------------------------------------
   const hud = createHud(elements.hud, rules);
@@ -53,7 +58,7 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
       const building = buildingById(game, selectedId);
       if (!building) return;
       if (id === 'upgrade') act({ action: 'upgrade', id: building.id }, { cost: rules.tiers[building.house.tier].upgrade?.cost });
-      if (id === 'demolish' && act({ action: 'demolish', x: building.x, y: building.y })) deselect();
+      if (id === 'demolish' && demolishBuilding(building)) deselect();
     },
   });
   const win = createWinScreen(elements.win, { onContinue: () => speed.setSpeed(rules.speeds[0] ?? 1) });
@@ -62,12 +67,30 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
   // Clears the selection and closes its panel at once, not a frame later.
   function deselect() {
     selectedId = null;
+    armed = null;
     info.hide();
+  }
+
+  // Demolishing a building takes two clicks on it, so one misclick cannot destroy
+  // it. The first click arms it, the second does it. Returns true once it is gone.
+  function demolishBuilding(building) {
+    if (armed?.id === building.id) {
+      armed = null;
+      return act({ action: 'demolish', x: building.x, y: building.y });
+    }
+    const check = previewDemolish(game, building.x, building.y, building);
+    if (!check.ok) {
+      say(reasonText(game, check.reason));
+      return false;
+    }
+    armed = { id: building.id, seconds: CONFIRM_SECONDS };
+    return false;
   }
 
   function setTool(next) {
     tool = sameTool(next, tool) && next.mode !== 'select' ? SELECT : next;
     roadDrag = null;
+    armed = null;
     if (tool.mode !== 'select') deselect();
     canvas.style.cursor = tool.mode === 'select' ? '' : 'crosshair';
   }
@@ -131,7 +154,7 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
     },
     onUp: (x, y, button, moved) => {
       if (roadDrag) {
-        const tiles = roadLine(roadDrag.start.x, roadDrag.start.y, roadDrag.end.x, roadDrag.end.y);
+        const tiles = roadLine(roadDrag.start.x, roadDrag.start.y, roadDrag.end.x, roadDrag.end.y, flipCorner);
         roadDrag = null;
         if (button !== 0) return;
         const result = execute(game, { action: 'road', tiles });
@@ -156,7 +179,8 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
         act({ action: 'place', building: tool.building, x: at.x, y: at.y }, { building: tool.building, cost: def.cost });
       } else if (tool.mode === 'demolish') {
         const target = previewDemolish(game, t.x, t.y, pick(game, camera, view, x, y).building);
-        act({ action: 'demolish', x: target.x, y: target.y });
+        if (target.kind === 'building') demolishBuilding(target.building);
+        else act({ action: 'demolish', x: target.x, y: target.y });
       } else if (tool.mode === 'upgrade') {
         const target = previewUpgrade(game, pick(game, camera, view, x, y).building);
         if (target.kind === 'house') act({ action: 'upgrade', id: target.building.id }, { cost: target.cost });
@@ -169,11 +193,16 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
   });
 
   window.addEventListener('keydown', (event) => {
+    if (event.key === 'Shift') flipCorner = true;
     if (event.key === 'Escape') {
       if (tool.mode !== 'select') setTool(SELECT);
       else deselect();
     }
   });
+  window.addEventListener('keyup', (event) => {
+    if (event.key === 'Shift') flipCorner = false;
+  });
+  window.addEventListener('blur', () => { flipCorner = false; });
   // Keep keyboard focus off the buttons, so Space always means pause.
   document.addEventListener('click', (event) => event.target.closest?.('button')?.blur());
 
@@ -231,7 +260,7 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
       }
     } else if (tool.mode === 'road' && active) {
       const here = groundTile(pointer.x, pointer.y);
-      const tiles = roadDrag ? roadLine(roadDrag.start.x, roadDrag.start.y, roadDrag.end.x, roadDrag.end.y) : [[here.x, here.y]];
+      const tiles = roadDrag ? roadLine(roadDrag.start.x, roadDrag.start.y, roadDrag.end.x, roadDrag.end.y, flipCorner) : [[here.x, here.y]];
       const preview = previewRoad(game, tiles);
       for (const t of preview.tiles) {
         const color = t.state === 'new' ? TINT.roadNew : t.state === 'existing' ? TINT.roadExisting : t.state === 'unaffordable' ? TINT.roadShort : TINT.bad;
@@ -259,9 +288,9 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
       if (target.kind === 'building') {
         overlay.hoverBuilding = target.building;
         const name = target.building.house ? `${rules.tiers[target.building.house.tier].name} house` : rules.buildings[target.building.type].name;
-        tip = target.ok
-          ? { text: `Demolish ${name}. ${refundText(rules, target.building)}.`, level: 'warn' }
-          : { text: reasonText(game, target.reason), level: 'bad' };
+        if (!target.ok) tip = { text: reasonText(game, target.reason), level: 'bad' };
+        else if (armed?.id === target.building.id) tip = { text: `Click again to demolish the ${name}.`, level: 'bad' };
+        else tip = { text: `Demolish ${name}. ${refundText(rules, target.building)}. Takes two clicks.`, level: 'warn' };
       } else if (target.kind === 'road') {
         tip = { text: 'Demolish road.', level: 'warn' };
       }
@@ -271,9 +300,9 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
 
     // Panels.
     const summary = getSummary(game);
-    hud.update(summary);
+    hud.update(summary, state.won ? null : advisor.update(game));
     menu.update(tool);
-    if (selected && tool.mode === 'select') info.show(panelModel(game, selected));
+    if (selected && tool.mode === 'select') info.show(panelModel(game, selected, { confirmDemolish: armed?.id === selected.id }));
     else info.hide();
 
     if (tip) {
@@ -283,6 +312,11 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
       elements.tip.hidden = false;
     } else {
       elements.tip.hidden = true;
+    }
+
+    if (armed) {
+      armed.seconds -= dt;
+      if (armed.seconds <= 0) armed = null;
     }
 
     if (messageTimer > 0) {

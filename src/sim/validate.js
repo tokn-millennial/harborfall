@@ -113,6 +113,17 @@ export function validateData(data) {
   // --- buildings ------------------------------------------------------------
   if (!buildings.road || buildings.road.category !== 'road') err('buildings.json must define "road" with category "road"');
   if (!Object.values(buildings).some((b) => b?.category === 'storage')) err('buildings.json needs at least one storage building');
+  const keysSeen = {};
+  for (const [id, b] of Object.entries(buildings)) {
+    if (!isObject(b) || b.key === undefined) continue;
+    if (typeof b.key !== 'string' || !/^[a-z0-9]$/i.test(b.key)) {
+      err(`buildings.${id}.key must be a single letter or digit`);
+      continue;
+    }
+    const key = b.key.toLowerCase();
+    if (keysSeen[key]) err(`buildings.${id}.key "${b.key}" is already used by ${keysSeen[key]}`);
+    else keysSeen[key] = id;
+  }
   for (const [id, b] of Object.entries(buildings)) {
     const where = `buildings.${id}`;
     if (!isObject(b)) { err(`${where} must be an object`); continue; }

@@ -8,6 +8,8 @@ import {
   roadLine, anchorFor, previewBuild, previewRoad, previewDemolish, previewUpgrade, rangeTiles, requiredTerrain, terrainTiles,
 } from '../src/ui/tools.js';
 import { panelModel } from '../src/ui/panelModel.js';
+import { createAdvisor } from '../src/ui/advice.js';
+import { housesInRangeOf } from '../src/sim/index.js';
 import { testGame, richGame, place, road, line, run, buildMarket, fillHouse, snapshot } from './helpers.js';
 
 // ---- words --------------------------------------------------------------------
@@ -326,4 +328,133 @@ test('the upgrade tool preview agrees with what the click then does', () => {
 
   preview = previewUpgrade(game, house);
   assert.deepEqual([preview.ok, preview.reason, preview.cost], [false, 'max_tier', null]);
+});
+
+// ---- added in Phase 6 --------------------------------------------------------------
+
+test('a road line can have its corner flipped to the other side', () => {
+  assert.deepEqual(roadLine(0, 0, 3, 1), [[0, 0], [1, 0], [2, 0], [3, 0], [3, 1]]);
+  assert.deepEqual(roadLine(0, 0, 3, 1, true), [[0, 0], [0, 1], [1, 1], [2, 1], [3, 1]]);
+  // Same ends and same length either way, and a straight line has no corner to flip.
+  for (const [ax, ay, bx, by] of [[2, 2, 7, 5], [7, 5, 2, 2], [4, 9, 1, 3]]) {
+    const plain = roadLine(ax, ay, bx, by);
+    const flipped = roadLine(ax, ay, bx, by, true);
+    assert.equal(flipped.length, plain.length);
+    assert.deepEqual(flipped[0], plain[0]);
+    assert.deepEqual(flipped[flipped.length - 1], plain[plain.length - 1]);
+    assert.notDeepEqual(flipped, plain);
+  }
+  assert.deepEqual(roadLine(2, 2, 6, 2, true), roadLine(2, 2, 6, 2));
+});
+
+test('a market panel counts the houses in its own range, not every house on the island', () => {
+  const game = richGame({ change: (d) => { d.buildings.market.market.radius = 8; } });
+  const market = buildMarket(game);            // centre (14,12)
+  place(game, 'house', 16, 11);                // near
+  place(game, 'house', 16, 13);                // near
+  place(game, 'house', 2, 2);                  // far outside
+  assert.equal(housesInRangeOf(game, market), 2);
+  assert.equal(housesInRangeOf(game, game.state.buildings[0]), 0, 'a warehouse reaches no houses');
+  const line = panelModel(game, market).lines.find((l) => l.label === 'Houses in range');
+  assert.equal(line.value, '2');
+});
+
+test('the Demolish button changes its words while it waits for a second press', () => {
+  const game = richGame();
+  const house = place(game, 'house', 16, 11);
+  const label = (options) => panelModel(game, house, options).actions.find((a) => a.id === 'demolish').label;
+  assert.equal(label(), 'Demolish');
+  assert.equal(label({ confirmDemolish: true }), 'Press again to demolish');
+});
+
+// The tip line. Patience is 30 game seconds by default.
+const tipAfter = (game, advisor, seconds) => {
+  let tip = null;
+  for (let i = 0; i < seconds * game.rules.ticksPerSecond; i++) {
+    run(game, 1);
+    tip = advisor.update(game);
+  }
+  return tip;
+};
+
+test('tips: a new game with stock on hand has nothing to say', () => {
+  const game = testGame();
+  const advisor = createAdvisor(game.rules);
+  assert.equal(tipAfter(game, advisor, 120), null);
+});
+
+test('tips: hungry houses and no fisherman', () => {
+  const game = richGame();
+  buildMarket(game);
+  place(game, 'house', 16, 11);
+  game.state.goods.fish = 0;
+  const advisor = createAdvisor(game.rules);
+  assert.equal(tipAfter(game, advisor, 20), null, 'it waits before speaking');
+  assert.equal(tipAfter(game, advisor, 15), 'Nobody is making fish. Build a fisherman.');
+});
+
+test('tips: a fisherman with no road is the thing to fix', () => {
+  const game = richGame();
+  buildMarket(game);
+  place(game, 'house', 16, 11);
+  place(game, 'fisherman', 2, 9);
+  game.state.goods.fish = 0;
+  const advisor = createAdvisor(game.rules);
+  assert.equal(tipAfter(game, advisor, 40), 'Your fisherman is not connected to a warehouse by road.');
+});
+
+test('tips: too many mouths for one fisherman', () => {
+  const game = richGame();
+  buildMarket(game);
+  place(game, 'fisherman', 2, 9);
+  road(game, line(9, 9, 3, 9));
+  for (const [x, y] of [[16, 11], [16, 13], [18, 11], [18, 13], [13, 13], [20, 11], [20, 13]]) place(game, 'house', x, y);
+  game.state.goods.fish = 0;
+  const advisor = createAdvisor(game.rules);
+  assert.equal(tipAfter(game, advisor, 600), 'Fish keeps running out. Build another fisherman.');
+});
+
+test('tips: a shortage is traced back to where it starts', () => {
+  // Planks are out because the sawmill has no wood, and nobody is cutting wood.
+  const game = richGame();
+  place(game, 'sawmill', 13, 11);
+  road(game, [[12, 10], [12, 11]]);
+  game.state.goods.wood = 0;
+  game.state.goods.planks = 0;
+  const advisor = createAdvisor(game.rules);
+  assert.equal(tipAfter(game, advisor, 40), 'Nobody is making wood. Build a lumberjack.');
+
+  // Bread is out because the bakery has no grain.
+  const town = richGame();
+  buildMarket(town);
+  const house = fillHouse(town, place(town, 'house', 16, 11));
+  execute(town, { action: 'upgrade', id: house.id });
+  place(town, 'bakery', 13, 13);
+  road(town, [[12, 12], [12, 13]]);
+  town.state.goods.bread = 0;
+  town.state.goods.grain = 0;
+  const townAdvisor = createAdvisor(town.rules);
+  assert.equal(tipAfter(town, townAdvisor, 200), 'Nobody is making grain. Build a farm.');
+});
+
+test('tips: the tip goes away when the shortage ends', () => {
+  const game = richGame();
+  buildMarket(game);
+  place(game, 'house', 16, 11);
+  game.state.goods.fish = 0;
+  const advisor = createAdvisor(game.rules);
+  assert.ok(tipAfter(game, advisor, 40));
+  game.state.goods.fish = 50;
+  assert.equal(tipAfter(game, advisor, 2), null);
+});
+
+test('tips never change the game', () => {
+  const game = richGame();
+  buildMarket(game);
+  place(game, 'house', 16, 11);
+  game.state.goods.fish = 0;
+  const advisor = createAdvisor(game.rules, { patienceSeconds: 0 });
+  const before = snapshot(game);
+  assert.ok(advisor.update(game));
+  assert.equal(snapshot(game), before);
 });

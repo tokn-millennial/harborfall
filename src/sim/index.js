@@ -8,11 +8,11 @@ import { stepProduction } from './production.js';
 import { settleIncome } from './economy.js';
 import { checkWin } from './win.js';
 import { getSummary, buildingIssue } from './summary.js';
-import { stepHouses, upgradeReason, countResidents, isSatisfied, inMarketRange } from './population.js';
+import { stepHouses, upgradeReason, countResidents, isSatisfied, inMarketRange, housesInRangeOf } from './population.js';
 
 export {
   createGame, execute, canPlace, siteReason, buildingAt, buildingById,
-  countResidents, isSatisfied, getSummary, buildingIssue, inMarketRange,
+  countResidents, isSatisfied, getSummary, buildingIssue, inMarketRange, housesInRangeOf,
 };
 
 // Checks an upgrade without doing it. Never changes the game.

@@ -47,6 +47,7 @@ export function compileRules(rawData) {
     compiledBuildings[id] = {
       id,
       name: b.name,
+      key: typeof b.key === 'string' ? b.key.toLowerCase() : null,
       category: b.category,
       w: b.size[0],
       h: b.size[1],

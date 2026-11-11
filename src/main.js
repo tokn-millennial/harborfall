@@ -58,6 +58,22 @@ async function start() {
     item.append(swatch, ` ${terrain.name}`);
     byId('legend').append(item);
   }
+  // Starting again wipes the current game, so the button must be pressed twice.
+  const newGame = byId('new-game');
+  let newGameArmed = 0;
+  newGame.addEventListener('click', () => {
+    if (newGameArmed) {
+      location.href = './';
+      return;
+    }
+    newGame.textContent = 'Press again to erase this game';
+    newGame.classList.add('danger');
+    newGameArmed = setTimeout(() => {
+      newGameArmed = 0;
+      newGame.textContent = 'Start a new game';
+      newGame.classList.remove('danger');
+    }, 4000);
+  });
   byId('loading').hidden = true;
 
   let last = performance.now();

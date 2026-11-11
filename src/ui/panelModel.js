@@ -2,12 +2,13 @@
 // buttons. Plain data, built from the game, so it is tested in Node.
 // infoPanel.js turns this into page elements.
 
-import { buildingIssue, canUpgrade } from '../sim/index.js';
+import { buildingIssue, canUpgrade, housesInRangeOf } from '../sim/index.js';
 import { MILLI } from '../sim/rules.js';
 import { amountText, costText, issueLevel, reasonText, refundText } from './text.js';
 import { previewDemolish } from './tools.js';
 
-export function panelModel(game, building) {
+// options.confirmDemolish: the Demolish button has been pressed once and is waiting for a second press.
+export function panelModel(game, building, options = {}) {
   const { rules, state } = game;
   const def = rules.buildings[building.type];
   const lines = [];
@@ -61,9 +62,8 @@ export function panelModel(game, building) {
   }
 
   if (def.marketRadius > 0) {
-    const served = state.buildings.filter((b) => b.house && b.house.served).length;
     lines.push({ label: 'Range', value: `${def.marketRadius} tiles` });
-    lines.push({ label: 'Houses served', value: `${served} (all markets)` });
+    lines.push({ label: 'Houses in range', value: String(housesInRangeOf(game, building)) });
   }
 
   if (def.storagePerGood > 0) {
@@ -76,7 +76,7 @@ export function panelModel(game, building) {
   const demolish = previewDemolish(game, building.x, building.y, building);
   actions.push({
     id: 'demolish',
-    label: 'Demolish',
+    label: options.confirmDemolish ? 'Press again to demolish' : 'Demolish',
     detail: `${refundText(rules, building)}.`,
     enabled: demolish.ok,
     reason: demolish.ok ? null : reasonText(game, demolish.reason),

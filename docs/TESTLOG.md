@@ -419,3 +419,68 @@ No bug was found in the simulation in any phase.
 | 4. UI and play | 1 | 202 | 7 | 12 |
 | 5. Review | 1 | 204 | 7 | 6 |
 | **Total** | **7** | **204** | **25 bugs, 5 design problems** | **73** |
+
+## Phase 6: Polish
+
+Date: 2026-11-11. Status: approved by Colin with no changes.
+
+**Turns used:** 1 (your message "push it to GitHub and keep building").
+
+**What was asked, and what happened**
+- **Push to GitHub: not done.** The GitHub command-line tool is not installed, so I could not create a repository. Git itself can push with your saved sign-in once a repository exists.
+- **Keep building: done**, within the problems Phase 5 left open.
+
+**What was built**
+- Demolish takes two clicks on a building, from the tool or from the info panel.
+- Shortcut keys for all 12 tools, shown on the buttons.
+- Shift flips the corner of a dragged road.
+- A tip line that names a lasting shortage and what to build, traced to its root.
+- A Start a new game button, pressed twice.
+- A market's panel counts the houses in its own range.
+- A slow-player mode for the bot, and `tools/pace.mjs` to report on it.
+
+**Automated tests: 220 pass, 0 fail.** That is 204 from before plus 16: 3 for shortcut keys in the data, 10 for the new UI logic (7 of them for the tip line), and 3 for the paced bot.
+
+**Browser checks**
+
+| Check | How | Result |
+|---|---|---|
+| A full game through the UI still matches the headless bot | UI playthrough | Pass. Won at 28.55 minutes, identical final state. |
+| Random input, with the new keys included | 12,000 actions over 2 runs | Pass. No errors. |
+| R, M, H and Q pick Road, Market, House and Select | Real key presses, then real clicks to build with them | Pass |
+| All 12 buttons show their key | Read from the page | Pass |
+| Demolish tool: first click arms, second click removes | Real clicks on a house | Pass. The note read "Click again to demolish the Farmer house." |
+| Panel Demolish: first press changes the label, second removes | Scripted presses | Pass |
+| Shift flips the road corner | Scripted drags with and without Shift | Pass |
+| Tip line appears for hungry houses with no fisherman | Built a market and a house by hand, ran at 4x | Pass. "Tip: Nobody is making fish. Build a fisherman." |
+| Market panel shows houses in its own range | Read after demolishing the only house | Pass. It showed 0. |
+| Start a new game: first press asks, second reloads a fresh game | Real clicks | Pass. 500 coins, 1 building, no roads. |
+
+**A person's pace** (20 games per row, shipped island)
+
+| Build order | Pace | Thinking time added | Fastest | Median | Slowest |
+|---|---|---|---|---|---|
+| Standard | Brisk | 3.4 min | 29.1 | 29.1 | 29.6 |
+| Standard | Typical | 7.7 min | 29.5 | 30.2 | 31.3 |
+| Standard | Slow | 17.8 min | 30.9 | 32.5 | 34.8 |
+| Careless | Brisk | 3.3 min | 30.4 | 30.5 | 30.7 |
+| Careless | Typical | 7.6 min | 30.6 | 30.8 | 31.2 |
+| Careless | Slow | 17.5 min | 30.6 | 31.2 | 32.0 |
+
+All 120 games won inside 25 to 40 minutes. Thinking time barely matters, because most of it overlaps with waiting for coins and planks.
+
+**Bugs found: 0.** No test or browser check failed in this phase. After five phases that each found several, that is more likely thin testing of the new parts than perfect code. The tip line in particular was checked in seven situations and a real game has many more.
+
+**Decisions made:** 9 (D69 to D77). None changes the game rules.
+
+**Weak or unfinished**
+- **GitHub is not done.**
+- **The pace numbers rest on guessed delays**, and they assume the player knows what to build. A lost, hesitant first-timer is not modelled.
+- **The tip line is simple.** One tip at a time, shortages only. It says nothing about a missing market, idle coins, or what to do first.
+- **Some shortcut letters are arbitrary**, because W A S D and C were taken: I for Sawmill, E for Warehouse, G for Farm.
+- **Shift to flip a road corner is easy to miss.** It is mentioned in the Road hint and the ? panel only.
+- **Two clicks to demolish may annoy** when clearing several buildings. There is still no undo.
+- **A game server was already running on the port when I tested**, so I used it. I take it to be yours from `start-game.bat`. It was serving the same folder.
+
+**What I would change**
+- I would have checked for the GitHub tool before promising a push in my plan.

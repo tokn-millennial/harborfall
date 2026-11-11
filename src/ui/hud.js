@@ -8,6 +8,8 @@ export function createHud(root, rules) {
   const net = el('span', { class: 'hud-net', title: 'Coins gained or lost each minute: taxes plus base income, minus upkeep' });
   const warning = el('div', 'hud-warning');
   warning.hidden = true;
+  const tip = el('div', 'hud-tip');
+  tip.hidden = true;
 
   const goods = {};
   const goodsRow = el('div', 'hud-goods');
@@ -40,10 +42,14 @@ export function createHud(root, rules) {
     popRow,
     time,
     warning,
+    tip,
   );
 
   return {
-    update(summary) {
+    // `advice` is a sentence from the advisor, or null.
+    update(summary, advice = null) {
+      tip.hidden = !advice;
+      if (advice) setText(tip, `Tip: ${advice}`);
       setText(coins, String(summary.coins));
       const n = summary.income.net;
       setText(net, `${n >= 0 ? '+' : ''}${n.toFixed(1)} / min`);

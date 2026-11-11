@@ -1,0 +1,7 @@
+{
+  "_about": "How fast a person acts, for the slow-player bot. These are guesses, not measurements. After each action the bot waits a random time between the two thinkSeconds numbers, plus roadTileSeconds for each road tile it just laid. Now and then (pauseChance, from 0 to 1) it also stops for a longer pause, as a person does to read or look around. startSeconds is how long it looks at the island before doing anything.",
+
+  "brisk":   { "startSeconds": 10, "thinkSeconds": [2, 5],  "roadTileSeconds": 0.3, "pauseChance": 0.05, "pauseSeconds": [10, 20] },
+  "typical": { "startSeconds": 30, "thinkSeconds": [4, 10], "roadTileSeconds": 0.5, "pauseChance": 0.10, "pauseSeconds": [15, 40] },
+  "slow":    { "startSeconds": 60, "thinkSeconds": [8, 20], "roadTileSeconds": 1.0, "pauseChance": 0.15, "pauseSeconds": [30, 90] }
+}
