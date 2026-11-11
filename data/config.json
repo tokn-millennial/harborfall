@@ -1,0 +1,26 @@
+{
+  "_about": "Global game settings. Times are in seconds, rates are per minute. Keys starting with _ are notes and are ignored by the game.",
+
+  "ticksPerSecond": 10,
+  "speeds": [1, 2, 4],
+
+  "start": {
+    "coins": 500,
+    "goods": { "wood": 40, "planks": 20 },
+    "freeBuildings": ["warehouse"]
+  },
+
+  "economy": {
+    "_incomeIntervalSeconds": "How often taxes, base income and upkeep are settled.",
+    "incomeIntervalSeconds": 6,
+    "_baseIncomePerMinute": "Coins the island earns with no residents at all. This is the safety net that stops a player getting stuck at zero.",
+    "baseIncomePerMinute": 10,
+    "_demolishRefundRatio": "Share of a building's cost (coins and goods) returned on demolish, rounded down.",
+    "demolishRefundRatio": 0.5
+  },
+
+  "win": {
+    "tier": "worker",
+    "residents": 100
+  }
+}

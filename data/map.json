@@ -1,0 +1,32 @@
+{
+  "_about": "The island. The same seed always produces the same island. Change the seed for a different one. Keys starting with _ are notes and are ignored by the game.",
+
+  "width": 64,
+  "height": 64,
+  "seed": 1407,
+
+  "_terrain": "Every tile is one of these. 'coast' is the sandy ring of land tiles that touch water.",
+  "terrain": {
+    "water":   { "name": "Water",        "buildable": false, "color": "#2f6f9f" },
+    "coast":   { "name": "Coast",        "buildable": true,  "color": "#e2d3a0" },
+    "grass":   { "name": "Grass",        "buildable": true,  "color": "#7fb069" },
+    "fertile": { "name": "Fertile land", "buildable": true,  "color": "#a8c256" },
+    "forest":  { "name": "Forest",       "buildable": false, "color": "#3d7a45" }
+  },
+
+  "_generation": "Rough shares of the island's land. The generator aims for these; exact results vary a little with the seed.",
+  "generation": {
+    "landFraction": 0.55,
+    "forestFractionOfLand": 0.22,
+    "fertileFractionOfLand": 0.18
+  },
+
+  "_guarantees": "The generator must meet all of these or the map is rejected by the tests. They make sure every island can be won.",
+  "guarantees": {
+    "minForestTiles": 250,
+    "minFertileBlocks2x2": 12,
+    "minCoastTiles": 60,
+    "_startMaxDistance": "The free starting warehouse is placed on open land with coast, forest and fertile land each within this many tiles.",
+    "startMaxDistance": 10
+  }
+}

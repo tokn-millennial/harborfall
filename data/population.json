@@ -1,0 +1,33 @@
+{
+  "_about": "Population tiers and how residents behave. 'needs' are units of a good eaten per resident per minute. Tax is coins per resident per minute. Keys starting with _ are notes and are ignored by the game.",
+
+  "_growthIntervalSeconds": "A house with all needs met gains one resident this often, up to its capacity.",
+  "growthIntervalSeconds": 6,
+
+  "_declineIntervalSeconds": "A house with an unmet need loses one resident this often.",
+  "declineIntervalSeconds": 12,
+
+  "_minResidents": "Residents never drop below this once a house has been lived in. Houses never downgrade.",
+  "minResidents": 1,
+
+  "tiers": {
+    "farmer": {
+      "name": "Farmer",
+      "capacity": 4,
+      "taxPerResidentPerMinute": 0.8,
+      "needs": { "fish": 0.2 },
+      "upgrade": {
+        "to": "worker",
+        "cost": { "coins": 20, "goods": { "planks": 5 } }
+      },
+      "visual": { "color": "#d9d2c0", "height": 0.8 }
+    },
+    "worker": {
+      "name": "Worker",
+      "capacity": 8,
+      "taxPerResidentPerMinute": 1.0,
+      "needs": { "fish": 0.2, "bread": 0.075 },
+      "visual": { "color": "#e8a25c", "height": 1.3 }
+    }
+  }
+}

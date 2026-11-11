@@ -1,0 +1,9 @@
+{
+  "_about": "The goods in the game. The order here is the order shown in the HUD. Colors are placeholder colors for icons.",
+
+  "wood":   { "name": "Wood",   "color": "#8b5a2b" },
+  "planks": { "name": "Planks", "color": "#d9a760" },
+  "fish":   { "name": "Fish",   "color": "#5aa7d6" },
+  "grain":  { "name": "Grain",  "color": "#e3c84a" },
+  "bread":  { "name": "Bread",  "color": "#c9853d" }
+}
