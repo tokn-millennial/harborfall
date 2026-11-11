@@ -1,0 +1,290 @@
+// The logic behind the UI: the words the player reads, what each tool would
+// do, and what the info panel shows. None of this needs a browser.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { execute, buildingIssue } from '../src/sim/index.js';
+import { clock, costText, shortfallText, refundText, buildingBlurb, placementText, reasonText, issueLevel } from '../src/ui/text.js';
+import { roadLine, anchorFor, previewBuild, previewRoad, previewDemolish, rangeTiles } from '../src/ui/tools.js';
+import { panelModel } from '../src/ui/panelModel.js';
+import { testGame, richGame, place, road, line, run, buildMarket, fillHouse, snapshot } from './helpers.js';
+
+// ---- words --------------------------------------------------------------------
+
+test('clock shows minutes and seconds', () => {
+  assert.equal(clock(0), '0:00');
+  assert.equal(clock(65.9), '1:05');
+  assert.equal(clock(1716), '28:36');
+});
+
+test('costs read naturally, straight from the data files', () => {
+  const { rules } = testGame();
+  assert.equal(costText(rules, rules.buildings.road.cost), '1 coin');
+  assert.equal(costText(rules, rules.buildings.farm.cost), '50 coins, 10 wood, 5 planks');
+  assert.equal(costText(rules, { coinsMilli: 0, goods: {} }), 'Free');
+});
+
+test('a shortfall says exactly what is missing', () => {
+  const game = testGame({ coins: 45, goods: { wood: 7, planks: 5 } });
+  assert.equal(shortfallText(game, game.rules.buildings.farm.cost), 'Need 5 more coins and 3 more wood');
+  assert.equal(shortfallText(game, game.rules.buildings.road.cost), null);
+});
+
+test('a refund is described, and the free warehouse returns nothing', () => {
+  const game = richGame();
+  const farm = place(game, 'farm', 14, 3);
+  assert.equal(refundText(game.rules, farm), 'Returns 25 coins, 5 wood, 2 planks');
+  assert.equal(refundText(game.rules, game.state.buildings[0]), 'Returns nothing');
+});
+
+test('every building has a description, with no code words leaking through', () => {
+  const { rules } = testGame();
+  for (const id of Object.keys(rules.buildings)) {
+    const lines = buildingBlurb(rules, id);
+    assert.ok(lines.length >= 1, `${id} has a description`);
+    for (const text of lines) {
+      assert.doesNotMatch(text, /_|undefined|NaN|null/, `${id}: "${text}"`);
+      assert.match(text, /\.$/, `${id}: "${text}" ends with a full stop`);
+    }
+  }
+  assert.deepEqual(buildingBlurb(rules, 'sawmill').slice(0, 1), ['Turns 2 wood into 1 plank every 16 s.']);
+});
+
+test('placement rules are explained with the numbers from the data', () => {
+  const { rules } = testGame();
+  assert.equal(placementText(rules, 'lumberjack'), 'Needs 8 or more forest tiles within 4 tiles.');
+  assert.equal(placementText(rules, 'fisherman'), 'Must touch a coast tile.');
+  assert.equal(placementText(rules, 'farm'), 'Must stand entirely on fertile land.');
+  assert.equal(placementText(rules, 'house'), null);
+});
+
+test('every reason the simulation can give has a plain sentence', () => {
+  const game = testGame();
+  const codes = [
+    'out_of_bounds', 'not_buildable', 'blocked', 'unknown_building', 'not_enough_coins', 'not_enough_goods',
+    'needs_forest', 'needs_coast', 'needs_fertile', 'nothing_here', 'last_warehouse', 'not_a_house', 'max_tier',
+    'house_not_full', 'no_market', 'needs_unmet', 'no_bread', 'no_fish', 'no_road', 'missing_input',
+    'storage_full', 'unknown_command', 'bad_command', 'some_future_code',
+  ];
+  for (const code of codes) {
+    const text = reasonText(game, code);
+    assert.ok(text.length > 5, code);
+    assert.doesNotMatch(text, /_|undefined/, `${code}: "${text}"`);
+  }
+  assert.equal(reasonText(game, 'needs_forest', { building: 'lumberjack' }), 'Needs 8 or more forest tiles within 4 tiles.');
+  assert.equal(reasonText(game, 'no_bread'), 'No bread in stock.');
+  assert.equal(reasonText(game, 'missing_input', { building: 'sawmill' }), 'Waiting for wood.');
+  assert.equal(reasonText(game, null), '');
+});
+
+test('a cost problem names what is missing', () => {
+  const game = testGame({ coins: 10 });
+  assert.equal(reasonText(game, 'not_enough_coins', { cost: game.rules.buildings.market.cost }), 'Need 50 more coins.');
+});
+
+test('problems are graded: no road or no market is serious, a shortage is a wait', () => {
+  assert.equal(issueLevel(null), 'ok');
+  assert.equal(issueLevel('no_road'), 'bad');
+  assert.equal(issueLevel('no_market'), 'bad');
+  assert.equal(issueLevel('missing_input'), 'warn');
+  assert.equal(issueLevel('no_fish'), 'warn');
+});
+
+// ---- tools --------------------------------------------------------------------
+
+test('a road line is L-shaped, unbroken, and runs along the longer side first', () => {
+  assert.deepEqual(roadLine(2, 2, 2, 2), [[2, 2]]);
+  assert.deepEqual(roadLine(2, 2, 5, 2), [[2, 2], [3, 2], [4, 2], [5, 2]]);
+  assert.deepEqual(roadLine(5, 2, 2, 2), [[5, 2], [4, 2], [3, 2], [2, 2]]);
+  assert.deepEqual(roadLine(2, 5, 2, 3), [[2, 5], [2, 4], [2, 3]]);
+  assert.deepEqual(roadLine(0, 0, 3, 1), [[0, 0], [1, 0], [2, 0], [3, 0], [3, 1]]);
+  assert.deepEqual(roadLine(0, 0, -1, 3), [[0, 0], [0, 1], [0, 2], [0, 3], [-1, 3]]);
+  // Every step in any line moves exactly one tile along an edge.
+  for (const [ax, ay, bx, by] of [[0, 0, 7, 4], [7, 4, 0, 0], [3, 9, 8, 1], [8, 1, 3, 9], [4, 4, 4, 9]]) {
+    const tiles = roadLine(ax, ay, bx, by);
+    assert.deepEqual(tiles[0], [ax, ay]);
+    assert.deepEqual(tiles[tiles.length - 1], [bx, by]);
+    assert.equal(tiles.length, Math.abs(bx - ax) + Math.abs(by - ay) + 1);
+    for (let i = 1; i < tiles.length; i++) {
+      assert.equal(Math.abs(tiles[i][0] - tiles[i - 1][0]) + Math.abs(tiles[i][1] - tiles[i - 1][1]), 1);
+    }
+  }
+});
+
+test('a building is centred on the pointer', () => {
+  assert.deepEqual(anchorFor({ w: 2, h: 2 }, 10.0, 10.0), { x: 9, y: 9 });
+  assert.deepEqual(anchorFor({ w: 2, h: 2 }, 10.6, 10.4), { x: 10, y: 9 });
+  assert.deepEqual(anchorFor({ w: 1, h: 1 }, 10.6, 10.4), { x: 10, y: 10 });
+});
+
+test('the build preview agrees with what the click then does', () => {
+  const game = richGame();
+  const cases = [
+    ['house', 16, 11], ['house', 0, 0], ['house', 10, 9], ['farm', 14, 3], ['farm', 8, 12],
+    ['lumberjack', 8, 4], ['lumberjack', 20, 14], ['fisherman', 2, 5], ['fisherman', 10, 5],
+  ];
+  for (const [building, x, y] of cases) {
+    const preview = previewBuild(game, building, x, y);
+    const before = snapshot(game);
+    const result = execute(game, { action: 'place', building, x, y });
+    assert.equal(preview.ok, result.ok, `${building} at ${x},${y}`);
+    if (!result.ok) {
+      assert.equal(preview.reason, result.reason, `${building} at ${x},${y}`);
+      assert.equal(snapshot(game), before);
+    }
+  }
+});
+
+test('the build preview separates a bad site from a cost problem', () => {
+  const poor = testGame({ coins: 0 });
+  const blocked = previewBuild(poor, 'house', 10, 9);
+  assert.deepEqual([blocked.ok, blocked.siteOk, blocked.reason], [false, false, 'blocked']);
+  const cannotAfford = previewBuild(poor, 'house', 16, 11);
+  assert.deepEqual([cannotAfford.ok, cannotAfford.siteOk, cannotAfford.reason], [false, true, 'not_enough_coins']);
+});
+
+test('placing a house out of market range is allowed but flagged', () => {
+  const game = richGame();
+  assert.deepEqual(previewBuild(game, 'house', 16, 11).hints, ['no_market']);
+  buildMarket(game);
+  assert.deepEqual(previewBuild(game, 'house', 16, 11).hints, []);
+  assert.deepEqual(previewBuild(game, 'house', 2, 2).hints, ['no_market'], 'too far from the market');
+});
+
+test('the road preview marks new, existing, bad and unaffordable tiles, and matches the command', () => {
+  const game = testGame({ coins: 4 });
+  road(game, [[12, 9]]);                       // 3 coins left
+  const tiles = [...line(12, 9, 14, 9), [4, 4], ...line(15, 9, 17, 9)];
+  const preview = previewRoad(game, tiles);
+  assert.deepEqual(preview.tiles.map((t) => t.state), ['existing', 'new', 'new', 'bad', 'new', 'unaffordable', 'unaffordable']);
+  assert.equal(preview.newCount, 3);
+  assert.equal(preview.costCoins, 3);
+  assert.equal(preview.reason, 'not_buildable');
+  const result = execute(game, { action: 'road', tiles });
+  assert.equal(result.placed, preview.newCount);
+});
+
+test('the demolish preview names what would go, and protects the last warehouse', () => {
+  const game = richGame();
+  const house = place(game, 'house', 16, 11);
+  road(game, [[12, 9]]);
+  assert.deepEqual(previewDemolish(game, 17, 12), { kind: 'building', building: house, x: 16, y: 11, w: 2, h: 2, ok: true, reason: null });
+  assert.equal(previewDemolish(game, 12, 9).kind, 'road');
+  assert.deepEqual([previewDemolish(game, 5, 12).ok, previewDemolish(game, 5, 12).reason], [false, 'nothing_here']);
+  const warehouse = previewDemolish(game, 10, 9);
+  assert.deepEqual([warehouse.ok, warehouse.reason], [false, 'last_warehouse']);
+  // Pointing at a roof: the ground tile is elsewhere, but the building under the pointer wins.
+  assert.equal(previewDemolish(game, 3, 3, house).building, house);
+});
+
+test('range tiles: a market covers a circle, a lumberjack shows the forest it can reach', () => {
+  const game = richGame();
+  const market = rangeTiles(game, 'market', 13, 11);
+  assert.ok(market.length > 150 && market.length < 220, `market covers ${market.length} tiles`);
+  const forest = rangeTiles(game, 'lumberjack', 8, 4);
+  assert.equal(forest.length, 13, 'the 13 forest tiles within radius 4 of (8,4)');
+  assert.deepEqual(rangeTiles(game, 'house', 16, 11), []);
+});
+
+// ---- warning markers and the info panel ---------------------------------------
+
+test('the issue of a building is the most useful thing to tell the player', () => {
+  const game = richGame();
+  const mill = place(game, 'sawmill', 13, 13);
+  assert.equal(buildingIssue(game, mill), 'no_road');
+  road(game, [[12, 10], [12, 11], [12, 12], [12, 13]]);
+  game.state.goods.wood = 0;
+  run(game, 2);
+  assert.equal(buildingIssue(game, mill), 'missing_input');
+  game.state.goods.wood = 50;
+  run(game, 2);
+  assert.equal(buildingIssue(game, mill), null);
+
+  const house = place(game, 'house', 16, 11);
+  assert.equal(buildingIssue(game, house), 'no_market');
+  place(game, 'market', 13, 10);
+  game.state.goods.fish = 0;
+  run(game, 2);
+  assert.equal(buildingIssue(game, house), 'no_fish');
+  game.state.goods.fish = 20;
+  run(game, 2);
+  assert.equal(buildingIssue(game, house), null);
+  assert.equal(buildingIssue(game, game.state.buildings[0]), null, 'a warehouse is always fine');
+});
+
+test('the info panel for a producer: status, what it makes, progress, upkeep, demolish', () => {
+  const game = richGame();
+  const jack = place(game, 'lumberjack', 8, 4);
+  let model = panelModel(game, jack);
+  assert.equal(model.title, 'Lumberjack');
+  assert.equal(model.level, 'bad');
+  assert.deepEqual(model.lines[0], { label: 'Status', value: 'Not connected to a warehouse by road.', level: 'bad' });
+
+  road(game, [...line(10, 8, 10, 4), [9, 4]]);
+  game.state.goods.wood = 0;
+  run(game, game.rules.buildings.lumberjack.production.cycleTicks / 2);
+  model = panelModel(game, jack);
+  assert.equal(model.lines[0].value, 'Working.');
+  assert.deepEqual(model.lines[1], { label: 'Makes', value: '1 wood every 5 s' });
+  assert.equal(model.lines[2].value, '50%');
+  assert.deepEqual(model.lines[3], { label: 'Upkeep', value: '2 coins a minute' });
+  assert.deepEqual(model.actions, [{ id: 'demolish', label: 'Demolish', detail: 'Returns 10 coins.', enabled: true, reason: null }]);
+});
+
+test('the info panel for a house: residents, needs, taxes, and an upgrade button that explains itself', () => {
+  const game = richGame();
+  buildMarket(game);
+  const house = place(game, 'house', 16, 11);
+  run(game, 1);
+  let model = panelModel(game, house);
+  assert.equal(model.title, 'Farmer house');
+  assert.deepEqual(model.lines.map((l) => `${l.label}: ${l.value}`), [
+    'Residents: 0 of 4', 'Market: In range', 'Fish: Supplied', 'Taxes: +0.0 coins a minute',
+  ]);
+  let upgrade = model.actions.find((a) => a.id === 'upgrade');
+  assert.equal(upgrade.label, 'Upgrade to Worker house');
+  assert.equal(upgrade.detail, '20 coins, 5 planks. Holds 8.');
+  assert.equal(upgrade.enabled, false);
+  assert.equal(upgrade.reason, 'The house must be full before it can be upgraded.');
+
+  fillHouse(game, house);
+  game.state.goods.bread = 0;
+  upgrade = panelModel(game, house).actions.find((a) => a.id === 'upgrade');
+  assert.deepEqual([upgrade.enabled, upgrade.reason], [false, 'No bread in stock.']);
+
+  game.state.goods.bread = 10;
+  game.state.goods.planks = 2;
+  upgrade = panelModel(game, house).actions.find((a) => a.id === 'upgrade');
+  assert.deepEqual([upgrade.enabled, upgrade.reason], [false, 'Need 3 more planks.']);
+
+  game.state.goods.planks = 50;
+  upgrade = panelModel(game, house).actions.find((a) => a.id === 'upgrade');
+  assert.deepEqual([upgrade.enabled, upgrade.reason], [true, null]);
+
+  execute(game, { action: 'upgrade', id: house.id });
+  run(game, 1);
+  model = panelModel(game, house);
+  assert.equal(model.title, 'Worker house');
+  assert.ok(model.lines.some((l) => l.label === 'Bread' && l.value === 'Supplied'));
+  assert.equal(model.actions.some((a) => a.id === 'upgrade'), false, 'no further upgrade');
+});
+
+test('the info panel for the last warehouse refuses demolish and says why', () => {
+  const game = richGame();
+  const model = panelModel(game, game.state.buildings[0]);
+  assert.equal(model.title, 'Warehouse');
+  const demolish = model.actions.find((a) => a.id === 'demolish');
+  assert.deepEqual([demolish.enabled, demolish.reason], [false, 'You cannot demolish your last warehouse.']);
+  assert.ok(model.lines.some((l) => l.label === 'Island total' && l.value === '100 of each good'));
+});
+
+test('building the panel never changes the game', () => {
+  const game = richGame();
+  buildMarket(game);
+  const house = fillHouse(game, place(game, 'house', 16, 11));
+  const before = snapshot(game);
+  for (const b of game.state.buildings) panelModel(game, b);
+  previewBuild(game, 'house', 18, 11);
+  previewRoad(game, line(12, 9, 16, 9));
+  previewDemolish(game, 16, 11, house);
+  assert.equal(snapshot(game), before);
+});

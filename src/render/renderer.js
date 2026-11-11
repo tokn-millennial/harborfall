@@ -3,18 +3,23 @@
 // Drawing order each frame:
 //   1. water (the background)
 //   2. ground tiles, then roads
-//   3. ground markers (hovered tile)
+//   3. ground markers: tinted tiles (previews, ranges) and the hovered tile
 //   4. things that stand up, far to near: trees and buildings
-//   5. outlines for the hovered or selected building
+//   5. on top: the ghost of a building being placed, outlines, warning markers
 
 import { TILE_H, boxSilhouette, depthOf, footprintCorners, tileToWorld } from './iso.js';
 import { visibleTileRange } from './camera.js';
 import { buildingVisual, shade } from './visuals.js';
+import { buildingIssue } from '../sim/index.js';
 
 const TREE_COLOR = '#2c5c36';
 const TREE_SHADOW = '#234a2c';
 const LABEL_MIN_ZOOM = 0.55;
 const GRID_MIN_ZOOM = 0.9;
+const MARKER_MIN_ZOOM = 0.45;
+const MARKER_COLOR = { bad: '#e5484d', warn: '#f5a524' };
+// A problem that stops a building working is red. A shortage is amber.
+const markerLevel = (issue) => (issue === 'no_road' || issue === 'no_market' ? 'bad' : 'warn');
 
 export function createRenderer(canvas, rules) {
   const ctx = canvas.getContext('2d');
@@ -78,9 +83,10 @@ export function createRenderer(canvas, rules) {
     path.closePath();
   }
 
-  function drawBox(building, zoom) {
-    const def = rules.buildings[building.type];
-    const { color, risePx, label } = buildingVisual(rules, building);
+  // Draws a box. `building` only needs x, y and what buildingVisual needs.
+  function drawBox(building, zoom, visual = buildingVisual(rules, building), size = rules.buildings[building.type]) {
+    const def = size;
+    const { color, risePx, label } = visual;
     const [n, e, s, west] = footprintCorners(building.x, building.y, def.w, def.h);
     const up = (p) => ({ x: p.x, y: p.y - risePx });
     const hairline = 1 / zoom;
@@ -113,8 +119,14 @@ export function createRenderer(canvas, rules) {
     }
   }
 
-  // overlay: { hoverTile: {x, y} | null, hoverBuilding, selectedBuilding }
-  function draw(state, camera, overlay = {}) {
+  // overlay (all optional):
+  //   hoverTile          { x, y } to outline
+  //   hoverBuilding      building to outline in white
+  //   selectedBuilding   building to outline in yellow
+  //   tints              [{ x, y, w, h, color }] ground tiles to tint
+  //   ghost              { x, y, w, h, color, risePx, label, outline } a building not yet placed
+  function draw(game, camera, overlay = {}) {
+    const state = game.state;
     const map = state.map;
     const zoom = camera.zoom;
     trees ??= buildTrees(map);
@@ -166,7 +178,15 @@ export function createRenderer(canvas, rules) {
       ctx.stroke(roads);
     }
 
-    // 3. Ground markers.
+    // 3. Ground markers. Tints of the same color are filled together.
+    if (overlay.tints?.length) {
+      const byColor = {};
+      for (const t of overlay.tints) diamond((byColor[t.color] ??= new Path2D()), t.x, t.y, t.w ?? 1, t.h ?? 1);
+      for (const [color, path] of Object.entries(byColor)) {
+        ctx.fillStyle = color;
+        ctx.fill(path);
+      }
+    }
     if (overlay.hoverTile && !overlay.hoverBuilding) {
       const path = new Path2D();
       diamond(path, overlay.hoverTile.x, overlay.hoverTile.y);
@@ -213,7 +233,22 @@ export function createRenderer(canvas, rules) {
     flushTrees();
     for (; next < buildings.length; next++) drawBox(buildings[next].building, zoom);
 
-    // 5. Outlines on top.
+    // 5. On top: the ghost of a building being placed.
+    if (overlay.ghost) {
+      const g = overlay.ghost;
+      ctx.globalAlpha = 0.6;
+      drawBox(g, zoom, { color: g.color, risePx: g.risePx, label: g.label ?? '' }, { w: g.w, h: g.h });
+      ctx.globalAlpha = 1;
+      // A bold outline says at a glance whether the spot is good: green or red.
+      if (g.outline) {
+        polygon(boxSilhouette(g.x, g.y, g.w, g.h, g.risePx));
+        ctx.strokeStyle = g.outline;
+        ctx.lineWidth = 3 / zoom;
+        ctx.stroke();
+      }
+    }
+
+    // Outlines.
     for (const [building, color, width] of [[overlay.selectedBuilding, '#ffe27a', 3], [overlay.hoverBuilding, '#ffffff', 2]]) {
       if (!building) continue;
       const def = rules.buildings[building.type];
@@ -221,6 +256,32 @@ export function createRenderer(canvas, rules) {
       ctx.strokeStyle = color;
       ctx.lineWidth = width / zoom;
       ctx.stroke();
+    }
+
+    // Warning markers: a small "!" above any building with a problem.
+    // They stay the same size on screen whatever the zoom.
+    if (zoom >= MARKER_MIN_ZOOM) {
+      const radius = 9 / zoom;
+      ctx.font = `700 ${13 / zoom}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (const { building } of buildings) {
+        const issue = buildingIssue(game, building);
+        if (!issue) continue;
+        const def = rules.buildings[building.type];
+        // Above the back corner of the roof, clear of the label in the middle.
+        const centre = tileToWorld(building.x, building.y);
+        const cy = centre.y - buildingVisual(rules, building).risePx - radius * 0.4;
+        ctx.beginPath();
+        ctx.arc(centre.x, cy, radius, 0, Math.PI * 2);
+        ctx.fillStyle = MARKER_COLOR[markerLevel(issue)];
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+        ctx.lineWidth = 1.5 / zoom;
+        ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('!', centre.x, cy + 0.5 / zoom);
+      }
     }
   }
 

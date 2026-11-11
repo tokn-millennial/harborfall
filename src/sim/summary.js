@@ -40,3 +40,22 @@ export function getSummary(game) {
     },
   };
 }
+
+// The one thing most wrong with a building right now, as a short code, or null
+// when it is fine. Used for warning markers and the info panel.
+//   no_road, missing_input, storage_full   producers and markets
+//   no_market, no_<good>                   houses
+export function buildingIssue(game, building) {
+  const def = game.rules.buildings[building.type];
+  if (building.house) {
+    if (!building.house.served) return 'no_market';
+    for (const good in building.house.met) {
+      if (!building.house.met[good]) return `no_${good}`;
+    }
+    return null;
+  }
+  if (def.requiresRoad && !building.connected) return 'no_road';
+  const status = building.production?.status;
+  if (status === 'missing_input' || status === 'storage_full') return status;
+  return null;
+}

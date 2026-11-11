@@ -1,19 +1,23 @@
-// Mouse and keyboard control of the camera.
-//   Drag (any mouse button)   pan
+// Mouse and keyboard control of the camera, plus raw pointer events for the tools.
+//   Drag                      pan (unless the active tool wants that button)
 //   Mouse wheel               zoom, centred on the cursor
 //   W A S D or arrow keys     pan
 //   + and -                   zoom, centred on the screen
 //   Home or C                 back to the start
 //
-// It also tracks where the pointer is, and reports clicks that were not drags.
+// Options:
+//   shouldPan(button)          asked at mouse-down: does a drag with this button pan the view?
+//   onDown(x, y, button)       mouse button went down on the map
+//   onMove(x, y)               pointer moved
+//   onUp(x, y, button, moved)  button released. `moved` is true if it was a drag, not a click.
+//   onHome()                   Home or C was pressed
 
 import { panByScreen, zoomAt } from '../render/camera.js';
 
-const KEY_PAN_SPEED = 700;     // screen pixels per second
+const KEY_PAN_SPEED = 700;     // screen pixels per second while a pan key is held
+const TAP_NUDGE = 32;          // screen pixels moved at once when a pan key goes down
 const DRAG_THRESHOLD = 5;      // pixels the mouse may move and still count as a click
 const WHEEL_STRENGTH = 0.0015;
-
-const TAP_NUDGE = 32;          // screen pixels moved at once when a pan key goes down
 
 const PAN_KEYS = {
   ArrowLeft: [-1, 0], KeyA: [-1, 0],
@@ -26,12 +30,10 @@ const PAN_KEY_BY_CHARACTER = {
   a: 'KeyA', d: 'KeyD', w: 'KeyW', s: 'KeyS',
 };
 
-export function createCameraControls({ canvas, camera, view, onHome, onClick }) {
+export function createCameraControls({ canvas, camera, view, shouldPan = () => true, onDown, onMove, onUp, onHome }) {
   const pointer = { x: 0, y: 0, inside: false };
   const held = new Set();
-  let drag = null; // { button, lastX, lastY, moved }
-  // Which mouse buttons pan when dragged. Phase 4 takes the left button for tools.
-  let panButtons = new Set([0, 1, 2]);
+  let drag = null; // { button, pans, lastX, lastY, startX, startY, moved }
 
   const position = (event) => {
     const rect = canvas.getBoundingClientRect();
@@ -40,9 +42,19 @@ export function createCameraControls({ canvas, camera, view, onHome, onClick }) 
 
   canvas.addEventListener('pointerdown', (event) => {
     const p = position(event);
-    drag = { button: event.button, lastX: p.x, lastY: p.y, startX: p.x, startY: p.y, moved: false };
-    canvas.setPointerCapture(event.pointerId);
+    pointer.x = p.x;
+    pointer.y = p.y;
+    pointer.inside = true;
+    drag = { button: event.button, pans: shouldPan(event.button), lastX: p.x, lastY: p.y, startX: p.x, startY: p.y, moved: false };
+    // Capture keeps the drag alive if the pointer leaves the canvas. It can
+    // fail for pointers the browser does not consider active; the drag still works.
+    try {
+      canvas.setPointerCapture(event.pointerId);
+    } catch {
+      // nothing to do
+    }
     event.preventDefault();
+    onDown?.(p.x, p.y, event.button);
   });
 
   canvas.addEventListener('pointermove', (event) => {
@@ -50,26 +62,27 @@ export function createCameraControls({ canvas, camera, view, onHome, onClick }) 
     pointer.x = p.x;
     pointer.y = p.y;
     pointer.inside = true;
-    if (!drag) return;
-    if (!drag.moved && Math.hypot(p.x - drag.startX, p.y - drag.startY) > DRAG_THRESHOLD) drag.moved = true;
-    if (drag.moved && panButtons.has(drag.button)) panByScreen(camera, p.x - drag.lastX, p.y - drag.lastY);
-    drag.lastX = p.x;
-    drag.lastY = p.y;
+    if (drag) {
+      if (!drag.moved && Math.hypot(p.x - drag.startX, p.y - drag.startY) > DRAG_THRESHOLD) drag.moved = true;
+      if (drag.moved && drag.pans) panByScreen(camera, p.x - drag.lastX, p.y - drag.lastY);
+      drag.lastX = p.x;
+      drag.lastY = p.y;
+    }
+    onMove?.(p.x, p.y);
   });
 
-  const endDrag = (event) => {
+  canvas.addEventListener('pointerup', (event) => {
     if (!drag) return;
-    const wasClick = !drag.moved;
-    const button = drag.button;
+    const { button, moved } = drag;
     drag = null;
     if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-    if (wasClick && onClick) {
-      const p = position(event);
-      onClick(p.x, p.y, button);
-    }
-  };
-  canvas.addEventListener('pointerup', endDrag);
-  canvas.addEventListener('pointercancel', () => { drag = null; });
+    const p = position(event);
+    onUp?.(p.x, p.y, button, moved);
+  });
+  canvas.addEventListener('pointercancel', () => {
+    if (drag) onUp?.(pointer.x, pointer.y, -1, true);
+    drag = null;
+  });
   canvas.addEventListener('pointerleave', () => { if (!drag) pointer.inside = false; });
   canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 
@@ -107,15 +120,17 @@ export function createCameraControls({ canvas, camera, view, onHome, onClick }) 
     const pan = panKey(event);
     if (pan) held.delete(pan);
   });
-  window.addEventListener('blur', () => { held.clear(); drag = null; });
+  window.addEventListener('blur', () => {
+    held.clear();
+    if (drag) onUp?.(pointer.x, pointer.y, -1, true);
+    drag = null;
+  });
 
   return {
     pointer,
-    get dragging() {
-      return drag !== null && drag.moved;
-    },
-    setPanButtons(buttons) {
-      panButtons = new Set(buttons);
+    // True while the view is being dragged around.
+    get panning() {
+      return drag !== null && drag.moved && drag.pans;
     },
     // Call once per frame with the seconds since the last frame.
     update(dt) {

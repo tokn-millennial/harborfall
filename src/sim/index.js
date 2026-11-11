@@ -7,10 +7,13 @@ import { buildingAt, buildingById } from './buildings.js';
 import { stepProduction } from './production.js';
 import { settleIncome } from './economy.js';
 import { checkWin } from './win.js';
-import { getSummary } from './summary.js';
-import { stepHouses, upgradeReason, countResidents, isSatisfied } from './population.js';
+import { getSummary, buildingIssue } from './summary.js';
+import { stepHouses, upgradeReason, countResidents, isSatisfied, inMarketRange } from './population.js';
 
-export { createGame, execute, canPlace, siteReason, buildingAt, buildingById, countResidents, isSatisfied, getSummary };
+export {
+  createGame, execute, canPlace, siteReason, buildingAt, buildingById,
+  countResidents, isSatisfied, getSummary, buildingIssue, inMarketRange,
+};
 
 // Checks an upgrade without doing it. Never changes the game.
 export function canUpgrade(game, id) {

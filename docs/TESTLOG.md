@@ -255,3 +255,92 @@ Once more, no bug was found in the simulation. It ran in the browser unchanged, 
 
 **What I would change**
 - I would test input with real, short key taps from the first minute. Both key bugs came from assuming a key is held for several frames.
+
+## Phase 4: UI and play
+
+Date: 2026-11-10. Status: approved by Colin. The gate was that he could play from start to win.
+
+**Turns used:** 1 (the approval of Phase 3 started it). Inside that turn there were 5 automated test runs and about 20 rounds of checks in a real browser.
+
+**What was built**
+- Top bar: coins, income, goods, population, goal bar, clock.
+- Build menu with a hint strip, and a note that follows the pointer.
+- Placement preview: a see-through building outlined green or red, with the reach of markets and lumberjacks shown.
+- Road tool: click for one tile, drag for a line.
+- Demolish tool.
+- Info panel with Upgrade and Demolish buttons.
+- Pause and speed controls, with keys.
+- Win screen.
+- Warning marks on buildings, and a "losing money" line.
+- A ? panel listing the controls.
+
+**Automated tests: 202 pass, 0 fail.** That is 180 from before plus 22 for the logic behind the UI.
+
+**Browser checks with real clicks and keys: 22 of 22 pass**, five of them after fixes.
+
+| Check | Result |
+|---|---|
+| Page loads with the full UI and no console errors | Pass |
+| Pick Lumberjack, hover: see-through copy and forest in reach are shown | Pass |
+| Click places it at the pointed tile and charges 20 coins | Pass |
+| A building with no road gets a red ! | Pass |
+| Drag a two-tile road: both tiles laid, lumberjack connects and starts work | Pass |
+| Drag an L-shaped road of 7 tiles | Pass |
+| Place fisherman, market and house from the menu | Pass |
+| Click once with the Road tool: one tile laid | Pass |
+| Demolish tool removes a road tile | Pass |
+| Placing on forest is refused with "You cannot build on water or forest." | Pass |
+| Esc puts the tool away | Pass |
+| Clicking a house roof opens its panel with the right residents, needs and taxes | Pass |
+| Key 3 sets 4x and the 4x button lights up | Pass |
+| Residents move in once the market is connected | Pass |
+| Win screen appears at 100 Workers, pauses the game and states the time | Pass |
+| Keep playing closes it and the game resumes | Pass |
+| Upgrade button turns a full Farmer house into a Worker house | Pass |
+| Space pauses (0 ticks in 2.5 seconds) and resumes at the earlier speed | Pass |
+| Right-click puts the tool away | Pass |
+| "You are losing money" appears when income is negative | Pass after a layout fix |
+| ? opens and closes the controls panel | Pass after a layout fix |
+| Preview of a market: green outline where valid, red where not | Pass after a fix |
+
+**A full game through the UI.** A test tool played the standard build order using only UI actions: 34 menu clicks, 50 clicks on the map, 13 road drags and 13 presses of Upgrade.
+
+| Measure | UI playthrough | Headless bot |
+|---|---|---|
+| Result | Won | Won |
+| Time to win | 28.55 minutes | 28.55 minutes |
+| Final game state | Identical, all 55,844 characters of it | |
+
+Every action sent through the UI did exactly what the matching command does.
+
+**Bugs found: 7. Bugs fixed: 7.**
+
+| # | Bug | How it was found | Fix |
+|---|---|---|---|
+| 1 | Text said "1 planks". I had even written a test expecting it. | Reading my own test output. | `goods.json` gained a singular word, and the text uses it. |
+| 2 | An inline edit of mine left `goods.json` invalid for about a minute. | The edit script stopped with an error. | Rewrote the file at once. Nothing was committed in that state, and I stopped making edits that way. |
+| 3 | Warning marks were drawn over the roof labels. | Screenshot. | Moved to the back corner of the roof. |
+| 4 | The "losing money" line covered the second row of the top bar. | Screenshot at 1280 by 720. | It is now its own row inside the bar. |
+| 5 | The ? panel and the info panel overlapped the top bar when it wrapped to two rows. | Same screenshot. | Panels now flow below the bar, whatever its height. |
+| 6 | A valid market preview was pink, close to the red used for "cannot build here". | Screenshot. | Every preview now has a green or red outline. |
+| 7 | A drag could fail to start if the browser refused to capture the pointer. | The UI playthrough, which uses scripted pointer events. | The capture is now optional. The drag works without it. |
+
+No bug was found in the simulation, for the fourth phase running.
+
+**Decisions made:** 12 (D51 to D62). None changes the game rules.
+
+**Weak or unfinished**
+- **Nobody has played it by hand from start to win.** I did about 20 real clicks for the first few buildings. The full game was played by a script that sends pointer events. The script never misclicks, never hesitates, and always centres the view before clicking. The gate is you playing it.
+- **I still have not seen it at full speed.** My browser pane draws about 1 frame a second.
+- **Upgrades are one house at a time.** A win takes at least 13 select-and-upgrade pairs.
+- **The build menu has no shortcut keys.**
+- **Demolish has no undo and no confirmation.**
+- **Roads can only be dragged as an L shape.**
+- **The top bar wraps to two or three rows on a narrow window** and then covers more of the map.
+- **A market's panel counts houses served by all markets, not by that one.**
+- **Mac, trackpads and touch are untested.**
+- **How long a person takes to win is still unknown.**
+
+**What I would change**
+- I would write the UI playthrough before the panels, not after. It found the pointer capture bug in seconds and would have guarded every later change.
+- I would never again assert awkward output in a test just because the code produced it. Bug 1 passed its test.

@@ -24,8 +24,7 @@ function addNeeds(house, tier) {
   }
 }
 
-// A house is served when any of its tiles is within range of a connected market.
-export function recomputeCoverage(game) {
+function connectedMarkets(game) {
   const { rules, state } = game;
   const markets = [];
   for (const b of state.buildings) {
@@ -35,6 +34,18 @@ export function recomputeCoverage(game) {
       markets.push({ cx, cy, radius: def.marketRadius });
     }
   }
+  return markets;
+}
+
+// Would a w-by-h building at (x, y) be within range of a connected market?
+export function inMarketRange(game, x, y, w, h) {
+  return connectedMarkets(game).some((m) => footprintWithinRadius(m.cx, m.cy, m.radius, x, y, w, h));
+}
+
+// A house is served when any of its tiles is within range of a connected market.
+export function recomputeCoverage(game) {
+  const { rules, state } = game;
+  const markets = connectedMarkets(game);
   for (const b of state.buildings) {
     if (!b.house) continue;
     const def = rules.buildings[b.type];

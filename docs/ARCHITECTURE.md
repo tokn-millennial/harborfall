@@ -37,6 +37,7 @@ If you later move to a real engine, you keep the simulation and the data files a
 ```
 Harborfall/
   index.html              The page. Holds the canvas and the panels.
+  ui.css                  How the panels look.
   package.json            Names the commands: test, start, bot, map. No dependencies.
   serve.mjs               Tiny local web server so the browser can load the game.
   start-game.bat          Double-click on Windows to start the server and open the game.
@@ -77,14 +78,17 @@ Harborfall/
       renderer.js         Draws terrain, roads, trees, buildings and outlines on the canvas.
 
     ui/                   Input and panels.
-      cameraControls.js   Mouse and keyboard control of the camera. Reports clicks.
-      input.js            Mouse and keyboard to tool actions (Phase 4).
-      tools.js            Build, road-drag, demolish and select tools.
-      hud.js              Coins, goods, population.
-      buildMenu.js        The list of buildings.
-      infoPanel.js        Details for the selected building.
-      speedControls.js    Pause, 1x, 2x, 4x.
+      gameUi.js           The controller: active tool, selection, clicks into commands.
+      cameraControls.js   Mouse and keyboard control of the camera. Passes pointer events on.
+      tools.js            What a build, road or demolish click would do. Pure, tested in Node.
+      text.js             Every sentence the player reads, built from the data. Pure.
+      panelModel.js       What the info panel says about a building. Pure.
+      hud.js              Coins and income, goods, population, clock.
+      buildMenu.js        The tool buttons and the hint strip above them.
+      infoPanel.js        Shows a panel model, reports button presses.
+      speedControls.js    Pause, 1x, 2x, 4x, and their keys.
       winScreen.js        The win message.
+      dom.js              Two small helpers for making page elements.
 
     platform/             The only place that touches the outside world.
       loadData.browser.js Loads the JSON files in the browser.
@@ -97,6 +101,7 @@ Harborfall/
     print-map.mjs         Prints the island as text, to check it without a browser.
     bot.mjs               Plays a full game headless and prints a report.
     tune.mjs              Plays several games with changed numbers, to compare them.
+    ui-playthrough.js     Plays a whole game through the real UI, in the browser.
     bot/
       bot.js              Follows a build order, waits when it cannot afford a step.
       planner.js          Picks building sites and road routes.
@@ -253,6 +258,7 @@ All tests run with `node --test` and need no browser.
 | `balance.test.js` | The balance targets from the brief, checked against the shipped data: starting stock, one fisherman per 20 residents (on paper and in play), about +40 coins a minute for the winning city, and no dead ends. |
 | `bot.test.js` | The Phase 2 gate. The bot wins on the shipped island in 25 to 40 minutes, with no long waits, income near +40 at the win and never below +10 after minute 5. It also wins on five other islands and from three bad openings. |
 | `iso.test.js` | Tile to screen and back returns the same tile for every tile, at several zooms and pans. Zoom keeps the point under the cursor fixed. Picking finds roofs, and the nearer of two overlapping boxes. |
+| `ui.test.js` | The logic behind the UI: every reason code has a sentence, previews agree with what a click then does, road lines are unbroken, the info panel says the right thing for each kind of building. |
 | `loop.test.js` | Real time becomes whole ticks. Speeds 2x and 4x, pause, and a stalled tab all behave. |
 
 Later phases add:
@@ -280,3 +286,19 @@ The bot lives in `tools/bot/`, outside the simulation. It uses only the simulati
 A fixed order is deliberate. When a game goes badly, the cause is the order or the balance numbers, not a clever bot hiding a problem.
 
 Limits: the bot cannot place buildings larger than 2x2, and it plays far more cleanly than a person.
+
+## 11. The UI
+
+The UI is split so that as much as possible can be tested without a browser.
+
+- **Pure logic, tested in Node:** `text.js`, `tools.js` and `panelModel.js`. They answer questions such as "what would a click here do?" and "what should the panel say?" using the same checks the simulation's commands use. A preview can therefore never disagree with the click that follows.
+- **Page code, checked in the browser:** `gameUi.js` and the panel files. They only show what the pure logic returns and send commands.
+- **One way in.** The UI changes the game only by calling `execute`. It never edits the state.
+
+Two queries were added to the simulation's public face for the UI: `buildingIssue` (the one thing most wrong with a building) and `inMarketRange` (would a house here be served).
+
+### The UI playthrough
+
+`tools/ui-playthrough.js` plays the standard build order through the real UI. It clicks menu buttons, clicks and drags on the canvas, selects houses by their roofs and presses Upgrade. Only the passing of time is done directly. It is run from the browser console and takes about a fifth of a second.
+
+It ends in exactly the same game state as the headless bot. That is strong evidence that every UI action does what the matching command does. It is not evidence about how the game feels to a person.

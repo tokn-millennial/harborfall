@@ -1,0 +1,67 @@
+// The bar across the top: coins and income, goods, population, and the clock.
+
+import { el, setText } from './dom.js';
+import { clock } from './text.js';
+
+export function createHud(root, rules) {
+  const coins = el('span', 'hud-big');
+  const net = el('span', 'hud-net');
+  const warning = el('div', 'hud-warning');
+  warning.hidden = true;
+
+  const goods = {};
+  const goodsRow = el('div', 'hud-goods');
+  for (const id of rules.goodIds) {
+    const swatch = el('span', 'swatch');
+    swatch.style.background = rules.goods[id].color;
+    const value = el('span', 'hud-value');
+    goods[id] = { value, box: el('span', { class: 'hud-good', title: rules.goods[id].name }, [swatch, el('span', 'hud-label', rules.goods[id].name), value]) };
+    goodsRow.append(goods[id].box);
+  }
+
+  const tiers = {};
+  const popRow = el('div', 'hud-pop');
+  for (const [id, tier] of Object.entries(rules.tiers)) {
+    const value = el('span', 'hud-value');
+    tiers[id] = value;
+    popRow.append(el('span', 'hud-good', [el('span', 'hud-label', `${tier.name}s`), value]));
+  }
+  const bar = el('div', 'progress');
+  const fill = el('div', 'progress-fill');
+  bar.append(fill);
+  const goal = el('span', 'hud-label');
+  popRow.append(el('span', 'hud-good', [goal, bar]));
+
+  const time = el('span', { class: 'hud-time', title: 'Game time' });
+
+  root.append(
+    el('div', 'hud-coins', [el('span', 'hud-label', 'Coins'), coins, net]),
+    goodsRow,
+    popRow,
+    time,
+    warning,
+  );
+
+  return {
+    update(summary) {
+      setText(coins, String(summary.coins));
+      const n = summary.income.net;
+      setText(net, `${n >= 0 ? '+' : ''}${n.toFixed(1)} a minute`);
+      net.classList.toggle('bad', n < 0);
+      warning.hidden = n >= 0;
+      if (n < 0) setText(warning, 'You are losing money. Build houses, or demolish something.');
+
+      for (const id of rules.goodIds) {
+        setText(goods[id].value, `${summary.goods[id]} / ${summary.storageCap}`);
+        goods[id].box.classList.toggle('full', summary.goods[id] >= summary.storageCap);
+        goods[id].box.classList.toggle('empty', summary.goods[id] === 0);
+      }
+      for (const id of Object.keys(tiers)) setText(tiers[id], `${summary.residents[id]} / ${summary.housing[id]}`);
+
+      const { target, current, tier } = summary.win;
+      setText(goal, `Goal: ${Math.min(current, target)} of ${target} ${rules.tiers[tier].name}s`);
+      fill.style.width = `${Math.min(100, (current / target) * 100)}%`;
+      setText(time, clock(summary.seconds));
+    },
+  };
+}

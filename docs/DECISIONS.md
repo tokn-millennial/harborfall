@@ -88,3 +88,20 @@ Decisions made after Phase 0 are added below, with the phase they belong to.
 | D48 | A pan key moves the view at once when pressed, then keeps moving while held. + and - are read as typed characters, not key positions. | In testing, a quick tap moved nothing, and + failed where the key sits elsewhere on the keyboard. | `src/ui/cameraControls.js`. |
 | D49 | One frame may account for at most 1 second of real time. | Game time then stays correct down to one frame a second, and returning to a hidden tab causes no jump. | `MAX_FRAME_SECONDS` in `src/main.js`. |
 | D50 | Tile size (64 by 32 pixels) and zoom limits are constants in the render code, not data files. | They are drawing settings, not game rules. | `src/render/iso.js`, `src/render/camera.js`. |
+
+### Phase 4: UI and play
+
+| # | Decision | Why | How to change |
+|---|---|---|---|
+| D51 | A left drag moves the view, except with the Road tool, where it lays road. | Laptops often have no middle button. Phase 3 said the left button would belong to the tools alone. That would have left trackpad users with only the keys. | `shouldPan` in `src/ui/gameUi.js`. |
+| D52 | A tool stays picked after placing. | Placing 14 houses should not take 28 clicks. | `src/ui/gameUi.js`. |
+| D53 | A building is placed centred on the pointer. | The copy that follows the pointer then sits under it, not off to one side. | `anchorFor` in `src/ui/tools.js`. |
+| D54 | Warning marks on buildings: red ! for no road or no market, amber ! for a wait. | You did not list these. A new player otherwise has to click every building to find the one that is idle. I count it as part of "building info". | Remove the marker block in `src/render/renderer.js`. |
+| D55 | The top bar says "You are losing money" when income is negative. | Phase 2 found that negative income is the main way a new player gets into trouble. | `src/ui/hud.js`. |
+| D56 | A house may be placed out of market range, but the note at the pointer warns that nobody will move in. | The simulation allows it, and a player may place houses before the market. | `previewBuild` in `src/ui/tools.js`. |
+| D57 | Winning pauses the game. Keep playing resumes at 1x. | The brief has no lose state and says nothing about what follows a win. | `src/ui/gameUi.js`. |
+| D58 | All on-screen text is built from the data files. `goods.json` gained an optional `singular` word ("plank"). | Retuning the data then updates the text by itself. | `src/ui/text.js`. |
+| D59 | No new-game button. Refresh the page. | Not listed. | Would need a small addition to `src/main.js`. |
+| D60 | Demolish has no confirmation. | A misclick costs half a building, which is recoverable. A prompt on every demolish would be tiresome. | `src/ui/gameUi.js`. |
+| D61 | The demo town link from Phase 3 now lives in the ? panel. | It stays useful for looking at a finished town, and it is out of the way. | Remove the link in `index.html`. |
+| D62 | A test tool plays a full game through the real UI. | It is the closest I can get to "play from start to win" without a person at the mouse. | `tools/ui-playthrough.js`. |
