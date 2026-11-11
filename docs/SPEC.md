@@ -217,8 +217,11 @@ Before tuning, the bread-first opening left the bot at zero coins and -10 a minu
 ## 11. Screen and controls (Phases 3 and 4)
 
 - Isometric view with flat-color placeholder shapes. No final art.
-- Pan: W A S D or arrow keys, or drag with the middle or right mouse button.
-- Zoom: mouse wheel, centred on the cursor.
+- Pan: W A S D or arrow keys, or drag with the mouse. In Phase 3 any mouse button drags. Phase 4 keeps the middle and right buttons for dragging and gives the left button to the build tools.
+- Zoom: mouse wheel, centred on the cursor. The + and - keys also zoom, centred on the screen. Zoom runs from 0.35x, which shows the whole island, to 3x.
+- Home or C: back to the start site.
+- The view cannot be dragged away from the island.
+- Houses show their number of residents on the roof. Other buildings show the first two letters of their name.
 - Left click: place the selected building, or select a building to see its info.
 - Drag with the Road tool: lays an L-shaped line of road.
 - Right click or Esc: cancel the current tool.

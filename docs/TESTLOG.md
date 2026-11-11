@@ -183,3 +183,75 @@ Date: 2026-11-10. Status: approved by Colin with no changes.
 **What I would change**
 - I would build a second, clumsier bot that pauses, overbuilds roads and misplaces a few buildings. It would estimate a person's time far better than a perfect one.
 - I would have run the bad openings before tuning the timing. I tuned to 28.8 minutes first and then had to retune when the dead end showed up.
+
+## Phase 3: Renderer
+
+Date: 2026-11-10. Status: approved by Colin, who confirmed the island is visible and movable.
+
+**Turns used:** 1 (the approval of Phase 2 started it). Inside that turn there were 3 automated test runs and 6 rounds of checks in a real browser.
+
+**What was built**
+- `serve.mjs` and two double-click start files, one for Windows and one for Mac.
+- `index.html`, the page.
+- Render layer in `src/render/`: isometric math, camera, picking, building visuals, and the canvas renderer.
+- `src/ui/cameraControls.js`: drag, wheel, keys.
+- `src/platform/loop.js`: the fixed-tick loop, and `src/platform/loadData.browser.js`.
+- `src/main.js`, which wires the layers together.
+
+**Automated tests: 180 pass, 0 fail.** That is 155 from before plus 19 for the isometric math, camera and picking, and 6 for the tick loop.
+
+**Browser checks, done by me in the built-in browser**
+
+| Check | Result |
+|---|---|
+| Page loads with no errors in the console | Pass |
+| Island draws: water, coast, grass, fertile land, forest with trees | Pass |
+| Starting warehouse is drawn and centred | Pass |
+| Hover over ground shows "Tile 51, 47 · Grass" and highlights the tile | Pass |
+| Hover over the warehouse shows its name and outlines the box | Pass |
+| Mouse wheel zooms in and out, centred on the cursor | Pass, 0.64x to 1.57x measured |
+| Dragging moves the view by exactly the distance dragged | Pass |
+| W A S D and arrow keys move the view | Pass after a fix |
+| + and - zoom | Pass after a fix |
+| Home and C return to the start | Pass |
+| Demo town: 32 buildings of all 8 kinds drawn, nearer ones in front | Pass |
+| Window resize keeps the picture sharp and correctly sized | Pass at 1280 by 720 |
+| Whole island visible at the furthest zoom | Pass |
+| Server refuses `.git`, hidden files and paths outside the folder | Pass, 403 each |
+| Starting a second server gives a clear message | Pass |
+
+**Drawing speed**, measured in the browser with the 32-building demo town on a 1920 by 1080 canvas:
+
+| Zoom | Time to draw one frame |
+|---|---|
+| 0.35x, whole island | 9.5 ms |
+| 1x | 4.2 ms |
+| 3x | 0.8 ms |
+
+A screen that refreshes 60 times a second allows 16.7 ms per frame, so all three fit.
+
+**Bugs found: 4. Bugs fixed: 4.**
+
+| # | Bug | How it was found | Fix |
+|---|---|---|---|
+| 1 | A quick tap on W A S D or an arrow key moved nothing. The view only moved if a frame was drawn while the key was down. | Pressing keys in the browser and reading the camera position. | The view now moves at once on key down, then continues while held. |
+| 2 | + and - did nothing when the key press carried no key position. They were matched by position, which also breaks on keyboards where + sits elsewhere. | Same test. | They are now matched by the typed character. |
+| 3 | At a very low frame rate the game ran slower than real time, because each frame could count for at most a quarter of a second. | The test browser draws about 1 frame a second, and the clock advanced 5 ticks in 2 seconds, not 20. | A frame may now count for up to 1 second. |
+| 4 | Roof labels clashed: W meant Warehouse and Worker, F meant Farm, Fisherman and Farmer. | Looking at the demo town screenshot. | Houses show their residents. Other buildings show two letters. |
+
+Once more, no bug was found in the simulation. It ran in the browser unchanged, which is the first real evidence for the layer rule.
+
+**Decisions made:** 8 (D43 to D50). None changes the game rules.
+
+**Weak or unfinished**
+- **I could not watch it at full speed.** The built-in browser pane was hidden on your screen, so it drew about 1 frame a second. Positions, picking and drawing are verified. Smoothness at 60 frames a second is not. You are the first to see it move.
+- **The two start files are untested.** Running them would have opened a browser window on your desktop. The server they start is tested.
+- **Mac is untested.** Nothing in the code is Windows-only, but nothing was run on a Mac.
+- **Trackpads are a guess.** Two-finger scroll will zoom. There is no pinch handling and no trackpad-friendly way to pan other than the keys or dragging.
+- **The renderer itself has no automated test.** Four of its five files are pure math and are tested. The canvas drawing is checked by eye only.
+- **Small buildings hide behind tall ones.** In the demo town the two lumberjacks are mostly hidden behind the warehouse. There is no way to rotate the view or see through buildings.
+- **The whole-island view takes 9.5 ms a frame.** That is fine on this machine and may not be on a slow one. Caching the ground as an image would fix it.
+- **The help panel covers the top-left corner of the island.**
+
+**What I would change**
+- I would test input with real, short key taps from the first minute. Both key bugs came from assuming a key is held for several frames.

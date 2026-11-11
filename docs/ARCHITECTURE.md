@@ -36,9 +36,11 @@ If you later move to a real engine, you keep the simulation and the data files a
 
 ```
 Harborfall/
-  index.html              The page. Holds the canvas and the HUD.
-  package.json            Names the commands: test, start, bot. No dependencies.
+  index.html              The page. Holds the canvas and the panels.
+  package.json            Names the commands: test, start, bot, map. No dependencies.
   serve.mjs               Tiny local web server so the browser can load the game.
+  start-game.bat          Double-click on Windows to start the server and open the game.
+  start-game.command      The same for a Mac.
 
   data/                   ALL game rules. Edit these to tune the game.
     config.json           Tick rate, start resources, economy, win target.
@@ -68,12 +70,15 @@ Harborfall/
       summary.js          The numbers the HUD, bot and reports read.
 
     render/               Drawing. Reads state, never changes it.
-      iso.js              Tile to screen math and back. Pure math, tested in Node.
-      camera.js           Pan and zoom.
-      renderer.js         Draws terrain, roads, buildings, previews.
+      iso.js              Tile to world math and back, box outlines, draw order. Pure math.
+      camera.js           Pan, zoom, world to screen and back, what is visible. Pure math.
+      pick.js             What is under a screen point: ground tile and building. Pure math.
+      visuals.js          Each building's color, height and label, from the data files.
+      renderer.js         Draws terrain, roads, trees, buildings and outlines on the canvas.
 
     ui/                   Input and panels.
-      input.js            Mouse and keyboard to tool actions.
+      cameraControls.js   Mouse and keyboard control of the camera. Reports clicks.
+      input.js            Mouse and keyboard to tool actions (Phase 4).
       tools.js            Build, road-drag, demolish and select tools.
       hud.js              Coins, goods, population.
       buildMenu.js        The list of buildings.
@@ -222,7 +227,10 @@ Adding a new producer, such as a second kind of farm, needs only a new entry in 
 - Classic 2:1 isometric diamonds. A tile is 64 x 32 pixels at zoom 1.
 - Tiles and buildings are drawn back to front so nearer things cover farther things.
 - Terrain is a flat colored diamond. A building is a colored box whose color and height come from the data files.
-- Tile picking converts the mouse position back to a tile on the ground. Known limit: clicking the roof of a tall box picks the tile behind it. This is acceptable for flat placeholders and is listed as a known issue.
+- Tile picking gives two answers for a screen point: the ground tile under it, and the building the pointer is over. A point on a drawn box counts as that building, even though the ground tile behind the box is a different one. Where two boxes overlap on screen, the nearer one wins. Phase 0 planned to accept wrong picks on roofs. That turned out to be easy to do properly, so it was.
+- Four of the five render files are pure math with no canvas, so they are tested in Node. Only `renderer.js` touches the canvas, and it is checked by eye in the browser.
+- The renderer draws in world pixels and lets the canvas apply pan and zoom. Ground tiles are batched into one shape per terrain type, so a frame has only a handful of fills. Trees and buildings are drawn far to near.
+- `http://localhost:5173/?demo` shows a finished town built by the bot, so the building shapes can be checked before the build menu exists.
 
 ## 8. Test plan
 
@@ -244,7 +252,8 @@ All tests run with `node --test` and need no browser.
 | `boundaries.test.js` | No file in `src/sim/` uses browser or Node features, the clock, or the built-in random function, and none imports from outside the folder. |
 | `balance.test.js` | The balance targets from the brief, checked against the shipped data: starting stock, one fisherman per 20 residents (on paper and in play), about +40 coins a minute for the winning city, and no dead ends. |
 | `bot.test.js` | The Phase 2 gate. The bot wins on the shipped island in 25 to 40 minutes, with no long waits, income near +40 at the win and never below +10 after minute 5. It also wins on five other islands and from three bad openings. |
-| `iso.test.js` (Phase 3) | Tile to screen and back returns the same tile, at several zoom and pan settings. |
+| `iso.test.js` | Tile to screen and back returns the same tile for every tile, at several zooms and pans. Zoom keeps the point under the cursor fixed. Picking finds roofs, and the nearer of two overlapping boxes. |
+| `loop.test.js` | Real time becomes whole ticks. Speeds 2x and 4x, pause, and a stalled tab all behave. |
 
 Later phases add:
 - **Phase 2:** the bot run is the balance test. It reports time to win, the coin curve, and any step that waited more than 5 minutes.

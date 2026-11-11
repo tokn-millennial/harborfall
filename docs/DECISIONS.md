@@ -75,3 +75,16 @@ Decisions made after Phase 0 are added below, with the phase they belong to.
 | D40 | The bot lays towns out on a grid with road lanes, and adds a market when houses run out of room. | Without lanes it could wall itself in. Without the market reflex, a full town stopped the order on an obstacle that any player would walk around. | `tools/bot/planner.js`, `tools/bot/bot.js`. |
 | D41 | The bot tests are part of the normal test run. | They are the Phase 2 gate. If later tuning breaks the timing or brings back a dead end, a test fails and says so. | Change the targets at the top of `tests/bot.test.js`. |
 | D42 | I did not add a new rule to rescue a broke player. | I considered one. Raising base income fixed the dead ends with data alone, which keeps the scope small. | See the Phase 2 gate report if you want it reconsidered. |
+
+### Phase 3: Renderer
+
+| # | Decision | Why | How to change |
+|---|---|---|---|
+| D43 | The game is started by double-clicking `start-game.bat` (Windows) or `start-game.command` (Mac). Each runs a small server included in the project and opens the browser. | Browsers will not load this kind of code from a double-clicked HTML file. You asked not to be handed technical steps. | `serve.mjs`. |
+| D44 | The server only answers this computer, and refuses hidden files such as `.git`. | It is a development convenience and should not expose the folder to the network. | `serve.mjs`. |
+| D45 | Picking a roof selects the building. Phase 0 planned to accept a wrong pick there. | It took about 20 lines to do properly, and wrong picks would have made Phase 4 selection feel broken. | `src/render/pick.js`. |
+| D46 | `?demo` in the address shows a town built by the bot. | Without it Phase 3 would show one warehouse, and the building shapes could not be judged. It is a viewing aid, not a game feature. | `src/main.js`. Remove the link in `index.html` to hide it. |
+| D47 | Labels on roofs: residents for houses, two letters for other buildings. | Single letters clashed: W for Warehouse and Worker, F for Farm, Fisherman and Farmer. | `src/render/visuals.js`. |
+| D48 | A pan key moves the view at once when pressed, then keeps moving while held. + and - are read as typed characters, not key positions. | In testing, a quick tap moved nothing, and + failed where the key sits elsewhere on the keyboard. | `src/ui/cameraControls.js`. |
+| D49 | One frame may account for at most 1 second of real time. | Game time then stays correct down to one frame a second, and returning to a hidden tab causes no jump. | `MAX_FRAME_SECONDS` in `src/main.js`. |
+| D50 | Tile size (64 by 32 pixels) and zoom limits are constants in the render code, not data files. | They are drawing settings, not game rules. | `src/render/iso.js`, `src/render/camera.js`. |

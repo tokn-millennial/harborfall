@@ -7,6 +7,7 @@
   "scripts": {
     "test": "node --test",
     "bot": "node tools/bot.mjs",
-    "map": "node tools/print-map.mjs"
+    "map": "node tools/print-map.mjs",
+    "start": "node serve.mjs --open"
   }
 }

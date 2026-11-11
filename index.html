@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Harborfall</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #2f6f9f; }
+    body { font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; color: #f2f2f2; }
+    #game { display: block; width: 100vw; height: 100vh; cursor: grab; touch-action: none; }
+    #game:active { cursor: grabbing; }
+    .panel {
+      position: absolute; background: rgba(18, 28, 38, 0.82); border-radius: 8px;
+      padding: 10px 14px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); pointer-events: auto;
+    }
+    #help { top: 12px; left: 12px; max-width: 290px; }
+    #help h1 { font-size: 17px; margin: 0 0 2px; }
+    #help p { margin: 0 0 8px; color: #b9c6d2; }
+    #help table { border-collapse: collapse; }
+    #help td { padding: 1px 10px 1px 0; vertical-align: top; }
+    #help td:first-child { color: #ffe27a; white-space: nowrap; }
+    #help a { color: #8fd0ff; }
+    #bar { left: 12px; bottom: 12px; right: 12px; display: flex; gap: 18px; justify-content: space-between; flex-wrap: wrap; }
+    #status { color: #b9c6d2; }
+    #error {
+      top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 520px;
+      white-space: pre-wrap; background: rgba(120, 20, 20, 0.95); font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="help" class="panel">
+    <h1>Harborfall</h1>
+    <p>Phase 3 preview: look around the island.</p>
+    <table>
+      <tr><td>Drag</td><td>Move the view</td></tr>
+      <tr><td>Mouse wheel</td><td>Zoom in and out</td></tr>
+      <tr><td>W A S D, arrows</td><td>Move the view</td></tr>
+      <tr><td>+ and -</td><td>Zoom</td></tr>
+      <tr><td>Home or C</td><td>Back to the start</td></tr>
+    </table>
+    <p style="margin: 8px 0 0"><a id="demo-link" href="./?demo">Show a demo town</a></p>
+  </div>
+
+  <div id="bar" class="panel">
+    <span id="readout">Loading…</span>
+    <span id="status"></span>
+  </div>
+
+  <div id="error" class="panel" hidden></div>
+
+  <script>
+    // A page opened by double-clicking the file cannot load the game's code.
+    if (location.protocol === 'file:') {
+      var box = document.getElementById('error');
+      box.hidden = false;
+      box.textContent =
+        'Harborfall cannot run from a double-clicked file.\n\n' +
+        'Start it this way instead:\n' +
+        '  Windows: double-click start-game.bat\n' +
+        '  Mac: double-click start-game.command\n\n' +
+        'Or run "node serve.mjs" in this folder and open http://localhost:5173';
+    }
+  </script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
