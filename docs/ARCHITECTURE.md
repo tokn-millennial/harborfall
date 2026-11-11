@@ -124,7 +124,14 @@ Harborfall/
     scenario.js           A scripted mini-city that runs the whole chain.
 
   docs/
-    SPEC.md  ARCHITECTURE.md  DECISIONS.md  TESTLOG.md
+    HANDOFF.md            Start here when picking the project up.
+    ROADMAP.md            What could come next.
+    BRIEF.md              The original brief.
+    SPEC.md  ARCHITECTURE.md  DECISIONS.md  TESTLOG.md  PLAYTEST.md  FINAL_REPORT.md
+    screenshots/          Pictures from each phase.
+
+  README.md               The front page.
+  CLAUDE.md               Standing instructions for an AI helper.
 ```
 
 The UI is built from ordinary page elements placed over the canvas, not drawn inside the canvas. This is far less work and reads better. The cost is that the UI does not carry over to a game engine. It would be rebuilt there in any case.

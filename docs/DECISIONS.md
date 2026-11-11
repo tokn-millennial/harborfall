@@ -152,3 +152,13 @@ You asked for "real art and style" and gave no direction, so every choice below 
 | D90 | Only trees within two tiles of a building are drawn in order with the buildings. | Sorting every tree every frame was too slow. A drawing never reaches further than two tiles from its plot. | `TREE_REACH` in `src/render/renderer.js`. |
 | D91 | Nothing moves on the map except water glints, smoke and sawdust. No people, carts or boats. | Moving people are a feature of their own, and you did not ask for them. | Tell me if you want them. |
 | D92 | No sound, no title screen, no new buildings. | Outside "art and style" as I read it. | Tell me if you want them. |
+
+### Handoff (after Phase 7)
+
+| # | Decision | Why | How to change |
+|---|---|---|---|
+| D93 | The roadmap is a list of proposals in a recommended order, not a plan. | Your rule is that nothing is built that you did not ask for. | Pick, reorder or strike items in `ROADMAP.md`. |
+| D94 | The roadmap puts "play it by hand" first. | It is the cheapest step and the one thing no script can do. | Your call. |
+| D95 | Your original brief is kept word for word in `docs/BRIEF.md`. | It is the source of the working rules, and it was only in the chat until now. It holds nothing personal beyond saying you are new to game development. | Delete the file. |
+| D96 | A `CLAUDE.md` file in the top folder gives an AI helper the standing rules. | So you do not have to repeat them at the start of every session. | Edit or delete the file. |
+| D97 | A `README.md` was added as the repository's front page. | GitHub shows it first, and there was none. | Edit the file. |

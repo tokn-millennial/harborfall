@@ -1,0 +1,213 @@
+# Harborfall: Handoff Guide
+
+Written 2026-11-11, at the end of Phase 7, by Fable 5.2.
+
+This is the one document to read when you come back to the project, or when you hand it to a new helper, human or AI. It says what exists, how to run and check it, how we worked, and what is still unproven. `ROADMAP.md` says what could come next.
+
+## 1. The project in a minute
+
+- **What it is:** a small Anno-style city builder that runs in a desktop browser. One island, 9 buildings, 5 goods, two kinds of resident. You win at 100 Workers, in about 30 minutes.
+- **How it is made:** plain JavaScript, with no framework, no build step and nothing to install except Node. All game rules are in five data files. All art is drawn by code.
+- **Size:** about 8,750 lines of code, tests and tools in 110 files.
+- **State:** Phases 0 to 7 are done, approved and on GitHub. 236 automated tests pass.
+- **Where:** the folder `Harborfall` in your Documents, and the private GitHub repository `tokn-millennial/harborfall`, branch `main`.
+
+## 2. What to read, in order
+
+| Document | What it is for | Read it when |
+|---|---|---|
+| `README.md` (top folder) | The front page: what it is and how to start it. | First. |
+| `docs/HANDOFF.md` | This guide. | Coming back, or handing over. |
+| `docs/ROADMAP.md` | What could come next, with sizes and the order I recommend. | Choosing the next phase. |
+| `docs/BRIEF.md` | Your original brief, word for word. The working rules come from here. | A helper is new to the project. |
+| `docs/SPEC.md` | Every rule of the game in plain words, with the data file each number lives in. | You want to know how something works, or tune it. |
+| `docs/ARCHITECTURE.md` | How the code is put together, folder by folder, and the test plan. | A helper is about to change code. |
+| `docs/DECISIONS.md` | Every choice made, numbered Q1 to Q5 (yours) and D1 to D97 (mine), with the reason and how to change it. | You wonder "why is it like this?" |
+| `docs/TESTLOG.md` | Per phase: what was built, tested, broken and fixed, and what is weak. | You want the honest history. |
+| `docs/PLAYTEST.md` | The 73-point checklist from Phase 5 and the ranked problem list. | Planning a playtest. |
+| `docs/FINAL_REPORT.md` | The scorecard for the original test, as written at the end of Phase 5, with short notes for Phases 6 and 7. | You want the verdict on the original brief. |
+| `CLAUDE.md` (top folder) | Standing instructions that an AI helper reads on its own at the start of a session. | You never need to. It is for the helper. |
+| `docs/screenshots/` | Pictures from Phases 3 to 7. | You want to see how it looked at each stage. |
+
+## 3. How to run it
+
+1. **Start the game:** double-click `start-game.bat` in the project folder. A black window opens and your browser shows the game at `http://localhost:5173`. Leave the black window open while you play. Close it to stop.
+2. **See a finished town:** open `http://localhost:5173/?demo`.
+3. **On a Mac:** double-click `start-game.command`. This has never been tested.
+
+The game needs Node installed (it was built and tested with version 24). It does not work by double-clicking `index.html`, because browsers refuse to load this kind of code straight from a file.
+
+## 4. How to check it still works
+
+These are typed in a terminal opened in the project folder. A helper runs them for you. You do not need to.
+
+| Command | What it does | A good result |
+|---|---|---|
+| `node --test` | Runs all 236 automated tests. About 1.5 seconds. | `pass 236`, `fail 0` |
+| `node tools/bot.mjs` | A bot plays a whole game with no screen and prints a report. | Wins in 28.6 minutes, no long waits. |
+| `node tools/bot.mjs careless` | The same, with a sloppier build order. | Wins in 30.4 minutes. |
+| `node tools/bot.mjs bread-first` | The same, with a reckless opening. | Wins in 52.9 minutes. Slower than the target, which is a known open issue. The point is that it recovers. |
+| `node tools/bot.mjs standard --seed 42` | The standard order on a different island. | Wins in 25.9 minutes. |
+| `node tools/pace.mjs` | Estimates how long a person takes, by adding human delays. | All games inside 25 to 40 minutes. |
+| `node tools/tune.mjs` | Tries changed numbers side by side without editing the data files. | A table to compare. |
+| `node tools/print-map.mjs` | Prints the island as text. | A map. |
+
+Two more checks run inside the browser. With the game open, press F12, click Console, and paste:
+
+- **A whole game through the real buttons and clicks.** Run it on a freshly loaded game. The result should show `won: true` at about 28.6 minutes.
+
+  `const { playThroughUi } = await import('/tools/ui-playthrough.js'); await playThroughUi(window.harborfall);`
+
+- **Thousands of random clicks and keys.** It should report no errors.
+
+  `const { monkey } = await import('/tools/ui-monkey.js'); monkey(window.harborfall, { actions: 5000, seed: 1 });`
+
+**The rule we kept:** after any change, the tests pass and the bot still wins before anything is called done. After any change to a screen, the two browser checks are run again.
+
+## 5. Changing the game without touching code
+
+Every number is in a file in the `data` folder. Open one in any text editor, change a number, save, and refresh the browser. Lines whose name starts with `_` are notes.
+
+| To change | File | Look for |
+|---|---|---|
+| Starting coins and goods | `config.json` | `start` |
+| How many Workers win the game | `config.json` | `win` → `residents` |
+| The income you get with no residents | `config.json` | `baseIncomePerMinute` |
+| What a building costs | `buildings.json` | that building's `cost` |
+| A building's running cost | `buildings.json` | `upkeepPerMinute` |
+| How fast a building works | `buildings.json` | `production` → `cycleSeconds` |
+| What a building uses and makes | `buildings.json` | `production` → `inputs` and `outputs` |
+| How far a market reaches | `buildings.json` | the market's `market` entry |
+| A building's shortcut key | `buildings.json` | `key` |
+| Taxes, house sizes, what residents eat | `population.json` | each tier's `taxPerResidentPerMinute`, `capacity`, `needs` |
+| The cost of upgrading a house | `population.json` | `upgrade` → `cost` |
+| The island's shape | `map.json` | `seed`. Any whole number gives a different island. |
+| Colors of ground, roofs and goods | `map.json`, `buildings.json`, `population.json`, `goods.json` | `color` |
+
+**After changing numbers, run `node --test` and `node tools/bot.mjs`**, or ask a helper to. Some tests check the balance targets from the brief (for example "one fisherman feeds about 20 residents"), so a big change can fail a test on purpose. That is the test doing its job. Decide whether the number or the target should move.
+
+**Adding a building or a good** can be done in the data files alone. In Phase 5 a "Stone" good and a "Quarry" were added to `goods.json` and `buildings.json` with no code change, and the quarry appeared in the menu and worked. A building with no drawing shows as a plain colored box until someone adds one in `src/render/art/buildings.js`.
+
+**If the game shows an error after an edit,** the data file probably has a typo, most often a missing comma or quote. The game shows a box that says it could not start and why. Undo the edit to recover.
+
+## 6. How we worked
+
+These rules came from your brief (`BRIEF.md`) and held for seven phases. A new helper should keep them unless you say otherwise.
+
+1. **Plan first.** The helper shows a plan before writing code.
+2. **One feature at a time,** tested after every change.
+3. **Small scope.** Nothing is added that you did not ask for. Where "art" or "polish" needed judgment, each unlisted extra was named in `DECISIONS.md` and in the gate report.
+4. **The helper finds its own bugs,** using the tests and the bot, and tests the game itself before reporting.
+5. **Questions only at the start of a phase.** After that the helper makes a reasonable choice and records it in `DECISIONS.md` with the reason and how to change it.
+6. **Rules live in data files,** not in code.
+7. **A log entry per phase** in `TESTLOG.md`: turns used, bugs found and fixed, decisions made, what is weak, what the helper would change.
+8. **Plain words.** You are not asked to read code.
+9. **Honesty.** What is weak, unfinished or untested is said plainly. A result that looks too good is checked before it is reported.
+
+**Phases and gates.** Work goes in phases. At the end of each one the helper stops and gives a report in five parts, then waits:
+
+1. What you built.
+2. Test results, with pass and fail counts.
+3. How to try it: three steps in the browser.
+4. Known issues.
+5. Decisions I need to make.
+
+**Saving the work.** One commit per approved phase, made only after you approve. Pushed to GitHub only when you say "push". (In the last two phases you said "push" at the gate, which was taken as approval.)
+
+## 7. Starting a new session with an AI helper
+
+Open the helper in the `Harborfall` folder, so it can see the files. The file `CLAUDE.md` in that folder gives it the standing rules without you repeating them. Then paste something like this, with the last line changed to what you want:
+
+> This is Harborfall, a small city builder I am building with AI help. I am new to game development and I do not read code.
+>
+> Before doing anything, read `docs/HANDOFF.md`, `docs/ROADMAP.md` and `docs/BRIEF.md`, then run `node --test` and `node tools/bot.mjs` and tell me whether the project is in the state the handoff describes.
+>
+> Follow the working rules in `docs/HANDOFF.md` section 6. Show me a plan first and wait for my approval. Stop at the end of the phase with the five-part report.
+>
+> This phase: (for example) build B1 and B2 from the roadmap.
+
+If the helper starts in a different folder, tell it the project is in `Documents\Harborfall` and that it must not write project files anywhere else.
+
+## 8. What is proven and what is not
+
+| Claim | Status | Evidence |
+|---|---|---|
+| The rules work as the spec says | **Proven** | 236 automated tests. |
+| The game cannot leave you permanently stuck | **Proven** for the cases tested | Tests for zero coins, and bot wins from three bad openings. |
+| A win takes 25 to 40 minutes | **Proven for a bot,** estimated for a person | Bot: 28.6 minutes. With guessed human delays: 29 to 35. |
+| Every button and click does what it should | **Strong evidence** | A script won through the real UI and ended in exactly the bot's game. Random input found no errors. |
+| A person can win by hand | **Your word only** | You approved the gate. I have no time or notes from a hand-played game. |
+| It is fun and clear | **Unknown** | No script can tell. |
+| It runs smoothly on your screen | **Unknown** | My test browser draws slowly. I never saw the game move at full speed. |
+| It works on a Mac, a trackpad, a touch screen | **Unknown** | Never tried. |
+| The art looks good | **My opinion only** | Judged from still screenshots. |
+
+**A note sheet for a hand-played game** (roadmap item A1). Copy it, fill it in, and give it to the helper:
+
+> - Time to win, as shown on the win screen:
+> - Speed I mostly played at (1x, 2x, 4x):
+> - The first thing that confused me:
+> - Times I did not know what to do next:
+> - Times I waited with nothing to do, and roughly how long:
+> - Anything that looked wrong or ugly:
+> - Did it stutter or feel slow? At what zoom?
+> - What I wanted to do and could not:
+> - Browser and computer:
+
+## 9. Known issues, all in one place
+
+Open today. Fixed problems are in `TESTLOG.md` and `PLAYTEST.md`.
+
+**Play**
+- No save. A refresh or a closed tab loses the game.
+- No undo. Demolish takes two clicks on a building as a guard.
+- A reckless opening still wins, but takes over 50 minutes.
+- Roads bend once per drag. Shift flips the corner.
+- The tip line covers shortages only. It gives no help with what to do first.
+- Some shortcut letters are arbitrary (I for Sawmill, E for Warehouse, G for Farm), because W A S D and C move the view.
+- No sound.
+
+**Look and speed**
+- The art is drawn by code. It is clean and consistent, and it is not painted art.
+- Nothing walks or sails. The only movement is smoke, sawdust, crops and water glints.
+- At zoom 0.7 a frame takes longer than before the art, in my test browser.
+- The ground looks a little soft when zoomed far in.
+- The game uses about 90 MB more memory than before the art.
+- Top bar icons are small. Names show on wide windows and on hover.
+
+**Design limits chosen on purpose** (`ARCHITECTURE.md` section 9)
+- Goods move instantly. Roads are a yes-or-no connection.
+- All warehouses share one stockpile.
+- Older houses are fed first.
+- Forest never runs out.
+
+**Testing**
+- The two browser checks are run by hand from the console.
+- Desktop browsers only. No touch support.
+
+## 10. Things a helper should know about this computer
+
+- **A game server is often already running** on port 5173, started by you from `start-game.bat`. A helper should use it and never stop it.
+- **Windows shell quoting is fragile.** Commands with apostrophes or nested quotes get mangled. Write a small script file and run that.
+- **An AI helper's built-in test browser may be slow or hidden,** drawing about one frame a second. Timing and smoothness cannot be judged there. Speed must be measured by forcing the browser to finish drawing. A timing that looks too good is probably measuring nothing (`TESTLOG.md`, Phase 7).
+- **The GitHub command-line tool is not installed.** Ordinary `git push` works, using the sign-in Windows has saved.
+- **The repository is private, and should stay so until cleaned.** The documents contain your first name and folder paths, and the commit history carries the name and email your Git uses. See roadmap item E1 before publishing anything.
+
+## 11. Words used in these documents
+
+| Word | Meaning |
+|---|---|
+| Simulation | The part of the code that is the game's rules. It has no screen. |
+| Renderer | The part that draws the island. It only looks at the game and never changes it. |
+| UI | Menus, the top bar, mouse and keyboard. |
+| Headless | Running the game with no screen, as the tests and the bot do. |
+| Tick | One step of game time. There are 10 a second. |
+| Bot | A script that plays a whole game by following a fixed build order. |
+| Build order | The bot's to-do list, such as "2 lumberjacks, a market, 6 houses". |
+| Seed | The number an island is grown from. The same seed always gives the same island. |
+| Data files | The five files in `data/` that hold every rule and number. |
+| Gate | The end of a phase, where the helper stops, reports and waits for you. |
+| Commit | A saved snapshot of the whole project, with a note. One per phase. |
+| Push | Sending commits to GitHub. |
+| Repository | The project folder together with its saved history. |
+| Dependency | Someone else's code that a project needs. This game has none. |

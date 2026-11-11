@@ -101,3 +101,13 @@ You asked me to keep building. Phase 6 worked through the open list above. The r
 - **Not done:** the push to GitHub, which needs a repository from you.
 
 Tests at the end of Phase 6: 220 of 220.
+
+## Addendum: Phase 7 and the handoff
+
+- **Pushed:** the project went to a private GitHub repository once you created one.
+- **Phase 7, art and style:** every building now has a drawing made by code, the ground, roads and water were redrawn, and the panels have a navy and brass theme. No game rule changed, and the bot's result is identical.
+- **Scorecard:** unchanged. "I can win by hand" is still passed on your word only.
+- **Still open:** no save, no undo, no sound, nothing moves on the map, and nobody has yet reported on a hand-played game or on how smoothly it runs on a real screen.
+- **Handoff:** `HANDOFF.md` says how to pick the project up, and `ROADMAP.md` says what could come next.
+
+Tests at the end of Phase 7: 236 of 236.

@@ -554,3 +554,29 @@ Milliseconds to draw one frame of the finished demo town on a 1920 x 1080 canvas
 
 **What I would change**
 - I would measure drawing speed the right way before writing any art. I rebuilt the drawing code twice because the first measurements were wrong.
+
+**After the gate:** committed as `ddebd54` and pushed at your request.
+
+## Handoff (after Phase 7)
+
+Date: 2026-11-11. Your request: "Give me a roadmap and all the handoff materials so I can continue building. Make sure any reference material is pushed to GitHub as well."
+
+**Turns used:** 1.
+
+**What was written.** No code changed.
+- `docs/ROADMAP.md`: 18 possible next steps in five stages, each with a size and what it needs from you, and a recommended order.
+- `docs/HANDOFF.md`: how to run, check and tune the game, how we worked, a prompt for starting a new session, what is proven and what is not, every open issue in one list, and a word list.
+- `docs/BRIEF.md`: your original brief, word for word.
+- `README.md`: the repository's front page.
+- `CLAUDE.md`: standing rules for an AI helper.
+- Notes added to `FINAL_REPORT.md`, `ARCHITECTURE.md` and `DECISIONS.md` (D93 to D97).
+
+**Checks**
+- Every command named in the handoff guide was run and its result copied from the output: `node --test` (236 pass), the bot on three build orders and a second island, `pace.mjs`, `tune.mjs` and `print-map.mjs`.
+- Every file the documents point to exists.
+- The two browser checks named in the guide were last run during Phase 7. No code has changed since.
+
+**Weak or unfinished**
+- **The sizes in the roadmap are estimates** from how long earlier phases took. The large items in particular could be off.
+- **The roadmap is my view of what matters.** You have not yet played a full game and told me what you think is missing.
+- **The start-of-session prompt is untested.** I wrote it and have not tried it on a fresh helper.
