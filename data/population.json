@@ -20,14 +20,14 @@
         "to": "worker",
         "cost": { "coins": 20, "goods": { "planks": 5 } }
       },
-      "visual": { "color": "#d9d2c0", "height": 0.8 }
+      "visual": { "art": "cottage", "color": "#c8a55a", "height": 1.0 }
     },
     "worker": {
       "name": "Worker",
       "capacity": 8,
       "taxPerResidentPerMinute": 0.85,
       "needs": { "fish": 0.2, "bread": 0.075 },
-      "visual": { "color": "#e8a25c", "height": 1.3 }
+      "visual": { "art": "townhouse", "color": "#b9553a", "height": 1.5 }
     }
   }
 }

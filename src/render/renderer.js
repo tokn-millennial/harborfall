@@ -1,27 +1,33 @@
 // Draws the island on a canvas. It reads the game state and never changes it.
 //
 // Drawing order each frame:
-//   1. water (the background)
-//   2. ground tiles and trees, then roads
-//   3. ground markers: tinted tiles (previews, ranges) and the hovered tile
-//   4. buildings, far to near
-//   5. on top: the ghost of a building being placed, outlines, marks
+//   1. open water, with drifting glints
+//   2. the island: ground, shoreline and forest
+//   3. roads, then ground markers (previews, ranges, the hovered tile)
+//   4. shadows, then buildings from far to near
+//   5. on top: the building being placed, outlines, marks
 //
-// The ground and the forest never change, so they are painted once into a
-// hidden picture and that picture is drawn each frame. Zoomed far in, where
-// the picture would look soft and few tiles are on screen anyway, the tiles
-// and trees are drawn directly, with trees sorted properly among the buildings.
+// Almost everything is prepared once and reused, so a frame is cheap:
+//   - The ground and forest never change, so they are painted once into one
+//     large picture. Filling their thousands of shapes on every frame was
+//     measured at many times the cost of showing a picture.
+//   - Each look of each building is drawn once into a small picture.
+//   - Road shapes are rebuilt only when something is built or removed.
+//
+// The art itself lives in src/render/art/. This file decides what to draw,
+// where and in what order.
 
 import { TILE_H, boxSilhouette, depthOf, footprintCorners, mapBounds, tileToWorld } from './iso.js';
 import { visibleTileRange } from './camera.js';
-import { buildingVisual, shade } from './visuals.js';
+import { buildingVisual } from './visuals.js';
+import { createKit } from './art/kit.js';
+import { BUILDING_ART, LIVE_ART, artIdFor, artStateKey } from './art/buildings.js';
+import { paintBox } from './art/box.js';
+import { createSpriteCache, sharpnessFor } from './art/sprites.js';
+import { createForestPainter, createRoadPainter, createTerrainPainter, paintTrees, paintWater, waterBackground } from './art/terrain.js';
 import { buildingIssue, canUpgrade } from '../sim/index.js';
 
-const TREE_COLOR = '#2c5c36';
-const TREE_SHADOW = '#234a2c';
-const GRID_COLOR = 'rgba(0, 0, 0, 0.07)';
 const LABEL_MIN_ZOOM = 0.55;
-const GRID_MIN_ZOOM = 0.9;
 const MARKER_MIN_ZOOM = 0.45;
 const MARK = {
   bad: { color: '#e5484d', text: '!' },     // stops the building working: no road, no market
@@ -29,22 +35,33 @@ const MARK = {
   ready: { color: '#2fb463', text: '▲' },   // a house that can be upgraded now
 };
 const markLevel = (issue) => (issue === 'no_road' || issue === 'no_market' ? 'bad' : 'warn');
+const GHOST_OUTLINE = { ok: '#5df08a', bad: '#ff5a5a' };
 
-// The ground picture is used while one of its pixels covers at most this many
-// screen pixels. Beyond that it would look blurred, so tiles are drawn directly.
-const CACHE_MAX_SCALE = 1.3;
-const CACHE_PAD = 40; // room around the map for tree tops
+// The ground picture is painted this many times finer than one world pixel,
+// following the screen's own sharpness, within limits. Finer looks crisper
+// when zoomed in and costs memory: at 1.5 the picture is about 80 MB.
+const PICTURE_MIN_DETAIL = 1;
+const PICTURE_MAX_DETAIL = 1.5;
+// A second, small copy of the picture is used when zoomed far out. Shrinking
+// the large one on every frame was measured at four times the cost.
+const SMALL_PICTURE_DETAIL = 0.5;
+const SMALL_PICTURE_BELOW_SCALE = 0.62;
+const CACHE_PAD = 48; // room around the map for tree tops and the shoreline
+const TREE_REACH = 2; // trees this close to a building are drawn in order with it
 
 export function createRenderer(canvas, rules) {
   const ctx = canvas.getContext('2d');
   const view = { width: 1, height: 1 };
   let pixelRatio = 1;
-  let trees = null;        // forest tiles, far to near
-  let groundPicture = null;
+  let groundPicture = null; // the ground and forest, painted once
+  let smallPicture = null;  // the same, smaller, for when zoomed far out
+  const sprites = createSpriteCache();
 
   const terrainColor = {};
   for (const [id, t] of Object.entries(rules.map.terrain)) terrainColor[id] = t.color;
-  const roadColor = rules.buildings.road.visual?.color ?? '#b9a98a';
+  const roads = createRoadPainter(rules.buildings.road.visual?.color ?? '#c9b78f');
+  // The water's color wash is the canvas's own background. The canvas is cleared each frame, so it shows through.
+  canvas.style.background = waterBackground(terrainColor.water);
 
   function resize() {
     pixelRatio = window.devicePixelRatio || 1;
@@ -52,17 +69,6 @@ export function createRenderer(canvas, rules) {
     view.height = Math.max(1, canvas.clientHeight);
     canvas.width = Math.round(view.width * pixelRatio);
     canvas.height = Math.round(view.height * pixelRatio);
-  }
-
-  function buildTrees(map) {
-    const list = [];
-    for (let y = 0; y < map.height; y++) {
-      for (let x = 0; x < map.width; x++) {
-        if (map.terrain[y * map.width + x] === 'forest') list.push({ x, y, depth: depthOf(x, y) });
-      }
-    }
-    list.sort((a, b) => a.depth - b.depth || a.x - b.x);
-    return list;
   }
 
   function diamond(path, x, y, w = 1, h = 1) {
@@ -81,104 +87,87 @@ export function createRenderer(canvas, rules) {
     ctx.closePath();
   }
 
-  function addTree(path, shadowPath, x, y) {
-    // A small offset per tile so the forest does not look like a grid.
-    const jitterX = ((x * 7 + y * 13) % 5) - 2;
-    const jitterY = ((x * 11 + y * 5) % 3) - 1;
-    const c = tileToWorld(x + 0.5, y + 0.5);
-    const cx = c.x + jitterX;
-    const cy = c.y + jitterY;
-    shadowPath.moveTo(cx, cy - 24);
-    shadowPath.lineTo(cx, cy + 3);
-    shadowPath.lineTo(cx - 9, cy + 3);
-    shadowPath.closePath();
-    path.moveTo(cx, cy - 24);
-    path.lineTo(cx + 9, cy + 3);
-    path.lineTo(cx, cy + 3);
-    path.closePath();
+  // Paints the whole island's ground and forest once, at a given fineness.
+  function buildGroundPicture(map, detail) {
+    const bounds = mapBounds(map);
+    const width = bounds.right - bounds.left + CACHE_PAD * 2;
+    const height = bounds.bottom - bounds.top + CACHE_PAD * 2;
+    const picture = document.createElement('canvas');
+    picture.width = Math.ceil(width * detail);
+    picture.height = Math.ceil(height * detail);
+    const g = picture.getContext('2d');
+    g.setTransform(detail, 0, 0, detail, (CACHE_PAD - bounds.left) * detail, (CACHE_PAD - bounds.top) * detail);
+    createTerrainPainter(map, terrainColor).paint(g, detail);
+    createForestPainter(map).paint(g);
+    return { picture, x: bounds.left - CACHE_PAD, y: bounds.top - CACHE_PAD, width, height };
   }
 
-  // Fills the ground tiles in a block of the map. `target` is a canvas context
-  // already set up to draw in world pixels; `lineScale` is its current zoom.
-  function paintGround(target, map, range, lineScale, withGrid) {
-    const ground = {};
-    for (let y = range.y0; y <= range.y1; y++) {
-      for (let x = range.x0; x <= range.x1; x++) {
-        const terrain = map.terrain[y * map.width + x];
-        if (terrain !== 'water') diamond((ground[terrain] ??= new Path2D()), x, y);
+  // One building: its drawn art from a ready-made picture, or a plain box if it has none.
+  function drawBuilding(building, zoom, time, sharpness, alpha = 1) {
+    const def = rules.buildings[building.type];
+    const visual = buildingVisual(rules, building);
+    const artId = artIdFor(rules, building);
+    ctx.globalAlpha = alpha;
+    if (artId) {
+      const p = building.production;
+      const info = {
+        h: visual.risePx,
+        color: visual.color,
+        working: p ? p.active && p.status === 'working' : false,
+        progress: p ? p.progress / def.production.cycleTicks : 0,
+        residents: building.house?.residents ?? 0,
+        time,
+      };
+      const key = `${artId}|${visual.color}|${visual.risePx}|${artStateKey(artId, info)}`;
+      const picture = sprites.get(key, def.w, def.h, visual.risePx, sharpness, (g) => BUILDING_ART[artId](g, info));
+      const origin = tileToWorld(building.x, building.y);
+      ctx.drawImage(picture.canvas, origin.x + picture.left, origin.y + picture.top, picture.width, picture.height);
+      LIVE_ART[artId]?.(createKit(ctx, building.x, building.y), info);
+    } else {
+      paintBox(ctx, building.x, building.y, def, visual, 1 / zoom, zoom >= LABEL_MIN_ZOOM);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // A small plate above a house showing how many people live there.
+  function residentsPlate(building) {
+    const def = rules.buildings[building.type];
+    const visual = buildingVisual(rules, building);
+    const centre = tileToWorld(building.x + def.w / 2, building.y + def.h / 2);
+    const text = String(building.house.residents);
+    const y = centre.y - visual.topPx - 7;
+    const w = 9 + text.length * 5;
+    ctx.fillStyle = 'rgba(22, 40, 50, 0.82)';
+    ctx.beginPath();
+    ctx.roundRect(centre.x - w / 2, y - 6, w, 12, 4);
+    ctx.fill();
+    ctx.fillStyle = '#f6eed6';
+    ctx.font = '700 9px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, centre.x, y + 0.5);
+  }
+
+  // The few trees standing close to a building. They are drawn again in order
+  // with the buildings, so a tree in front of a house covers it and a tree
+  // behind is covered. Every other tree is already in the forest layer.
+  function treesNear(map, buildings) {
+    const seen = new Set();
+    const list = [];
+    for (const { building } of buildings) {
+      const def = rules.buildings[building.type];
+      for (let y = building.y - TREE_REACH; y < building.y + def.h + TREE_REACH; y++) {
+        for (let x = building.x - TREE_REACH; x < building.x + def.w + TREE_REACH; x++) {
+          if (x < 0 || y < 0 || x >= map.width || y >= map.height) continue;
+          const i = y * map.width + x;
+          if (map.terrain[i] !== 'forest' || seen.has(i)) continue;
+          seen.add(i);
+          list.push({ x, y, depth: depthOf(x, y) });
+        }
       }
     }
-    target.lineJoin = 'round';
-    for (const [terrain, path] of Object.entries(ground)) {
-      target.fillStyle = terrainColor[terrain];
-      target.fill(path);
-      // A hairline in the same color closes the tiny gaps between diamonds.
-      target.strokeStyle = terrainColor[terrain];
-      target.lineWidth = 1.2 / lineScale;
-      target.stroke(path);
-    }
-    if (withGrid) {
-      target.strokeStyle = GRID_COLOR;
-      target.lineWidth = 1 / lineScale;
-      for (const path of Object.values(ground)) target.stroke(path);
-    }
-  }
-
-  function paintTrees(target, list) {
-    const light = new Path2D();
-    const shadow = new Path2D();
-    for (const tree of list) addTree(light, shadow, tree.x, tree.y);
-    target.fillStyle = TREE_SHADOW;
-    target.fill(shadow);
-    target.fillStyle = TREE_COLOR;
-    target.fill(light);
-  }
-
-  // Paints the whole island's ground, grid and trees once, at zoom 1.
-  function buildGroundPicture(map) {
-    const bounds = mapBounds(map);
-    const picture = document.createElement('canvas');
-    picture.width = Math.ceil(bounds.right - bounds.left) + CACHE_PAD * 2;
-    picture.height = Math.ceil(bounds.bottom - bounds.top) + CACHE_PAD * 2;
-    const g = picture.getContext('2d');
-    g.setTransform(1, 0, 0, 1, CACHE_PAD - bounds.left, CACHE_PAD - bounds.top);
-    paintGround(g, map, { x0: 0, y0: 0, x1: map.width - 1, y1: map.height - 1 }, 1, true);
-    paintTrees(g, trees);
-    return { picture, x: bounds.left - CACHE_PAD, y: bounds.top - CACHE_PAD };
-  }
-
-  // Draws a box. `building` only needs x, y and what buildingVisual needs.
-  function drawBox(building, zoom, visual = buildingVisual(rules, building), size = rules.buildings[building.type]) {
-    const { color, risePx, label } = visual;
-    const [n, e, s, west] = footprintCorners(building.x, building.y, size.w, size.h);
-    const up = (p) => ({ x: p.x, y: p.y - risePx });
-
-    ctx.lineWidth = 1 / zoom;
-    ctx.strokeStyle = shade(color, 0.45);
-
-    polygon([west, s, up(s), up(west)]); // the face toward the lower left
-    ctx.fillStyle = shade(color, 0.8);
-    ctx.fill();
-    ctx.stroke();
-
-    polygon([s, e, up(e), up(s)]); // the face toward the lower right
-    ctx.fillStyle = shade(color, 0.62);
-    ctx.fill();
-    ctx.stroke();
-
-    polygon([up(n), up(e), up(s), up(west)]); // the roof
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.stroke();
-
-    if (zoom >= LABEL_MIN_ZOOM) {
-      const centre = tileToWorld(building.x + size.w / 2, building.y + size.h / 2);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.font = `600 ${size.w > 1 ? 15 : 10}px system-ui, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label, centre.x, centre.y - risePx);
-    }
+    list.sort((a, b) => a.depth - b.depth || a.x - b.x);
+    return list;
   }
 
   // overlay (all optional):
@@ -186,56 +175,41 @@ export function createRenderer(canvas, rules) {
   //   hoverBuilding      building to outline in white
   //   selectedBuilding   building to outline in yellow
   //   tints              [{ x, y, w, h, color }] ground tiles to tint
-  //   ghost              { x, y, w, h, color, risePx, label, outline } a building not yet placed
+  //   ghost              { building, ok } a building not yet placed: a stand-in
+  //                      with type, x, y (and house for a house), and whether the spot is good
   //   fadeBuildings      draw buildings see-through, so the ground behind them shows
   function draw(game, camera, overlay = {}) {
     const state = game.state;
     const map = state.map;
     const zoom = camera.zoom;
-    trees ??= buildTrees(map);
+    const time = performance.now() / 1000;
 
-    // 1. Water.
+    // 1. Open water, in screen pixels.
     ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    ctx.fillStyle = terrainColor.water;
-    ctx.fillRect(0, 0, view.width, view.height);
+    paintWater(ctx, view, camera, time);
 
     // From here on, draw in world pixels and let the canvas apply pan and zoom.
     const scale = pixelRatio * zoom;
+    const sharpness = sharpnessFor(scale);
     ctx.setTransform(scale, 0, 0, scale, pixelRatio * (view.width / 2 - camera.x * zoom), pixelRatio * (view.height / 2 - camera.y * zoom));
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'medium';
     const range = visibleTileRange(camera, view, map);
 
-    // 2. Ground and trees: from the picture, or directly when zoomed far in.
-    const usePicture = scale <= CACHE_MAX_SCALE;
-    if (usePicture) {
-      groundPicture ??= buildGroundPicture(map);
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'medium';
-      ctx.drawImage(groundPicture.picture, groundPicture.x, groundPicture.y);
+    // 2. The island: a ready-made picture, the small copy when zoomed far out.
+    let ground;
+    if (scale < SMALL_PICTURE_BELOW_SCALE) {
+      ground = smallPicture ??= buildGroundPicture(map, SMALL_PICTURE_DETAIL);
     } else {
-      paintGround(ctx, map, range, zoom, zoom >= GRID_MIN_ZOOM);
+      ground = groundPicture ??= buildGroundPicture(map, Math.min(PICTURE_MAX_DETAIL, Math.max(PICTURE_MIN_DETAIL, pixelRatio)));
     }
+    ctx.imageSmoothingQuality = 'low';
+    ctx.drawImage(ground.picture, ground.x, ground.y, ground.width, ground.height);
+    ctx.imageSmoothingQuality = 'medium';
 
-    // Roads change, so they are always drawn fresh.
-    const roads = new Path2D();
-    let anyRoad = false;
-    for (let y = range.y0; y <= range.y1; y++) {
-      for (let x = range.x0; x <= range.x1; x++) {
-        if (state.roads[y * map.width + x]) {
-          diamond(roads, x, y);
-          anyRoad = true;
-        }
-      }
-    }
-    if (anyRoad) {
-      ctx.lineJoin = 'round';
-      ctx.fillStyle = roadColor;
-      ctx.fill(roads);
-      ctx.strokeStyle = shade(roadColor, 0.8);
-      ctx.lineWidth = 1 / zoom;
-      ctx.stroke(roads);
-    }
+    // 3. Roads, then ground markers.
+    roads.paint(ctx, state);
 
-    // 3. Ground markers. Tints of the same color are filled together.
     if (overlay.tints?.length) {
       const byColor = {};
       for (const t of overlay.tints) diamond((byColor[t.color] ??= new Path2D()), t.x, t.y, t.w ?? 1, t.h ?? 1);
@@ -254,62 +228,67 @@ export function createRenderer(canvas, rules) {
       ctx.stroke(path);
     }
 
-    // 4. Buildings, far to near.
+    // 4. Buildings, far to near, each with a soft shadow on the ground first.
     const buildings = [];
     for (const b of state.buildings) {
       const def = rules.buildings[b.type];
-      if (b.x + def.w - 1 < range.x0 || b.x > range.x1 || b.y + def.h - 1 < range.y0 || b.y > range.y1) continue;
+      if (b.x + def.w - 1 < range.x0 - 1 || b.x > range.x1 + 1 || b.y + def.h - 1 < range.y0 - 1 || b.y > range.y1 + 1) continue;
       buildings.push({ building: b, depth: depthOf(b.x, b.y, def.w, def.h) });
     }
     buildings.sort((a, b) => a.depth - b.depth || a.building.x - b.building.x);
-    const boxAlpha = overlay.fadeBuildings ? 0.5 : 1;
-    const box = (b) => {
-      ctx.globalAlpha = boxAlpha;
-      drawBox(b, zoom);
-      ctx.globalAlpha = 1;
-    };
 
-    if (usePicture) {
-      for (const { building } of buildings) box(building);
-    } else {
-      // Zoomed in: trees are drawn here too, in order, so a tree in front of a
-      // building covers it and a tree behind is covered.
-      let batch = [];
-      let next = 0;
-      for (const tree of trees) {
-        if (tree.x < range.x0 || tree.x > range.x1 || tree.y < range.y0 || tree.y > range.y1) continue;
+    const shadows = new Path2D();
+    for (const { building } of buildings) {
+      const def = rules.buildings[building.type];
+      const reach = buildingVisual(rules, building).risePx * 0.014;
+      diamond(shadows, building.x + 0.12 + reach, building.y + 0.12, def.w - 0.24, def.h - 0.24);
+    }
+    ctx.fillStyle = 'rgba(20, 35, 25, 0.2)';
+    ctx.fill(shadows);
+
+    // Buildings and the trees beside them, in order. Trees that fall between
+    // the same two buildings are drawn together.
+    const alpha = overlay.fadeBuildings ? 0.5 : 1;
+    let next = 0;
+    let batch = [];
+    for (const tree of treesNear(map, buildings)) {
+      if (next < buildings.length && buildings[next].depth <= tree.depth) {
+        paintTrees(ctx, batch);
+        batch = [];
         while (next < buildings.length && buildings[next].depth <= tree.depth) {
-          if (batch.length) paintTrees(ctx, batch);
-          batch = [];
-          box(buildings[next].building);
+          drawBuilding(buildings[next].building, zoom, time, sharpness, alpha);
           next++;
         }
-        batch.push(tree);
       }
-      if (batch.length) paintTrees(ctx, batch);
-      for (; next < buildings.length; next++) box(buildings[next].building);
+      batch.push(tree);
+    }
+    paintTrees(ctx, batch);
+    for (; next < buildings.length; next++) drawBuilding(buildings[next].building, zoom, time, sharpness, alpha);
+
+    if (zoom >= LABEL_MIN_ZOOM && !overlay.fadeBuildings) {
+      for (const { building } of buildings) if (building.house) residentsPlate(building);
     }
 
-    // 5. On top: the ghost of a building being placed.
+    // 5. On top: the building being placed, see-through, outlined green or red.
     if (overlay.ghost) {
       const g = overlay.ghost;
-      ctx.globalAlpha = 0.6;
-      drawBox(g, zoom, { color: g.color, risePx: g.risePx, label: g.label ?? '' }, { w: g.w, h: g.h });
-      ctx.globalAlpha = 1;
-      // A bold outline says at a glance whether the spot is good: green or red.
-      if (g.outline) {
-        polygon(boxSilhouette(g.x, g.y, g.w, g.h, g.risePx));
-        ctx.strokeStyle = g.outline;
-        ctx.lineWidth = 3 / zoom;
-        ctx.stroke();
+      const def = rules.buildings[g.building.type];
+      drawBuilding(g.building, zoom, time, sharpness, 0.7);
+      polygon(boxSilhouette(g.building.x, g.building.y, def.w, def.h, buildingVisual(rules, g.building).topPx));
+      if (!g.ok) {
+        ctx.fillStyle = 'rgba(230, 60, 60, 0.3)';
+        ctx.fill();
       }
+      ctx.strokeStyle = g.ok ? GHOST_OUTLINE.ok : GHOST_OUTLINE.bad;
+      ctx.lineWidth = 3 / zoom;
+      ctx.stroke();
     }
 
     // Outlines.
     for (const [building, color, width] of [[overlay.selectedBuilding, '#ffe27a', 3], [overlay.hoverBuilding, '#ffffff', 2]]) {
       if (!building) continue;
       const def = rules.buildings[building.type];
-      polygon(boxSilhouette(building.x, building.y, def.w, def.h, buildingVisual(rules, building).risePx));
+      polygon(boxSilhouette(building.x, building.y, def.w, def.h, buildingVisual(rules, building).topPx));
       ctx.strokeStyle = color;
       ctx.lineWidth = width / zoom;
       ctx.stroke();
@@ -328,7 +307,7 @@ export function createRenderer(canvas, rules) {
         if (issue) mark = MARK[markLevel(issue)];
         else if (building.house && canUpgrade(game, building.id).ok) mark = MARK.ready;
         if (!mark) continue;
-        // Above the back corner of the roof, clear of the label in the middle.
+        // Above the back corner, clear of the roof and the residents plate.
         const corner = tileToWorld(building.x, building.y);
         const cy = corner.y - buildingVisual(rules, building).risePx - radius * 0.4;
         ctx.beginPath();
@@ -345,5 +324,5 @@ export function createRenderer(canvas, rules) {
   }
 
   resize();
-  return { draw, resize, view, tileHeight: TILE_H };
+  return { draw, resize, view, tileHeight: TILE_H, sprites };
 }

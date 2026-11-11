@@ -232,8 +232,12 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 ## 11. Screen and controls
 
 **View**
-- Isometric view with flat-color placeholder shapes. No final art.
-- Houses show their number of residents on the roof. Other buildings show the first two letters of their name.
+- Isometric view in a warm storybook style. All of the art is drawn by the game's own code. There are no image files.
+- Each building has its own look: a long timber warehouse with crates outside, a log cabin with a log pile for the lumberjack, an open-sided sawmill with a stack of planks, a fishing hut with a boat and a net rack, a farm with a barn and crop rows, a brick bakery with a tall chimney, a thatched cottage for Farmers, a taller timber-framed townhouse with a tiled roof for Workers, and a paved market square with three striped stalls.
+- Some looks follow the game: a farm's crop grows through each cycle, a bakery smokes while it bakes, a sawmill throws sawdust while it saws, and a house's windows are lit once someone lives in it.
+- The ground has a raised shoreline with shallows around it, grass in several shades, ploughed fertile land, sand, and trees. Roads join up with each other and with the buildings beside them. The water has drifting glints.
+- Houses show their number of residents on a small plate above the roof.
+- The panels are navy with a brass edge. The build menu shows a small picture of each building, and the top bar shows an icon for each good.
 - A red ! above a building means it has no road or no market. An amber ! means it is waiting for something. A green ▲ means a house is ready to upgrade.
 - While you are placing a building or a road, existing buildings are drawn see-through, so nothing hides behind them.
 
@@ -275,4 +279,4 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 
 ## 12. Not in Version 1
 
-Save and load, undo, sound, more islands, ships and trade, combat, visible carriers, workforce requirements for buildings, building rotation, a tutorial, touch controls, and final art.
+Save and load, undo, sound, more islands, ships and trade, combat, visible carriers, workforce requirements for buildings, building rotation, a tutorial, touch controls, people or boats moving on the map, and painted art from image files.

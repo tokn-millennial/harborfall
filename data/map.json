@@ -7,11 +7,11 @@
 
   "_terrain": "Every tile is one of these. 'coast' is the sandy ring of land tiles that touch water.",
   "terrain": {
-    "water":   { "name": "Water",        "buildable": false, "color": "#2f6f9f" },
-    "coast":   { "name": "Coast",        "buildable": true,  "color": "#e2d3a0" },
-    "grass":   { "name": "Grass",        "buildable": true,  "color": "#7fb069" },
-    "fertile": { "name": "Fertile land", "buildable": true,  "color": "#a8c256" },
-    "forest":  { "name": "Forest",       "buildable": false, "color": "#3d7a45" }
+    "water":   { "name": "Water",        "buildable": false, "color": "#2e77a8" },
+    "coast":   { "name": "Coast",        "buildable": true,  "color": "#e6d6a3" },
+    "grass":   { "name": "Grass",        "buildable": true,  "color": "#86b96b" },
+    "fertile": { "name": "Fertile land", "buildable": true,  "color": "#b3a35a" },
+    "forest":  { "name": "Forest",       "buildable": false, "color": "#5d9a58" }
   },
 
   "_generation": "How the island is shaped. landFraction is the share of the whole map that is land. The forest and fertile numbers are shares of that land.",

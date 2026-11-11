@@ -484,3 +484,73 @@ All 120 games won inside 25 to 40 minutes. Thinking time barely matters, because
 
 **What I would change**
 - I would have checked for the GitHub tool before promising a push in my plan.
+
+**After the gate:** you created an empty private repository and gave me its address, and Phases 0 to 6 were pushed to it.
+
+## Phase 7: Art and style
+
+Date: 2026-11-11. Status: approved by Colin with no changes (his reply to the gate was "Push").
+
+**Turns used:** 1 (your message "lets add real art and style to this thing"). It was a long one.
+
+**What was built**
+- A drawing for every building and both house tiers, all in code: warehouse, lumberjack, sawmill, fisherman, farm, bakery, cottage, townhouse, market.
+- New ground: a raised shoreline with shallows, grass in four shades, ploughed fertile land, sand, flowers, and two kinds of tree.
+- Roads that join up with each other and with the buildings beside them.
+- Water with drifting glints.
+- Looks that follow the game: ripening crops, bakery smoke, sawdust, lit windows.
+- A navy and brass theme for every panel, small building pictures on the build menu, and icons in the top bar.
+- A new way of drawing a frame, in which almost everything is prepared once and reused.
+
+**Automated tests: 236 pass, 0 fail.** That is 220 from before plus 16 for the art. The art tests run without a browser, using a stand-in canvas that records what was drawn. They prove a drawing runs, uses valid colors and stays inside its plot. They cannot prove it looks good.
+
+**Browser checks**
+
+| Check | How | Result |
+|---|---|---|
+| A full game through the UI still matches the headless bot | UI playthrough, after the last change | Pass. Won at 28.55 minutes, identical final state. |
+| Random input on a finished town | 2,500 actions, seed 21 | Pass. No errors. 10 stored building pictures at the end. |
+| Random input on a fresh game with plenty of coins | 2,500 actions, seed 22 | Pass. No errors. |
+| The error console after all of the above | Read it | Empty. |
+| Each building looks right at normal zoom, far out and close in | Screenshots of the demo town | Pass by my eye. See `docs/screenshots/phase7-*.jpg`. |
+| The placement ghost is green where allowed and red where not | Screenshot | Pass |
+| The win screen, the ? panel and the build menu under the new theme | Screenshots | Pass |
+
+The random-input run was 5,000 actions, not the 12,000 of Phase 6. A single run of 6,000 timed out in my test browser, so I split it and did not repeat it further.
+
+**Drawing speed**
+
+Milliseconds to draw one frame of the finished demo town on a 1920 x 1080 canvas, old boxes against new art, two runs each. Under 16 is smooth.
+
+| Zoom | Phase 6 boxes | Phase 7 art |
+|---|---|---|
+| 0.35 (whole island) | 37 and 34 | 15 and 14 |
+| 0.7 | 5.8 and 5.7 | 18.5 and 17 |
+| 1 (normal) | 29 and 29 | 12 and 11 |
+| 2 | 24 and 31 | 14 and 16 |
+
+- The new art is faster than the old boxes at three of the four zooms and **slower at 0.7**, where it shrinks the large ground picture on every frame.
+- **These numbers are from my test browser, which is slow and likely draws without the graphics card.** They are good for comparing old with new. They do not tell you how smooth it is on your screen. I have not seen the game in motion at full speed.
+
+**Bugs found: 3, all fixed. One speed problem, fixed. One mistake of mine in measuring.**
+1. Crop rows were drawn black. The color mixer returned a color in a form the shading tool could not read. Fixed, with a test.
+2. Dark outlines swamped thin shapes such as fence rails and crop rows. Those shapes are now drawn without an outline.
+3. The farm's barn was drawn after the rows in front of it and covered them. Reordered.
+4. **Speed.** My first version drew every tile, tree and building from scratch on every frame. Measured properly it took over 100 milliseconds a frame. Rebuilt around prepared pictures, as described in `ARCHITECTURE.md` section 7.
+5. **Measuring.** My first timings said a frame took 0.4 milliseconds. That figure only measured the browser writing down what to draw, not drawing it. I caught it because it was too good to be true. The same mistake is likely in my Phase 3 and Phase 5 speed figures, which I already marked as unreliable.
+
+**Decisions made:** 15 (D78 to D92). None changes a game rule. Colors and heights in the data files changed.
+
+**Weak or unfinished**
+- **It is code-drawn art.** It is clean and consistent, and it looks like tidy vector shapes. It is not painted art, and a real artist would do better.
+- **I judged the look myself from still screenshots.** Taste is yours to judge.
+- **Nothing walks or sails.** The town is alive only in smoke, sawdust, crops and water glints.
+- **Zoom 0.7 draws slower than before** in my test browser.
+- **The ground looks a little soft when zoomed far in**, because it is a stretched picture.
+- **Memory use went up** by roughly 90 MB for the two ground pictures on a sharp screen.
+- **Trees more than two tiles from a building are never drawn in front of it.** No drawing reaches that far today. A much taller building added later could show the flaw.
+- **Titles use Georgia**, which will look slightly different on a Mac. Mac is still untested.
+- **The top bar's icons are small** and some may be hard to tell apart at a glance. Names still show on wide windows and on hover.
+
+**What I would change**
+- I would measure drawing speed the right way before writing any art. I rebuilt the drawing code twice because the first measurements were wrong.

@@ -4,6 +4,8 @@
 
 import { el, setText } from './dom.js';
 import { buildingBlurb, costText, shortfallText } from './text.js';
+import { icon } from './icons.js';
+import { drawBuildingIcon } from '../render/art/icon.js';
 
 // A tool is { mode: 'select' | 'build' | 'road' | 'upgrade' | 'demolish', building }.
 export const sameTool = (a, b) => a.mode === b.mode && a.building === b.building;
@@ -37,15 +39,16 @@ export function createBuildMenu(root, hintRoot, game, { onPick }) {
     return entry;
   }
 
-  add({ mode: 'select', building: null }, 'Select', null, ['Click a building to see its details. Drag to move the view.'], TOOL_KEYS.select);
+  const select = add({ mode: 'select', building: null }, 'Select', null, ['Click a building to see its details. Drag to move the view.'], TOOL_KEYS.select);
+  select.button.prepend(el('span', 'tool-glyph', [icon('select', { size: 26 })]));
   for (const [id, def] of Object.entries(rules.buildings)) {
     const tool = { mode: def.category === 'road' ? 'road' : 'build', building: id };
     const blurb = buildingBlurb(rules, id);
     if (def.category === 'road') blurb.push('Hold Shift while dragging to flip the corner.');
     const entry = add(tool, def.name, costText(rules, def.cost), blurb, def.key);
-    const swatch = el('span', 'swatch');
-    swatch.style.background = def.visual?.color ?? '#999';
-    entry.button.prepend(swatch);
+    const picture = el('canvas', 'tool-picture');
+    drawBuildingIcon(picture, rules, id);
+    entry.button.prepend(picture);
     entry.def = def;
   }
   // One Upgrade tool, priced from the first tier that can be upgraded.
@@ -57,10 +60,12 @@ export function createBuildMenu(root, hintRoot, game, { onPick }) {
       'A green ▲ marks houses that are ready.',
     ], TOOL_KEYS.upgrade);
     entry.def = { cost: upgradable.upgrade.cost };
+    entry.button.prepend(el('span', 'tool-glyph', [icon('upgrade', { size: 26 })]));
   }
-  add({ mode: 'demolish', building: null }, 'Demolish', 'Half back', [
+  const demolish = add({ mode: 'demolish', building: null }, 'Demolish', 'Half back', [
     'Click a road to remove it. Click a building twice to remove it. Half the cost is returned.',
   ], TOOL_KEYS.demolish);
+  demolish.button.prepend(el('span', 'tool-glyph', [icon('demolish', { size: 26 })]));
 
   window.addEventListener('keydown', (event) => {
     if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;

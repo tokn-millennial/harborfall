@@ -1,5 +1,5 @@
 {
-  "_about": "Every building type. Costs are paid once. Upkeep is coins per minute. Times are in seconds. 'size' is [width, height] in tiles. 'visual' only affects how the placeholder shape is drawn. 'key' is the keyboard shortcut that picks the building; W A S D, C and the number keys are taken. Keys starting with _ are notes and are ignored by the game.",
+  "_about": "Every building type. Costs are paid once. Upkeep is coins per minute. Times are in seconds. 'size' is [width, height] in tiles. 'visual' sets how the building looks: 'art' names its drawing (leave it out for a plain box), 'color' is its main color, usually the roof, and 'height' is how tall it stands. 'key' is the keyboard shortcut that picks the building; W A S D, C and the number keys are taken. Keys starting with _ are notes and are ignored by the game.",
 
   "road": {
     "name": "Road",
@@ -9,7 +9,7 @@
     "cost": { "coins": 1, "goods": {} },
     "upkeepPerMinute": 0,
     "requiresRoad": false,
-    "visual": { "color": "#b9a98a", "height": 0 }
+    "visual": { "color": "#cdbb93", "height": 0 }
   },
 
   "warehouse": {
@@ -22,7 +22,7 @@
     "requiresRoad": false,
     "_storagePerGood": "Each warehouse adds this much room for every good in the shared island stockpile.",
     "storagePerGood": 100,
-    "visual": { "color": "#7d6b8f", "height": 1.2 }
+    "visual": { "art": "warehouse", "color": "#6f7f96", "height": 1.45 }
   },
 
   "lumberjack": {
@@ -36,7 +36,7 @@
     "_placement": "Needs at least minTiles forest tiles within the radius.",
     "placement": { "terrainInRadius": { "terrain": "forest", "radius": 4, "minTiles": 8 } },
     "production": { "cycleSeconds": 5, "inputs": {}, "outputs": { "wood": 1 } },
-    "visual": { "color": "#4f7a3a", "height": 0.7 }
+    "visual": { "art": "lumberjack", "color": "#4f7a3a", "height": 0.95 }
   },
 
   "sawmill": {
@@ -48,7 +48,7 @@
     "upkeepPerMinute": 3,
     "requiresRoad": true,
     "production": { "cycleSeconds": 16, "inputs": { "wood": 2 }, "outputs": { "planks": 1 } },
-    "visual": { "color": "#b5803f", "height": 0.9 }
+    "visual": { "art": "sawmill", "color": "#9c5a3c", "height": 1.15 }
   },
 
   "fisherman": {
@@ -62,7 +62,7 @@
     "_placement": "Must share an edge with a coast tile.",
     "placement": { "adjacentTerrain": "coast" },
     "production": { "cycleSeconds": 15, "inputs": {}, "outputs": { "fish": 1 } },
-    "visual": { "color": "#3f88b5", "height": 0.7 }
+    "visual": { "art": "fisherman", "color": "#3f88b5", "height": 0.95 }
   },
 
   "farm": {
@@ -76,7 +76,7 @@
     "_placement": "Every tile under the building must be fertile land.",
     "placement": { "footprintTerrain": "fertile" },
     "production": { "cycleSeconds": 30, "inputs": {}, "outputs": { "grain": 1 } },
-    "visual": { "color": "#d8c046", "height": 0.5 }
+    "visual": { "art": "farm", "color": "#e0c04a", "height": 0.6 }
   },
 
   "bakery": {
@@ -88,7 +88,7 @@
     "upkeepPerMinute": 6,
     "requiresRoad": true,
     "production": { "cycleSeconds": 15, "inputs": { "grain": 1 }, "outputs": { "bread": 1 } },
-    "visual": { "color": "#c46f3a", "height": 1.0 }
+    "visual": { "art": "bakery", "color": "#c46f3a", "height": 1.35 }
   },
 
   "house": {
@@ -101,7 +101,7 @@
     "requiresRoad": false,
     "_housing": "The population tier a new house starts at. Tiers are defined in population.json.",
     "housing": { "tier": "farmer" },
-    "visual": { "color": "#d9d2c0", "height": 0.8 }
+    "visual": { "art": "cottage", "color": "#c8a55a", "height": 1.0 }
   },
 
   "market": {
@@ -114,6 +114,6 @@
     "requiresRoad": true,
     "_market": "Houses with at least one tile within this radius are supplied with goods.",
     "market": { "radius": 8 },
-    "visual": { "color": "#c9506b", "height": 1.0 }
+    "visual": { "art": "market", "color": "#c9506b", "height": 1.0 }
   }
 }

@@ -129,4 +129,26 @@ Decisions made after Phase 0 are added below, with the phase they belong to.
 | D74 | A Start a new game button in the ? panel, pressed twice. | Listed as open in Phase 5. | `src/main.js`. |
 | D75 | A market's panel counts the houses in its own range. | It used to count houses served by any market, which misled. | `housesInRangeOf` in `src/sim/population.js`. |
 | D76 | The bot can play at a person's pace. The three paces are my guesses. | The biggest open question was how long a person takes. This is an estimate until you play. | `tools/bot/paces.json`. |
-| D77 | The project was not pushed to GitHub in this phase. | The GitHub command-line tool is not installed, so I could not create a repository. I chose not to read your saved GitHub sign-in out of Windows to do it another way. | Create an empty repository and give me its address. |
+| D77 | The project was not pushed to GitHub in this phase. | The GitHub command-line tool is not installed, so I could not create a repository. I chose not to read your saved GitHub sign-in out of Windows to do it another way. | Create an empty repository and give me its address. It was pushed after you did. |
+
+### Phase 7: Art and style
+
+You asked for "real art and style" and gave no direction, so every choice below is mine.
+
+| # | Decision | Why | How to change |
+|---|---|---|---|
+| D78 | All art is drawn by code. There are no image files. | I cannot paint pictures. Code-drawn art keeps the game free of downloads and outside tools, stays sharp at every zoom, and takes its colors from the data files. The cost is a simple, clean look, not a painted one. | An artist's pictures can replace the drawings one building at a time in `src/render/art/buildings.js`. |
+| D79 | The look is a warm storybook harbor: pitched roofs, timber, thatch and tile, soft greens, a sandy shore. | It suits a calm building game and reads clearly at small sizes. This is taste, and you may want another. | Colors are in `buildings.json`, `population.json` and `map.json`. Shapes are in `src/render/art/`. |
+| D80 | The panels are navy with a brass edge, with parchment cards for the tools and a serif face for titles. | To match the harbor theme. | The named colors at the top of `ui.css`. |
+| D81 | The fonts are ones the computer already has (Georgia for titles). | No font files to load. Titles will look slightly different on a Mac. | `--display` in `ui.css`. |
+| D82 | Each building names its drawing in the data (`visual.art`). One with no drawing is shown as a plain box. | Rules stay in the data, and a building added there still works before it has art. | `buildings.json` and `population.json`. |
+| D83 | Colors and heights in the data changed to suit the drawings. No game rule changed. | A roof color and a box color are different jobs. The bot still wins in the same 28.6 minutes with the same final state. | The `visual` entries in the data files. |
+| D84 | Farmer houses and Worker houses look different: a thatched cottage and a taller tiled townhouse. | You should be able to see your progress toward 100 Workers on the map. | `visual` under each tier in `population.json`. |
+| D85 | Some drawings follow the game: crops ripen, the bakery smokes, the sawmill throws sawdust, house windows light up. | You did not list these. They are part of making the art feel alive, they show only what the game already tracks, and they add no rules. | `ART_USES` and `LIVE_ART` in `src/render/art/buildings.js`. |
+| D86 | The two-letter labels are gone from drawn buildings. Houses keep their resident count, on a small plate. | The drawings say what a building is. The count is still needed. | `drawBuilding` in `src/render/renderer.js`. |
+| D87 | The build menu shows a small picture of each building, and the top bar shows icons for goods, people and coins. | Pictures are faster to find than words. The names stay under the pictures. | `src/render/art/icon.js` and `src/ui/icons.js`. |
+| D88 | The ground is painted once into two hidden pictures, and each building look once into its own picture. | Drawing every shape on every frame took over 100 milliseconds a frame, which is under 10 frames a second. | The constants at the top of `src/render/renderer.js`. |
+| D89 | The large ground picture is up to 1.5 times finer than the screen needs at normal zoom. It uses about 80 MB of memory. | Finer looks crisper when zoomed in. Zoomed in past about 1.5x the ground still looks a little soft. | `PICTURE_MAX_DETAIL` in `src/render/renderer.js`. |
+| D90 | Only trees within two tiles of a building are drawn in order with the buildings. | Sorting every tree every frame was too slow. A drawing never reaches further than two tiles from its plot. | `TREE_REACH` in `src/render/renderer.js`. |
+| D91 | Nothing moves on the map except water glints, smoke and sawdust. No people, carts or boats. | Moving people are a feature of their own, and you did not ask for them. | Tell me if you want them. |
+| D92 | No sound, no title screen, no new buildings. | Outside "art and style" as I read it. | Tell me if you want them. |

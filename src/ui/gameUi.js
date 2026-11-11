@@ -4,7 +4,6 @@
 
 import { buildingById, execute, getSummary } from '../sim/index.js';
 import { centerOnTile, clampToMap, screenToTile } from '../render/camera.js';
-import { HEIGHT_UNIT } from '../render/iso.js';
 import { pick } from '../render/pick.js';
 import { createCameraControls } from './cameraControls.js';
 import { createHud } from './hud.js';
@@ -27,8 +26,6 @@ const TINT = {
   roadExisting: 'rgba(255, 255, 255, 0.3)',
   roadShort: 'rgba(245, 165, 36, 0.6)',
 };
-const GHOST_BAD_COLOR = '#d9534f';
-const GHOST_OUTLINE = { ok: '#5df08a', bad: '#ff5a5a' };
 const SELECT = { mode: 'select', building: null };
 const MESSAGE_SECONDS = 3;
 const CONFIRM_SECONDS = 4; // how long a first demolish click waits for the second
@@ -122,15 +119,12 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
     return false;
   }
 
+  // A stand-in building for the renderer to draw where the pointer is.
   function ghostFor(buildingId, preview) {
     const def = rules.buildings[buildingId];
-    const visual = (def.housingTier ? rules.tiers[def.housingTier].visual : null) ?? def.visual ?? { color: '#999999', height: 0.8 };
     return {
-      x: preview.x, y: preview.y, w: def.w, h: def.h,
-      color: preview.ok ? visual.color : GHOST_BAD_COLOR,
-      risePx: visual.height * HEIGHT_UNIT,
-      label: def.name.slice(0, 2),
-      outline: preview.ok ? GHOST_OUTLINE.ok : GHOST_OUTLINE.bad,
+      building: { type: buildingId, x: preview.x, y: preview.y, house: def.housingTier ? { tier: def.housingTier, residents: 0 } : undefined },
+      ok: preview.ok,
     };
   }
 

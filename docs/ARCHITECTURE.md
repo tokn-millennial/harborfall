@@ -75,7 +75,14 @@ Harborfall/
       camera.js           Pan, zoom, world to screen and back, what is visible. Pure math.
       pick.js             What is under a screen point: ground tile and building. Pure math.
       visuals.js          Each building's color, height and label, from the data files.
-      renderer.js         Draws terrain, roads, trees, buildings and outlines on the canvas.
+      renderer.js         Puts a frame together: water, ground, roads, buildings, outlines, marks.
+      art/                The drawings. Every one is code. There are no image files.
+        kit.js            Drawing tools in "building space": walls, pitched roofs, posts, color mixing.
+        buildings.js      One drawing per building look, picked by the `art` name in the data.
+        terrain.js        Ground, shoreline, trees, water glints and joined-up roads.
+        box.js            The plain box used when a building has no drawing.
+        icon.js           The small building pictures on the build menu.
+        sprites.js        Keeps each building look as a ready-made picture.
 
     ui/                   Input and panels.
       gameUi.js           The controller: active tool, selection, clicks into commands.
@@ -90,6 +97,7 @@ Harborfall/
       speedControls.js    Pause, 1x, 2x, 4x, and their keys.
       winScreen.js        The win message.
       dom.js              Two small helpers for making page elements.
+      icons.js            The small icons for goods, people, coins and tools.
 
     platform/             The only place that touches the outside world.
       loadData.browser.js Loads the JSON files in the browser.
@@ -235,12 +243,19 @@ Adding a new producer, such as a second kind of farm, needs only a new entry in 
 
 - Classic 2:1 isometric diamonds. A tile is 64 x 32 pixels at zoom 1.
 - Tiles and buildings are drawn back to front so nearer things cover farther things.
-- Terrain is a flat colored diamond. A building is a colored box whose color and height come from the data files.
+- Each building's data names a drawing (`visual.art`), a main color and a height. The drawing is a small piece of code in `src/render/art/buildings.js` that builds the shape from walls and roofs. A building with no drawing, or an unknown name, is shown as a plain colored box, so a new building in the data works before it has art.
+- The drawings are tested without a browser: `tests/art.test.js` gives them a stand-in canvas that records what was drawn.
 - Tile picking gives two answers for a screen point: the ground tile under it, and the building the pointer is over. A point on a drawn box counts as that building, even though the ground tile behind the box is a different one. Where two boxes overlap on screen, the nearer one wins. Phase 0 planned to accept wrong picks on roofs. That turned out to be easy to do properly, so it was.
-- Four of the five render files are pure math with no canvas, so they are tested in Node. Only `renderer.js` touches the canvas, and it is checked by eye in the browser.
+- `iso.js`, `camera.js`, `pick.js` and `visuals.js` are pure math with no canvas, so they are tested in Node. `renderer.js` is checked by eye in the browser.
 - The renderer draws in world pixels and lets the canvas apply pan and zoom.
-- The ground and the forest never change, so they are painted once into a hidden picture, and each frame draws that picture. Zoomed far in, where the picture would look soft and few tiles are on screen, tiles and trees are drawn directly, with trees sorted among the buildings. This was added in Phase 5 and made the whole-island view about 30 times faster.
-- Buildings are drawn far to near. While a building or road is being placed they are drawn see-through.
+- Almost everything is prepared once and reused, because drawing thousands of small shapes on every frame was measured as far too slow:
+  - The ground and the forest never change, so they are painted once into a large hidden picture, and each frame shows that picture. A second, small copy is used when zoomed far out. The large picture uses about 80 MB of memory on a sharp screen and the small one about 9 MB.
+  - Each look of each building is drawn once into its own small picture. A farm has six looks, one per stage of its crop. A finished town needs about ten pictures in all. They are redrawn sharper when the player zooms in.
+  - Road shapes are rebuilt only when something is built or removed.
+  - The water's color is the page background behind the canvas. Only the glints are drawn each frame.
+  - Smoke and sawdust are the only building parts drawn fresh each frame.
+- Buildings are drawn far to near. Trees within two tiles of a building are drawn in order with the buildings, so a tree in front of a house covers it. All other trees are part of the ground picture.
+- While a building or road is being placed, buildings are drawn see-through.
 - `http://localhost:5173/?demo` shows a finished town built by the bot, so the building shapes can be checked before the build menu exists.
 
 ## 8. Test plan
@@ -266,6 +281,7 @@ All tests run with `node --test` and need no browser.
 | `iso.test.js` | Tile to screen and back returns the same tile for every tile, at several zooms and pans. Zoom keeps the point under the cursor fixed. Picking finds roofs, and the nearer of two overlapping boxes. |
 | `ui.test.js` | The logic behind the UI: every reason code has a sentence, previews agree with what a click then does, road lines are unbroken, the info panel says the right thing for each kind of building. |
 | `loop.test.js` | Real time becomes whole ticks. Speeds 2x and 4x, pause, and a stalled tab all behave. |
+| `art.test.js` | Every building and house tier has a drawing. Every drawing runs in every state, uses only valid colors and stays inside its own plot. A building with no drawing falls back to a box. Stored pictures change only when the look changes. Drawing never changes the game. |
 
 Later phases add:
 - **Phase 2:** the bot run is the balance test. It reports time to win, the coin curve, and any step that waited more than 5 minutes.

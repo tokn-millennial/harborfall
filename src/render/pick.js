@@ -28,7 +28,7 @@ export function pick(game, camera, view, sx, sy) {
     const def = rules.buildings[b.type];
     const depth = depthOf(b.x, b.y, def.w, def.h);
     if (depth <= bestDepth) continue;
-    const outline = boxSilhouette(b.x, b.y, def.w, def.h, buildingVisual(rules, b).risePx);
+    const outline = boxSilhouette(b.x, b.y, def.w, def.h, buildingVisual(rules, b).topPx);
     if (pointInPolygon(world.x, world.y, outline)) {
       building = b;
       bestDepth = depth;
