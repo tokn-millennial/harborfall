@@ -324,6 +324,7 @@ export function paintWater(ctx, view, camera, time) {
 // when a road or building is added or removed.
 export function createRoadPainter(color) {
   let stamp = null;
+  let lastState = null;
   let shapes = null;
 
   function build(state) {
@@ -373,8 +374,10 @@ export function createRoadPainter(color) {
       let roads = 0;
       for (let i = 0; i < state.roads.length; i++) if (state.roads[i]) roads = (Math.imul(roads, 31) + i + 1) | 0;
       const now = `${roads}|${state.buildings.length}|${state.nextId}`;
-      if (now !== stamp) {
+      // A different game altogether (one was loaded, or a new one begun) always rebuilds.
+      if (now !== stamp || state !== lastState) {
         stamp = now;
+        lastState = state;
         shapes = build(state);
       }
       if (shapes.count === 0) return;

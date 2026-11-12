@@ -580,3 +580,79 @@ Date: 2026-11-11. Your request: "Give me a roadmap and all the handoff materials
 - **The sizes in the roadmap are estimates** from how long earlier phases took. The large items in particular could be off.
 - **The roadmap is my view of what matters.** You have not yet played a full game and told me what you think is missing.
 - **The start-of-session prompt is untested.** I wrote it and have not tried it on a fresh helper.
+
+## Phase 8: Save, title screen, drawing speed
+
+Date: 2026-11-11. Status: approved by Colin with no changes.
+
+**Turns used:** 1 (your message "Just keep building"). No plan was shown first, at your word (D98).
+
+**What was built**
+- **Save and load.** The game saves itself and offers Continue when you come back. One saved game, kept in the browser.
+- **A title screen**, with the island behind it: Continue, New game, New game on a random island, and a link to a finished town.
+- **A choice of island.** A random island is one of a million, and its number shows in the ? panel.
+- **A drawing speed fix** at the zoom levels where buildings are shown smaller than they were drawn.
+- A test page, `?fresh`, so the test tools never touch a saved game.
+
+**Automated tests: 271 pass, 0 fail.** That is 236 from before plus 35: 20 for saving and loading, 14 for the save slot and the title screen, and 1 more from the guard that keeps browser code out of the simulation, which now also covers `save.js`.
+
+**Browser checks**
+
+| Check | How | Result |
+|---|---|---|
+| The title screen appears, with two new-game buttons and no Continue when nothing is saved | First load, read from the page and seen | Pass |
+| New game starts a game and saves it at once | Real click, then read the stored save | Pass |
+| A refresh keeps the game | Built a house, ran 2 minutes, reloaded the page | Pass. Continue read "2:08 played, 0 of 100 Workers, 525 coins". |
+| Continue restores the game exactly | Real click, compared clock and buildings | Pass |
+| Leaving the page saves | Ran 777 ticks and left at once, before the 10 second save | Pass. The stored clock went from 42 to 819. |
+| New game over a saved one needs two presses, and the first press wears off | Real clicks. Waited 5 seconds after the first. | Pass. The saved game was untouched. |
+| A random island is a different island, drawn correctly, and saved as that island | Two real clicks | Pass. Island 621985. |
+| Continue brings back a random island, and the view | Moved and zoomed the view, went to the title, continued | Pass. Same island, same spot, same zoom. |
+| A save made under changed rules is refused with an explanation | Changed the stamp in the stored save | Pass. No Continue button. The save was left in place. |
+| Unreadable text in the save slot, and a damaged save | Stored garbage, then a save with a building moved off the island | Pass, both. No error. Each gets its own sentence. |
+| `?fresh` and `?demo` never touch the saved game | Compared the stored save before and after each test below | Pass |
+| A full game through the UI still matches the headless bot | UI playthrough on `?fresh` | Pass. Won at 28.55 minutes, identical final state. |
+| Random input | 7,000 actions over 3 runs, on `?fresh` and `?demo` | Pass. No errors. |
+| A game left by the random-input test still saves and loads | Saved and loaded the games from two of the three runs | Pass, both |
+| The ? panel at 1280 by 720 | Screenshot | Failed at first, then fixed. See bug 1. |
+| The error console after all of the above | Read it | Three warnings, one for each refused save, as intended. No errors. |
+
+**Drawing speed**
+
+Milliseconds to draw one frame of the demo town (32 buildings) in my test browser. Each zoom was drawn the old way and the new way in turns, 20 times each, and the cost of measuring (2.9 ms) was taken away.
+
+| Zoom | Before | After |
+|---|---|---|
+| 0.35 (whole island) | 39 | 20 |
+| 0.5 | 24 | 22 |
+| 0.7 | 45 | 23 |
+| 0.9 | 48 | 25 |
+| 1 | 26 | 24 |
+| 1.5 | 28 | 28 |
+| 2 | 21 | 20 |
+| 3 | 21 | 21 |
+
+- The fix halves the frame time at the three zoom levels that were slow and leaves the rest alone. Frame time is now about the same at every zoom.
+- **About 20 to 28 ms a frame is still not smooth in my test browser.** Smooth is under 16. That browser is slow and I do not know how it compares with yours. This is still the thing I most need you to look at.
+- Where the time goes at zoom 0.7, measured piece by piece: water and ground 4 ms, roads 3.5 ms, buildings and everything on them the rest. The buildings' share grows with the number on screen.
+
+**Bugs found: 1 in this phase's work, fixed. 2 mistakes of mine from Phase 7, corrected.**
+1. **The ? panel ran under the build menu** on a 1280 by 720 window once two lines about saving were added, hiding the new button. The button and the save note now come first in the panel, and the panel scrolls on a short window.
+2. **My Phase 7 explanation of the slow zoom was wrong.** I blamed shrinking the large ground picture and proposed a middle-sized one. Measured properly, showing the ground costs about 1 ms at any size. The real cost was the smoothing setting on the building pictures. The middle picture was not built.
+3. **My Phase 7 speed table cannot be trusted in its details.** The runs were taken one after another with the measuring cost left in, and that cost drifts by more than the differences I reported. Its broad claim (the art is not slower than the old boxes) may still hold. Its "slower at 0.7" finding was real but for the wrong reason.
+
+**Decisions made:** 16 (D98 to D113). No game rule changed. The bot's result is identical.
+
+**Weak or unfinished**
+- **The saved game lives in one browser.** Another browser or computer does not have it, and clearing the browser's stored data deletes it. There is no file to back up.
+- **Tuning a number in the data files makes a saved game unusable** until the number is changed back. This is on purpose, and it will get in your way when you tune.
+- **Two tabs open on the game overwrite each other's save.**
+- **The speed setting, the picked tool and the tip line's memory are not saved.** A continued game starts at 1x.
+- **Random islands are not balance-tested one by one.** The bot wins on every other island I have tried, about a dozen, in 26 to 29 minutes. Some island out of a million may be harder.
+- **The title screen was checked at one window size**, 1280 by 720.
+- **Speed is still unproven on a real screen**, as above.
+- **The ground still looks a little soft when zoomed far in.** Not touched in this phase.
+- **Not done from the roadmap's Phase 8:** your hand-played game (A1) and a Mac test (A3).
+
+**What I would change**
+- I would have measured the slow zoom before writing a cause into the Phase 7 documents and the roadmap. The guess read as a finding.

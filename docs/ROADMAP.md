@@ -1,6 +1,6 @@
 # Harborfall: Roadmap
 
-Written 2026-11-11, at the end of Phase 7, by Fable 5.2.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 8, by Fable 5.2.
 
 This is a list of what could come next, in the order I would do it. **Nothing here is decided.** Every item is a proposal, and you choose. The working rule from the brief still stands: nothing gets built that you did not ask for.
 
@@ -8,8 +8,8 @@ Read `HANDOFF.md` first if you are picking the project up after a break.
 
 ## Where the project stands
 
-- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), and drawn art with a new theme (Phase 7).
-- **Proven by machines:** 236 automated tests pass. A bot wins in 28.6 minutes. A script wins through the real UI and ends in exactly the bot's game.
+- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), and saving, a title screen and a choice of island (Phase 8).
+- **Proven by machines:** 271 automated tests pass. A bot wins in 28.6 minutes. A script wins through the real UI and ends in exactly the bot's game.
 - **Not proven by a person:** nobody has told me how a hand-played game went, how smooth it is on a real screen, or how it works on a Mac.
 
 That last line shapes the order below. The cheapest and most useful next step is an hour of your own play.
@@ -28,8 +28,8 @@ Each phase so far took one long working session. The sizes compare with that.
 
 | Phase | What | Size | Why here |
 |---|---|---|---|
-| 8 | Play it and fix what you find (A1, A2, A3) | Small to medium | Everything after this builds on a game nobody has played by hand. |
-| 9 | Save and load, title screen, new-island choice (B1, B2) | Medium | A 30 minute game that is lost on a refresh is hard to enjoy or to test. |
+| 8 | **Done.** Save and load, title screen, island choice (B1, B2), and the drawing speed fix from A2 | Medium | A 30 minute game that was lost on a refresh was hard to enjoy or to test. |
+| 9 | Play it and fix what you find (A1, the rest of A2, A3) | Small to medium | Still the most useful next step. Everything else builds on a game nobody has played by hand. Now that the game saves, it no longer has to be one sitting. |
 | 10 | Life on the map (C1) | Medium | The biggest gain in feel for no change in rules. |
 | 11 | Sound (C2) | Medium | Same reason. Needs a decision from you first. |
 | 12 | A guided first game and undo (B3, B4) | Medium | Best done after you have watched someone new play. |
@@ -46,10 +46,10 @@ Each phase so far took one long working session. The sizes compare with that.
 - **Why:** the one item on the final scorecard that is passed "on your word" is "I can win by hand". All of my time estimates are guesses.
 - **Size:** small for you, small to medium for the fixes.
 
-### A2. Check drawing speed on your screen, and fix the two known soft spots
-- **Known:** at zoom 0.7 a frame takes longer than it did with the old boxes, in my test browser. Zoomed far in, the ground looks a little soft.
-- **Unknown:** whether either matters on a real graphics card. My test browser is slow and I never saw the game move at full speed.
-- **Likely fixes:** a third, middle-sized ground picture for the 0.6 to 0.9 zoom range, and a finer large picture or direct drawing of only the tiles in view when zoomed far in.
+### A2. Check drawing speed on your screen (partly done in Phase 8)
+- **Done:** the slow zoom levels were traced to a smoothing setting and fixed. Frame time there halved in my test browser and is now even across all zoom levels. The middle-sized ground picture I proposed here was measured first, made no difference, and was not built.
+- **Still unknown:** whether the game is smooth on a real graphics card. In my test browser a frame takes 20 to 28 ms, and smooth is under 16. Please tell me how it feels.
+- **Still open:** zoomed far in, the ground looks a little soft. If speed is a problem on your screen, the next places to look are the roads (drawn shape by shape every frame, about 3.5 ms) and the trees beside buildings (about 3 ms).
 - **Size:** small.
 
 ### A3. Try it on a Mac
@@ -61,15 +61,17 @@ Each phase so far took one long working session. The sizes compare with that.
 
 ## Stage B: Make it a game you can come back to
 
-### B1. Save and load
-- **What you get:** the game saves itself in the browser every minute or so, and offers "Continue" when you come back. Optionally a file you can download and load.
+### B1. Save and load (done in Phase 8)
+- **Left over:** more than one saved game, a save file to download, and saves that survive a change to the data files. None is planned.
+- **What you got:** the game saves itself in the browser every minute or so, and offers "Continue" when you come back. Optionally a file you can download and load.
 - **Why it is cheap:** the whole game state is already plain data that can be written out as text. That was a design goal from Phase 0.
 - **Design notes:** a save needs a version stamp and the island seed. If the data files change after a save, the save may no longer make sense, so loading must check and refuse cleanly. The simulation must not touch browser storage. Saving belongs in `src/platform/`.
 - **Tests:** save, load, and play on must end in the same game as never saving at all.
 - **Size:** small to medium.
 
-### B2. Title screen and island choice
-- **What you get:** a start screen with New game, Continue and the demo town. New game can keep the standard island or roll a random one.
+### B2. Title screen and island choice (done in Phase 8)
+- **Left over:** a box to type an island number into.
+- **What you got:** a start screen with New game, Continue and the demo town. New game can keep the standard island or roll a random one.
 - **Why it is cheap:** the island already comes from one seed number in `data/map.json`, and the bot already wins on a dozen other seeds.
 - **Risk:** a random island may be harder or easier. The map generator guarantees enough forest, fertile land and coast, and a test checks it, but balance was tuned on seed 1407.
 - **Size:** small.
@@ -180,10 +182,10 @@ These are not features. They are debts and loose ends, smallest first.
 
 One line is enough. For example:
 
-> Phase 8: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
+> Phase 9: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
 
 or
 
-> Phase 9: build B1 and B2 from the roadmap. Show me the plan first.
+> Phase 10: build C1 from the roadmap. Show me the plan first.
 
 The helper should then follow the working rules in `HANDOFF.md` section 6: plan first, one feature at a time, test everything itself, stop at the gate with the five-part report, and commit only after you approve.

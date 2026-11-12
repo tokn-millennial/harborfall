@@ -24,13 +24,14 @@ Harborfall is a small Anno-style city builder for desktop browsers. The owner is
 
 ## Commands
 
-- `node --test` runs all tests (236 at the end of Phase 7). They must all pass before a gate.
+- `node --test` runs all tests (271 at the end of Phase 8). They must all pass before a gate.
 - `node tools/bot.mjs` plays a full headless game (also `careless`, `bread-first`, `--seed N`, `--pace typical`, `--steps`, `--map`). The standard order must still win inside 25 to 40 minutes. It is the balance gate, and `tests/bot.test.js` checks it.
 - `node tools/tune.mjs` compares balance variants. `node tools/pace.mjs` estimates a person's time. `node tools/print-map.mjs` prints the island.
-- `node serve.mjs` serves the game at `http://localhost:5173`. `?demo` shows a finished town.
+- `node serve.mjs` serves the game at `http://localhost:5173`, which opens on the title screen and saves the game in the browser. `?demo` shows a finished town. `?fresh` opens a new game with no title screen. Neither of those two ever saves.
+- Do all browser testing on `?fresh` or `?demo`, so the owner's saved game is never overwritten. Test the title screen and saving on the plain address only when that is what you are testing, and say so.
 - Browser checks, run from the page console after any UI or drawing change:
-  - `const { playThroughUi } = await import('/tools/ui-playthrough.js'); await playThroughUi(window.harborfall);` on a fresh game. The final state must be identical to the headless bot's.
-  - `const { monkey } = await import('/tools/ui-monkey.js'); monkey(window.harborfall, { actions: 2500, seed: 1 });` must report no errors. Run it on a fresh game and on `?demo`.
+  - `const { playThroughUi } = await import('/tools/ui-playthrough.js'); await playThroughUi(window.harborfall);` on a freshly loaded `?fresh` page. The final state must be identical to the headless bot's.
+  - `const { monkey } = await import('/tools/ui-monkey.js'); monkey(window.harborfall, { actions: 2500, seed: 1 });` must report no errors. Run it on `?fresh` and on `?demo`.
 
 ## Documents to keep current
 
@@ -48,6 +49,9 @@ Update these in the same phase as the change, before the gate:
 - A game server may already be running on port 5173, started by the owner. Use it. Never stop a server you did not start.
 - On this Windows machine, shell commands containing apostrophes or nested quotes get mangled. Write a script file and run it.
 - An embedded or hidden test browser may draw about one frame a second. Do not judge smoothness there, and do not trust timings unless you force the browser to finish drawing (draw the game canvas into a tiny canvas and read a pixel back). Unforced timings measure almost nothing.
+- Compare drawing speeds by running the old way and the new way in turns, many times, and subtracting the cost of the measuring itself. Runs taken one after another drift by more than most differences.
+- Never show a stored picture with `imageSmoothingQuality` above `'low'`. Shrinking with `'medium'` was measured at over twenty times the cost.
+- If you change the shape of the game state, bump `SAVE_FORMAT` in `src/sim/save.js` and decide what happens to older saves. A change to the data files already makes older saves refuse to load, by design.
 - Drawing thousands of small shapes per frame is too slow. Prepare pictures once and reuse them, as `src/render/renderer.js` does.
 - The repository is private and its documents and history contain personal details. Do not make it public, and do not publish its contents elsewhere, without the owner's say-so.
 - The GitHub command-line tool is not installed. Plain `git push` works. Do not read saved sign-ins or tokens from the system.

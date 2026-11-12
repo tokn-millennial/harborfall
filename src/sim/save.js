@@ -1,0 +1,131 @@
+// Saving and loading. A save is plain data: it can be turned into text, kept
+// anywhere, and turned back into a game later. Where it is kept is not this
+// file's business (see src/platform/saveStore.js).
+//
+// A save holds the whole state, the island seed that was asked for, and a
+// stamp of the rules it was played under. Loading refuses a save whose rules
+// have changed, because its numbers may no longer make sense.
+
+import { compileRules, stableText, withSeed } from './rules.js';
+import { refresh } from './refresh.js';
+import { footprint, inBounds, tileIndex } from './grid.js';
+
+export const SAVE_FORMAT = 1;
+const APP = 'harborfall';
+
+const copy = (value) => JSON.parse(JSON.stringify(value));
+const isCount = (n) => Number.isInteger(n) && n >= 0;
+
+// Everything needed to carry on with this game later. Never changes the game.
+export function saveGame(game) {
+  return {
+    app: APP,
+    format: SAVE_FORMAT,
+    rulesStamp: game.rules.stamp,
+    seed: game.rules.map.seed,
+    state: copy(game.state),
+  };
+}
+
+// Turns a save back into a game. Returns { ok: true, game } or
+// { ok: false, reason, detail }. Reasons:
+//   not_a_save     this is not a Harborfall save at all
+//   newer_version  it was made by a newer version of the game
+//   rules_changed  the data files have changed since it was made
+//   damaged        it does not describe a possible game
+// `rawData` is the data files as loaded, the same as for createGame.
+export function loadGame(rawData, save) {
+  const fail = (reason, detail = '') => ({ ok: false, reason, detail });
+  if (save === null || typeof save !== 'object' || save.app !== APP || !Number.isInteger(save.format)) {
+    return fail('not_a_save');
+  }
+  if (save.format > SAVE_FORMAT) return fail('newer_version');
+  if (save.format < 1) return fail('not_a_save');
+
+  const rules = compileRules(Number.isInteger(save.seed) ? withSeed(rawData, save.seed) : rawData);
+  if (save.rulesStamp !== rules.stamp) return fail('rules_changed');
+
+  let state;
+  try {
+    state = copy(save.state);
+  } catch {
+    return fail('damaged', 'the state cannot be read');
+  }
+  const problem = stateProblem(rules, state);
+  if (problem) return fail('damaged', problem);
+
+  // Everything worked out from what is built where (road connections, storage,
+  // market coverage) must agree with a fresh calculation.
+  const check = { rules, state: copy(state) };
+  try {
+    refresh(check);
+  } catch (error) {
+    return fail('damaged', `the state cannot be worked with: ${error.message}`);
+  }
+  if (stableText(check.state) !== stableText(state)) return fail('damaged', 'connections or storage do not add up');
+
+  return { ok: true, game: { rules, state } };
+}
+
+// The first thing wrong with a state, in words, or null if it is a possible game.
+function stateProblem(rules, state) {
+  if (state === null || typeof state !== 'object') return 'there is no state';
+  if (!isCount(state.tick)) return 'the clock is not a whole number';
+  if (!isCount(state.coinsMilli)) return 'the coins are not a whole number';
+  if (!isCount(state.storageCap)) return 'the storage limit is not a whole number';
+  if (!isCount(state.incomeTimer)) return 'the income timer is not a whole number';
+  if (!Number.isInteger(state.nextId) || state.nextId < 1) return 'the next building number is wrong';
+  if (typeof state.won !== 'boolean') return 'the win flag is missing';
+  if (state.wonAtTick !== null && !isCount(state.wonAtTick)) return 'the win time is wrong';
+  if (state.won !== (state.wonAtTick !== null)) return 'the win flag and the win time disagree';
+
+  if (state.goods === null || typeof state.goods !== 'object') return 'the goods are missing';
+  for (const id of rules.goodIds) {
+    if (!isCount(state.goods[id])) return `the amount of ${id} is not a whole number`;
+  }
+  if (Object.keys(state.goods).length !== rules.goodIds.length) return 'there is a good the rules do not know';
+
+  const map = state.map;
+  if (map === null || typeof map !== 'object') return 'the island is missing';
+  if (!Number.isInteger(map.width) || !Number.isInteger(map.height) || map.width < 1 || map.height < 1) return 'the island has no size';
+  const total = map.width * map.height;
+  if (!Array.isArray(map.terrain) || map.terrain.length !== total) return 'the island has the wrong number of tiles';
+  for (const t of map.terrain) {
+    if (!Object.hasOwn(rules.map.terrain, t)) return `the island has unknown ground "${t}"`;
+  }
+  if (map.start !== null && (typeof map.start !== 'object' || !inBounds(map, map.start.x, map.start.y))) return 'the start site is off the island';
+
+  if (!Array.isArray(state.roads) || state.roads.length !== total) return 'the road list is the wrong length';
+  if (!state.roads.every((r) => r === 0 || r === 1)) return 'the road list holds something that is not a road';
+  if (!Array.isArray(state.occupancy) || state.occupancy.length !== total) return 'the building map is the wrong length';
+  if (!Array.isArray(state.buildings)) return 'the building list is missing';
+
+  const ids = new Set();
+  let coveredTiles = 0;
+  for (const b of state.buildings) {
+    if (b === null || typeof b !== 'object') return 'a building is not a building';
+    if (!Number.isInteger(b.id) || b.id < 1 || b.id >= state.nextId || ids.has(b.id)) return 'a building has a wrong or repeated number';
+    ids.add(b.id);
+    const def = Object.hasOwn(rules.buildings, b.type) ? rules.buildings[b.type] : null;
+    if (!def || def.category === 'road') return `a building has the unknown type "${b.type}"`;
+    if (!Number.isInteger(b.x) || !Number.isInteger(b.y)) return 'a building has no position';
+    for (const [tx, ty] of footprint(b.x, b.y, def.w, def.h)) {
+      if (!inBounds(map, tx, ty)) return `building ${b.id} is off the island`;
+      if (state.occupancy[tileIndex(map, tx, ty)] !== b.id) return `building ${b.id} does not match the building map`;
+      coveredTiles++;
+    }
+    if (Boolean(def.production) !== Boolean(b.production)) return `building ${b.id} has the wrong kind of record`;
+    if (b.production && !isCount(b.production.progress)) return `building ${b.id} has a wrong work timer`;
+    if (Boolean(def.housingTier) !== Boolean(b.house)) return `building ${b.id} has the wrong kind of record`;
+    if (b.house) {
+      const tier = Object.hasOwn(rules.tiers, b.house.tier) ? rules.tiers[b.house.tier] : null;
+      if (!tier) return `house ${b.id} has an unknown kind of resident`;
+      if (!isCount(b.house.residents) || b.house.residents > tier.capacity) return `house ${b.id} holds an impossible number of residents`;
+      if (b.house.hunger === null || typeof b.house.hunger !== 'object' || b.house.met === null || typeof b.house.met !== 'object') {
+        return `house ${b.id} has no record of its needs`;
+      }
+    }
+  }
+  if (state.occupancy.filter((id) => id !== 0).length !== coveredTiles) return 'the building map shows a building that is not in the list';
+  return null;
+}

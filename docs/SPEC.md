@@ -231,6 +231,16 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 
 ## 11. Screen and controls
 
+**Starting and saving**
+- The game opens on a title screen, with the island behind it. It offers Continue (if there is a saved game), New game on the standard island, and New game on a random island. A link shows a finished town built by the bot.
+- Continue shows the time played, the Workers so far and the coins. It puts you back where you were, looking at the same spot.
+- The game saves itself. It saves about every 10 seconds, whenever the page is hidden or closed, and when you go back to the title screen. There is no save button and nothing to remember.
+- There is one saved game, kept in the browser you played in. It is not shared with other browsers or computers, and clearing the browser's stored data removes it.
+- Starting a new game replaces the saved one, so the button must be pressed twice.
+- A saved game cannot be continued if a rule in the data files has changed since it was saved. The title screen says so. Changing the rule back brings the game back. Changes to names, colors, shortcut keys and notes do not matter.
+- A random island is one of a million. The ? panel shows the island's number. The balance was tuned on the standard island.
+- The ? panel has a "Save and go to the title screen" button.
+
 **View**
 - Isometric view in a warm storybook style. All of the art is drawn by the game's own code. There are no image files.
 - Each building has its own look: a long timber warehouse with crates outside, a log cabin with a log pile for the lumberjack, an open-sided sawmill with a stack of planks, a fishing hut with a boat and a net rack, a farm with a barn and crop rows, a brick bakery with a tall chimney, a thatched cottage for Farmers, a taller timber-framed townhouse with a tiled roof for Workers, and a paved market square with three striped stalls.
@@ -268,7 +278,7 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 - Coins and net income per minute. Income turns red when negative, with a line saying what to do.
 - Each good with its storage limit. On windows narrower than 1500 pixels a good shows as its color and number, with the name on hover.
 - Farmers and Workers, each with housing capacity, and a bar toward the goal of 100 Workers.
-- Game time, Pause, 1x, 2x, 4x, and a ? button for the controls. The ? panel also has a Start a new game button, which must be pressed twice.
+- Game time, Pause, 1x, 2x, 4x, and a ? button for the controls. The ? panel also shows when the game was last saved and has the button back to the title screen.
 - A tip line appears when something has been short for 30 game seconds, for example "Fish keeps running out. Build another fisherman." It names the root of the shortage: if bread is out because the bakery has no grain, it talks about grain.
 
 **Keys**
@@ -279,4 +289,4 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 
 ## 12. Not in Version 1
 
-Save and load, undo, sound, more islands, ships and trade, combat, visible carriers, workforce requirements for buildings, building rotation, a tutorial, touch controls, people or boats moving on the map, and painted art from image files.
+More than one saved game, save files to download or share, undo, sound, more islands, ships and trade, combat, visible carriers, workforce requirements for buildings, building rotation, a tutorial, touch controls, people or boats moving on the map, and painted art from image files.

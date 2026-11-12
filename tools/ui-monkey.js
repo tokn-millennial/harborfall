@@ -6,7 +6,8 @@
 // negative, goods are whole numbers, no house holds more than its capacity,
 // every building sits exactly on the tiles it claims, and the camera is sane.
 //
-// Run it from the browser's console:
+// Run it from the browser's console, on http://localhost:5173/?fresh or ?demo.
+// Those pages never save, so the random input cannot wreck a saved game:
 //   const { monkey } = await import('/tools/ui-monkey.js');
 //   monkey(window.harborfall, { actions: 20000, seed: 1 });
 

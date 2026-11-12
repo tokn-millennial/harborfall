@@ -273,11 +273,17 @@ test('moving parts draw only while the building is working', () => {
 });
 
 test('stored pictures get sharper in steps as the view zooms in', () => {
-  assert.equal(sharpnessFor(0.5), 1);
+  assert.equal(sharpnessFor(0.35), 0.6);
+  assert.equal(sharpnessFor(0.6), 0.6);
+  assert.equal(sharpnessFor(0.7), 1);
   assert.equal(sharpnessFor(1), 1);
   assert.equal(sharpnessFor(1.5), 2);
   assert.equal(sharpnessFor(2.4), 3);
   assert.equal(sharpnessFor(4.5), 4.5);
+  // A picture is never shown at much less than half the size it was drawn at.
+  for (let scale = 0.35; scale <= 4.5; scale += 0.05) {
+    assert.ok(scale / sharpnessFor(scale) >= 0.5, `at scale ${scale.toFixed(2)} a picture is shrunk to ${(scale / sharpnessFor(scale)).toFixed(2)}`);
+  }
 });
 
 test('a building knows the name of its art, and a house takes its tier\'s', () => {

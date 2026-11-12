@@ -12,7 +12,10 @@ const MARGIN = 14; // room around the footprint for roof overhangs and props
 
 // How sharp the pictures need to be for a given number of screen pixels per
 // world pixel. A few fixed steps, so zooming does not remake them constantly.
+// The steps are close enough that a picture is never shown at less than about
+// half its size, which keeps the browser's cheapest smoothing looking clean.
 export function sharpnessFor(scale) {
+  if (scale <= 0.6) return 0.6;
   if (scale <= 1) return 1;
   if (scale <= 2) return 2;
   if (scale <= 3) return 3;

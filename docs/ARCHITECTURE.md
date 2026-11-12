@@ -69,6 +69,7 @@ Harborfall/
       commands.js         Applies a command: place, road, demolish, upgrade.
       win.js              The win check.
       summary.js          The numbers the HUD, bot and reports read.
+      save.js             Turns a game into plain data and back, and refuses a save that cannot be trusted.
 
     render/               Drawing. Reads state, never changes it.
       iso.js              Tile to world math and back, box outlines, draw order. Pure math.
@@ -91,6 +92,8 @@ Harborfall/
       text.js             Every sentence the player reads, built from the data. Pure.
       panelModel.js       What the info panel says about a building. Pure.
       advice.js           The tip line: what is short, traced to its root. Pure.
+      titleModel.js       What the title screen says and offers. Pure.
+      titleScreen.js      Shows the title screen and reports the choice.
       hud.js              Coins and income, goods, population, clock.
       buildMenu.js        The tool buttons and the hint strip above them.
       infoPanel.js        Shows a panel model, reports button presses.
@@ -103,8 +106,9 @@ Harborfall/
       loadData.browser.js Loads the JSON files in the browser.
       loadData.node.js    Loads the JSON files in Node.
       loop.js             Fixed-tick loop and speed control.
+      saveStore.js        Keeps one saved game in a storage box that is handed to it.
 
-    main.js               Browser start-up: load data, create game, wire layers.
+    main.js               Browser start-up: load data, title screen, pick the game, wire layers, autosave.
 
   tools/
     print-map.mjs         Prints the island as text, to check it without a browser.
@@ -261,6 +265,7 @@ Adding a new producer, such as a second kind of farm, needs only a new entry in 
   - Road shapes are rebuilt only when something is built or removed.
   - The water's color is the page background behind the canvas. Only the glints are drawn each frame.
   - Smoke and sawdust are the only building parts drawn fresh each frame.
+  - Pictures are shown with the browser's cheapest smoothing. The next level up was measured at over twenty times the cost whenever a building's picture is shown smaller than it was drawn. Building pictures come in five sizes, so one is never shown at less than half its size.
 - Buildings are drawn far to near. Trees within two tiles of a building are drawn in order with the buildings, so a tree in front of a house covers it. All other trees are part of the ground picture.
 - While a building or road is being placed, buildings are drawn see-through.
 - `http://localhost:5173/?demo` shows a finished town built by the bot, so the building shapes can be checked before the build menu exists.
@@ -288,6 +293,8 @@ All tests run with `node --test` and need no browser.
 | `iso.test.js` | Tile to screen and back returns the same tile for every tile, at several zooms and pans. Zoom keeps the point under the cursor fixed. Picking finds roofs, and the nearer of two overlapping boxes. |
 | `ui.test.js` | The logic behind the UI: every reason code has a sentence, previews agree with what a click then does, road lines are unbroken, the info panel says the right thing for each kind of building. |
 | `loop.test.js` | Real time becomes whole ticks. Speeds 2x and 4x, pause, and a stalled tab all behave. |
+| `save.test.js` | A game that is saved, turned into text, read back and played on ends exactly where it would have without saving. Tested on real bot games at several moments, on a won game, on another island and on a hand-made one. Twenty kinds of damaged save, a changed rule and a newer version are each refused. Changes to looks and names are not. |
+| `title.test.js` | The save slot, with a stand-in for the browser's storage: reading, writing, failing storage, unreadable text. What the title screen offers in each case, and that a new game never replaces a saved one without a second press. |
 | `art.test.js` | Every building and house tier has a drawing. Every drawing runs in every state, uses only valid colors and stays inside its own plot. A building with no drawing falls back to a box. Stored pictures change only when the look changes. Drawing never changes the game. |
 
 Later phases add:
@@ -336,3 +343,19 @@ It ends in exactly the same game state as the headless bot. That is strong evide
 ### The random-input test
 
 `tools/ui-monkey.js` sends thousands of seeded random clicks, drags, scrolls and key presses to the page. After every action it checks that the game still makes sense: coins not negative, goods whole numbers, no house over capacity, every building on exactly the tiles it claims, the camera within its limits. A failure can be repeated exactly by using the same seed. It runs from the browser console.
+
+Both tools are run on `http://localhost:5173/?fresh`, a test page that opens a new game on the standard island with no title screen and never saves. The random-input test is also run on `?demo`.
+
+## 12. Saving
+
+Saving is split across three places, so that the part that matters would survive a move to a game engine.
+
+- **`src/sim/save.js`, the what.** `saveGame(game)` returns plain data: the whole state, the island seed that was asked for, a format number, and a stamp of the rules. `loadGame(data, save)` turns it back into a game, or says why not: `not_a_save`, `newer_version`, `rules_changed` or `damaged`. It has no browser code and never fails with an error on bad input.
+- **`src/platform/saveStore.js`, the where.** One slot in a storage box that is handed to it. In the browser the box is the page's own storage. In the tests it is a stand-in. Every failure of the box is caught, because a browser may block or fill its storage at any time.
+- **`src/main.js`, the when.** It saves every 10 seconds, when the page is hidden or closed, and before going to the title screen. It also stores where the player is looking, which is not part of the game state.
+
+**The rules stamp.** A save made under one set of numbers may be nonsense under another, for example a house holding more residents than its new limit. So each save carries a short stamp worked out from every rule in the data files, and loading refuses a save whose stamp differs. The island seed, the notes, and names, colors and shortcut keys are left out of the stamp, because they cannot break a game.
+
+**The damage check.** A save is checked in about twenty ways: whole numbers where they belong, buildings of known types that sit on the tiles the map says they do, residents within a house's limit. Then everything worked out from what is built where (road connections, storage, market coverage) is calculated afresh and must match what the save says.
+
+**Limits.** One slot, one browser. Two tabs open on the game overwrite each other, and the last to save wins. The speed setting, the picked tool and the tip line's memory of shortages are not saved.

@@ -9,7 +9,8 @@
 // Only the passing of time is not done through the UI: the game is stepped
 // directly, so a 28-minute game takes a second or two.
 //
-// Run it from the browser's console on a freshly loaded game:
+// Run it from the browser's console on the test page, http://localhost:5173/?fresh
+// which opens a new game with no title screen and never touches the saved game:
 //   const { playThroughUi } = await import('/tools/ui-playthrough.js');
 //   await playThroughUi(window.harborfall);
 

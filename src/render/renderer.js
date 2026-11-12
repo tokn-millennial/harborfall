@@ -42,8 +42,8 @@ const GHOST_OUTLINE = { ok: '#5df08a', bad: '#ff5a5a' };
 // when zoomed in and costs memory: at 1.5 the picture is about 80 MB.
 const PICTURE_MIN_DETAIL = 1;
 const PICTURE_MAX_DETAIL = 1.5;
-// A second, small copy of the picture is used when zoomed far out. Shrinking
-// the large one on every frame was measured at four times the cost.
+// A second, small copy of the picture is used when zoomed far out, where the
+// large one would be shown at a third of its size and look grainy.
 const SMALL_PICTURE_DETAIL = 0.5;
 const SMALL_PICTURE_BELOW_SCALE = 0.62;
 const CACHE_PAD = 48; // room around the map for tree tops and the shoreline
@@ -55,6 +55,7 @@ export function createRenderer(canvas, rules) {
   let pixelRatio = 1;
   let groundPicture = null; // the ground and forest, painted once
   let smallPicture = null;  // the same, smaller, for when zoomed far out
+  let pictureMap = null;    // the island those pictures show
   const sprites = createSpriteCache();
 
   const terrainColor = {};
@@ -192,20 +193,29 @@ export function createRenderer(canvas, rules) {
     const scale = pixelRatio * zoom;
     const sharpness = sharpnessFor(scale);
     ctx.setTransform(scale, 0, 0, scale, pixelRatio * (view.width / 2 - camera.x * zoom), pixelRatio * (view.height / 2 - camera.y * zoom));
+    // Pictures are shown with the browser's cheapest smoothing. The next level
+    // up was measured at over twenty times the cost whenever a building's
+    // picture is shown smaller than it was drawn, which is most zoom levels.
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'medium';
+    ctx.imageSmoothingQuality = 'low';
     const range = visibleTileRange(camera, view, map);
 
     // 2. The island: a ready-made picture, the small copy when zoomed far out.
+    // A different island (a new game on another one) throws the old pictures away.
+    if (map !== pictureMap) {
+      for (const old of [groundPicture, smallPicture]) {
+        if (old) old.picture.width = old.picture.height = 0; // hands the memory back at once
+      }
+      groundPicture = smallPicture = null;
+      pictureMap = map;
+    }
     let ground;
     if (scale < SMALL_PICTURE_BELOW_SCALE) {
       ground = smallPicture ??= buildGroundPicture(map, SMALL_PICTURE_DETAIL);
     } else {
       ground = groundPicture ??= buildGroundPicture(map, Math.min(PICTURE_MAX_DETAIL, Math.max(PICTURE_MIN_DETAIL, pixelRatio)));
     }
-    ctx.imageSmoothingQuality = 'low';
     ctx.drawImage(ground.picture, ground.x, ground.y, ground.width, ground.height);
-    ctx.imageSmoothingQuality = 'medium';
 
     // 3. Roads, then ground markers.
     roads.paint(ctx, state);

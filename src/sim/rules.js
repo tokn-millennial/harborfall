@@ -20,6 +20,55 @@ export function stripNotes(value) {
   return value;
 }
 
+// The same data with a different island seed. The original is left alone.
+export function withSeed(rawData, seed) {
+  return { ...rawData, map: { ...rawData.map, seed } };
+}
+
+// Keys that only change how things look or what they are called. A change to
+// one of these does not make an older saved game unusable.
+const LOOKS_ONLY = new Set(['visual', 'color', 'name', 'singular', 'key']);
+
+// Text that is the same for the same value whatever order its keys are in.
+export function stableText(value) {
+  if (Array.isArray(value)) return `[${value.map(stableText).join(',')}]`;
+  if (value !== null && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((k) => `${JSON.stringify(k)}:${stableText(value[k])}`).join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
+
+function withoutLooks(value) {
+  if (Array.isArray(value)) return value.map(withoutLooks);
+  if (value !== null && typeof value === 'object') {
+    const out = {};
+    for (const [key, v] of Object.entries(value)) {
+      if (!LOOKS_ONLY.has(key)) out[key] = withoutLooks(v);
+    }
+    return out;
+  }
+  return value;
+}
+
+// A short stamp of every rule that matters to a game in progress. Two sets of
+// data files with the same stamp play the same. The island seed, the notes,
+// and names, colors and shortcut keys are left out.
+export function rulesStamp(rawData) {
+  const data = withoutLooks(stripNotes(rawData));
+  if (data.map) delete data.map.seed;
+  const text = stableText(data);
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (h2 >>> 0).toString(16).padStart(8, '0') + (h1 >>> 0).toString(16).padStart(8, '0');
+}
+
 function deepFreeze(value) {
   if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
     Object.freeze(value);
@@ -116,5 +165,6 @@ export function compileRules(rawData) {
     },
     win: { tier: config.win.tier, residents: config.win.residents },
     map,
+    stamp: rulesStamp(data),
   });
 }

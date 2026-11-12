@@ -8,14 +8,14 @@ A small Anno-style city builder that runs in a desktop browser. Settle one islan
 
 1. Install [Node](https://nodejs.org) if you do not have it. The game was built and tested with version 24.
 2. Double-click `start-game.bat` (Windows) or `start-game.command` (Mac). Or run `node serve.mjs --open` in this folder.
-3. The game opens at `http://localhost:5173`. Press **?** in the game for the controls. Add `?demo` to the address to see a finished town.
+3. The game opens at `http://localhost:5173` on its title screen. It saves itself in the browser as you play. Press **?** in the game for the controls. Add `?demo` to the address to see a finished town.
 
 ## What is in here
 
 - **Plain JavaScript and Canvas.** No framework, no build step, nothing to install besides Node, and no image files. The art is drawn by code.
 - **Three separate layers.** The simulation (`src/sim/`) holds every rule and has no screen or browser code. The renderer (`src/render/`) draws it. The UI (`src/ui/`) turns clicks into commands.
 - **All rules in data.** Every cost, speed and tax is in five JSON files in `data/`. Change a number, refresh, and the game changes.
-- **Tested without a browser.** 236 automated tests, and a bot that plays whole games to check the balance.
+- **Tested without a browser.** 271 automated tests, and a bot that plays whole games to check the balance.
 
 ## Check it
 
@@ -46,6 +46,6 @@ The first runs every test. The second has a bot play a full game and print a rep
 
 ## Status
 
-Phases 0 to 7 are complete: the full Version 1 game, a polish pass, and drawn art. It has been tested heavily by scripts and lightly by people. See section 8 of the handoff guide for what is proven and what is not.
+Phases 0 to 8 are complete: the full Version 1 game, a polish pass, drawn art, and saving with a title screen. It has been tested heavily by scripts and lightly by people. See section 8 of the handoff guide for what is proven and what is not.
 
 Built in November 2026 with Claude Fable 5.2 as a test of how well an AI model builds a complete, playable game.

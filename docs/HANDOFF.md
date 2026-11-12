@@ -1,15 +1,15 @@
 # Harborfall: Handoff Guide
 
-Written 2026-11-11, at the end of Phase 7, by Fable 5.2.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 8, by Fable 5.2.
 
 This is the one document to read when you come back to the project, or when you hand it to a new helper, human or AI. It says what exists, how to run and check it, how we worked, and what is still unproven. `ROADMAP.md` says what could come next.
 
 ## 1. The project in a minute
 
-- **What it is:** a small Anno-style city builder that runs in a desktop browser. One island, 9 buildings, 5 goods, two kinds of resident. You win at 100 Workers, in about 30 minutes.
+- **What it is:** a small Anno-style city builder that runs in a desktop browser. One island, 9 buildings, 5 goods, two kinds of resident. You win at 100 Workers, in about 30 minutes. The game saves itself.
 - **How it is made:** plain JavaScript, with no framework, no build step and nothing to install except Node. All game rules are in five data files. All art is drawn by code.
-- **Size:** about 8,750 lines of code, tests and tools. The whole project is 115 files, counting documents and screenshots.
-- **State:** Phases 0 to 7 are done, approved and on GitHub. 236 automated tests pass.
+- **Size:** about 9,700 lines of code, tests and tools. The whole project is 125 files, counting documents and screenshots.
+- **State:** Phases 0 to 8 are done. 271 automated tests pass.
 - **Where:** the folder `Harborfall` in your Documents, and the private GitHub repository `tokn-millennial/harborfall`, branch `main`.
 
 ## 2. What to read, in order
@@ -22,16 +22,16 @@ This is the one document to read when you come back to the project, or when you 
 | `docs/BRIEF.md` | Your original brief, word for word. The working rules come from here. | A helper is new to the project. |
 | `docs/SPEC.md` | Every rule of the game in plain words, with the data file each number lives in. | You want to know how something works, or tune it. |
 | `docs/ARCHITECTURE.md` | How the code is put together, folder by folder, and the test plan. | A helper is about to change code. |
-| `docs/DECISIONS.md` | Every choice made, numbered Q1 to Q5 (yours) and D1 to D97 (mine), with the reason and how to change it. | You wonder "why is it like this?" |
+| `docs/DECISIONS.md` | Every choice made, numbered Q1 to Q5 (yours) and D1 to D113 (mine), with the reason and how to change it. | You wonder "why is it like this?" |
 | `docs/TESTLOG.md` | Per phase: what was built, tested, broken and fixed, and what is weak. | You want the honest history. |
 | `docs/PLAYTEST.md` | The 73-point checklist from Phase 5 and the ranked problem list. | Planning a playtest. |
 | `docs/FINAL_REPORT.md` | The scorecard for the original test, as written at the end of Phase 5, with short notes for Phases 6 and 7. | You want the verdict on the original brief. |
 | `CLAUDE.md` (top folder) | Standing instructions that an AI helper reads on its own at the start of a session. | You never need to. It is for the helper. |
-| `docs/screenshots/` | Pictures from Phases 3 to 7. | You want to see how it looked at each stage. |
+| `docs/screenshots/` | Pictures from Phases 3 to 8. | You want to see how it looked at each stage. |
 
 ## 3. How to run it
 
-1. **Start the game:** double-click `start-game.bat` in the project folder. A black window opens and your browser shows the game at `http://localhost:5173`. Leave the black window open while you play. Close it to stop.
+1. **Start the game:** double-click `start-game.bat` in the project folder. A black window opens and your browser shows the title screen at `http://localhost:5173`. Pick New game, or Continue if you have played before. Leave the black window open while you play. Close it to stop. Your game is saved in the browser, so closing either window loses nothing.
 2. **See a finished town:** open `http://localhost:5173/?demo`.
 3. **On a Mac:** double-click `start-game.command`. This has never been tested.
 
@@ -43,7 +43,7 @@ These are typed in a terminal opened in the project folder. A helper runs them f
 
 | Command | What it does | A good result |
 |---|---|---|
-| `node --test` | Runs all 236 automated tests. About 1.5 seconds. | `pass 236`, `fail 0` |
+| `node --test` | Runs all 271 automated tests. About 1.5 seconds. | `pass 271`, `fail 0` |
 | `node tools/bot.mjs` | A bot plays a whole game with no screen and prints a report. | Wins in 28.6 minutes, no long waits. |
 | `node tools/bot.mjs careless` | The same, with a sloppier build order. | Wins in 30.4 minutes. |
 | `node tools/bot.mjs bread-first` | The same, with a reckless opening. | Wins in 52.9 minutes. Slower than the target, which is a known open issue. The point is that it recovers. |
@@ -52,9 +52,9 @@ These are typed in a terminal opened in the project folder. A helper runs them f
 | `node tools/tune.mjs` | Tries changed numbers side by side without editing the data files. | A table to compare. |
 | `node tools/print-map.mjs` | Prints the island as text. | A map. |
 
-Two more checks run inside the browser. With the game open, press F12, click Console, and paste:
+Two more checks run inside the browser. Open the test page `http://localhost:5173/?fresh`, which starts a new game with no title screen and never saves, so the checks cannot harm your saved game. Press F12, click Console, and paste:
 
-- **A whole game through the real buttons and clicks.** Run it on a freshly loaded game. The result should show `won: true` at about 28.6 minutes.
+- **A whole game through the real buttons and clicks.** Reload the test page first. The result should show `won: true` at about 28.6 minutes.
 
   `const { playThroughUi } = await import('/tools/ui-playthrough.js'); await playThroughUi(window.harborfall);`
 
@@ -83,6 +83,8 @@ Every number is in a file in the `data` folder. Open one in any text editor, cha
 | The cost of upgrading a house | `population.json` | `upgrade` → `cost` |
 | The island's shape | `map.json` | `seed`. Any whole number gives a different island. |
 | Colors of ground, roofs and goods | `map.json`, `buildings.json`, `population.json`, `goods.json` | `color` |
+
+**A saved game stops working when you change a rule.** Change a cost or a speed while a game is saved, and the title screen will say that game cannot be continued. Change the number back and it can. Names, colors, shortcut keys and notes are safe to change.
 
 **After changing numbers, run `node --test` and `node tools/bot.mjs`**, or ask a helper to. Some tests check the balance targets from the brief (for example "one fisherman feeds about 20 residents"), so a big change can fail a test on purpose. That is the test doing its job. Decide whether the number or the target should move.
 
@@ -132,13 +134,14 @@ If the helper starts in a different folder, tell it the project is in `Documents
 
 | Claim | Status | Evidence |
 |---|---|---|
-| The rules work as the spec says | **Proven** | 236 automated tests. |
+| The rules work as the spec says | **Proven** | 271 automated tests. |
+| A saved game comes back exactly | **Proven** | Saved, loaded and played-on games end identical to never-saved ones, in tests and in the browser. |
 | The game cannot leave you permanently stuck | **Proven** for the cases tested | Tests for zero coins, and bot wins from three bad openings. |
 | A win takes 25 to 40 minutes | **Proven for a bot,** estimated for a person | Bot: 28.6 minutes. With guessed human delays: 29 to 35. |
 | Every button and click does what it should | **Strong evidence** | A script won through the real UI and ended in exactly the bot's game. Random input found no errors. |
 | A person can win by hand | **Your word only** | You approved the gate. I have no time or notes from a hand-played game. |
 | It is fun and clear | **Unknown** | No script can tell. |
-| It runs smoothly on your screen | **Unknown** | My test browser draws slowly. I never saw the game move at full speed. |
+| It runs smoothly on your screen | **Unknown** | My test browser draws slowly: 20 to 28 ms a frame, where smooth is under 16. I never saw the game move at full speed. |
 | It works on a Mac, a trackpad, a touch screen | **Unknown** | Never tried. |
 | The art looks good | **My opinion only** | Judged from still screenshots. |
 
@@ -159,7 +162,10 @@ If the helper starts in a different folder, tell it the project is in `Documents
 Open today. Fixed problems are in `TESTLOG.md` and `PLAYTEST.md`.
 
 **Play**
-- No save. A refresh or a closed tab loses the game.
+- One saved game, in one browser. It does not follow you to another browser or computer, and there is no file to back up.
+- Changing a rule in the data files makes a saved game unusable until it is changed back.
+- Two tabs open on the game overwrite each other's save.
+- A continued game starts at 1x with no tool picked.
 - No undo. Demolish takes two clicks on a building as a guard.
 - A reckless opening still wins, but takes over 50 minutes.
 - Roads bend once per drag. Shift flips the corner.
@@ -170,7 +176,7 @@ Open today. Fixed problems are in `TESTLOG.md` and `PLAYTEST.md`.
 **Look and speed**
 - The art is drawn by code. It is clean and consistent, and it is not painted art.
 - Nothing walks or sails. The only movement is smoke, sawdust, crops and water glints.
-- At zoom 0.7 a frame takes longer than before the art, in my test browser.
+- A frame takes 20 to 28 ms in my test browser, which is not smooth. The cost grows with the number of buildings on screen.
 - The ground looks a little soft when zoomed far in.
 - The game uses about 90 MB more memory than before the art.
 - Top bar icons are small. Names show on wide windows and on hover.
@@ -187,6 +193,7 @@ Open today. Fixed problems are in `TESTLOG.md` and `PLAYTEST.md`.
 
 ## 10. Things a helper should know about this computer
 
+- **Test on `?fresh` and `?demo`,** which never save. A helper that tests on the plain address will overwrite the saved game.
 - **A game server is often already running** on port 5173, started by you from `start-game.bat`. A helper should use it and never stop it.
 - **Windows shell quoting is fragile.** Commands with apostrophes or nested quotes get mangled. Write a small script file and run that.
 - **An AI helper's built-in test browser may be slow or hidden,** drawing about one frame a second. Timing and smoothness cannot be judged there. Speed must be measured by forcing the browser to finish drawing. A timing that looks too good is probably measuring nothing (`TESTLOG.md`, Phase 7).
