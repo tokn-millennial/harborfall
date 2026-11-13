@@ -68,6 +68,13 @@ function smoke(g, u, v, z, time) {
     g.dot(u + 0.08 - t * 0.1, v + 0.08 - t * 0.1, z + 2 + t * 16, 2 + t * 3.2, `rgba(245, 245, 240, ${0.5 * (1 - t)})`);
   }
 }
+// A thin wisp from a house chimney: smaller and fainter than a bakery's smoke.
+function wisp(g, u, v, z, time) {
+  for (let i = 0; i < 2; i++) {
+    const t = (time * 0.28 + i / 2) % 1;
+    g.dot(u + 0.08 - t * 0.08, v + 0.08 - t * 0.08, z + 2 + t * 12, 1.5 + t * 2.4, `rgba(245, 245, 240, ${(0.38 * (1 - t)).toFixed(3)})`);
+  }
+}
 function crate(g, u, v, size, color = '#b08a5a') {
   g.box(u, v, u + size, v + size, 0, size * 16, color);
 }
@@ -317,11 +324,23 @@ export const ART_USES = {
   weaver: ['working'],
 };
 
-// Moving parts, drawn fresh every frame on top of the building.
+// Moving parts, drawn fresh every frame on top of the building: while a
+// producer works, or while a house has people in it.
 export const LIVE_ART = {
   // Smoke from the chimney while baking.
   bakery(g, { h, working, time }) {
     if (working) smoke(g, 1.25, 0.5, h * 0.55 + h * 0.95, time);
+  },
+  // A wisp of smoke from the chimney of any house with people in it. `seed`
+  // sets each house's wisp a little out of step with its neighbours'.
+  cottage(g, { h, residents, time, variant = 0, seed = 0 }) {
+    if (residents > 0) wisp(g, variant === 1 ? 1.3 : 0.5, 0.7, h * 0.5 + h * 0.85, time + seed * 0.37);
+  },
+  townhouse(g, { h, residents, time, variant = 0, seed = 0 }) {
+    if (residents > 0) wisp(g, variant === 1 ? 0.55 : 1.3, 0.6, h * 0.62 + h * 0.75, time + seed * 0.37);
+  },
+  guildhouse(g, { h, residents, time, seed = 0 }) {
+    if (residents > 0) wisp(g, 0.45, 0.55, h * 0.68 + h * 0.62, time + seed * 0.37);
   },
   // Sawdust at the doorway while sawing.
   sawmill(g, { working, time }) {

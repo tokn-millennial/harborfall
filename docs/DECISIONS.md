@@ -274,3 +274,18 @@ You chose this phase ("Small polish") from the options I gave: difficulty settin
 | D173 | The sharp ground appears a fifth of a second after the view stops, not while it moves. | Drawing it costs one slow frame. Paying that only when you have stopped means moving the view is exactly as smooth as it was. | `CLOSE_UP_SETTLE_SECONDS` and `CLOSE_UP_FROM` in `src/render/renderer.js`. Set `CLOSE_UP_FROM` very high to switch it off. |
 | D174 | The sharp copy is one hidden canvas the size of the screen. | About 18 MB on a large sharp screen, against several times that for sharper copies of the whole island. | Nothing to change. |
 | D175 | Not done from the roadmap's polish ideas: a building-site look, smoke from house chimneys, a day and night tint, and scenarios. | You asked for three things and I listed three. | Ask. |
+
+### Phase 14: Dust, smoke, and day and night
+
+| # | Decision | Why | How to change |
+|---|---|---|---|
+| D176 | "Keep going" at the Phase 13 gate was taken as approval of Phase 13, which was then committed, and as a request for the next thing I can do without you. | The same reading as before. | Say "not approved" and I will undo the commit. |
+| D177 | This phase is the rest of the roadmap's art pass (C3): a building-site look, smoke from house chimneys, and day and night. I did not start workers, carriers or trade. | Those change how the game plays, and I said I would wait for your choice. These three change only how it looks. | Name one of the three larger items. |
+| D178 | The "building-site look" became a puff of dust and a quick settle to full size, lasting under a second. Demolishing and Undo raise dust too. | Buildings appear at once in this game. A scaffold that lingers would suggest a building time the rules do not have. | `src/render/effects.js` and `src/render/art/dust.js`. |
+| D179 | Dust plays on real time, even while paused. | You can build while paused, and the feedback should still come. | `update` in `src/render/effects.js`. |
+| D180 | Every lived-in house smokes a little, all the time. | It shows at a glance which houses have people. An empty house has a cold chimney. | The house entries in `LIVE_ART`, `src/render/art/buildings.js`. |
+| D181 | A day is 8 game minutes, about 5 of them daylight, and a new game starts at sunrise. | Long enough that night is an event, short enough to see three or four in a game. Starting at sunrise keeps the first minutes, when a new player is learning, in daylight. | The numbers at the top of `src/render/daylight.js`. |
+| D182 | Night is a blue tint of at most 36% and a warm light at each lived-in house. Anything the player reads is drawn after it. | Darker looked better and was harder to play. The game must read the same at night. | `NIGHT_TINT_STRENGTH` in `src/render/renderer.js`. |
+| D183 | Day and night can be switched off in the ? panel, and it is on to begin with. | It is a matter of taste, and some will find a dimmer screen tiring. | The box in the ? panel. |
+| D184 | Night changes nothing in the game: no slower work, no different needs. | You did not ask for that, and it would be a new rule. | Would be a rule change. |
+| D185 | None of the three is stored in the game. | So saved games are unaffected and the look is always worked out afresh. | See `ARCHITECTURE.md` section 17. |

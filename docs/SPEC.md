@@ -378,3 +378,15 @@ What the bot found, in minutes to the win:
 **Houses come in three looks.** Each cottage, townhouse and Artisan house has a roof a shade darker or lighter, a chimney on one side or the other, and for some a flower bed, flower boxes or a banner. Which look a house has follows from when it was built, so it is the same every time the game is opened. It changes nothing about the house.
 
 **The ground is sharp when zoomed in.** Zoomed past about 1.4 times the ground picture's own size, the ground on screen is redrawn at exactly the size shown, a fifth of a second after the view stops moving. While the view moves, the stretched picture is used as before.
+
+## 15. Dust, chimney smoke, and day and night
+
+Added in Phase 14. All three are looks only. No rule changed, and nothing in the game depends on them.
+
+- **Dust.** A new building lands with a puff of dust and a quick settle to full size. A demolished building, or one taken back with Undo, leaves a larger puff where it stood. Roads raise none. It lasts under a second and plays even while the game is paused.
+- **Chimney smoke.** Any house with people in it gives off a thin wisp of smoke, each house a little out of step with the next. An empty house gives none. Below zoom 0.5 the smoke is not drawn.
+- **Day and night.** A day lasts 8 game minutes: about 5 of daylight, then dusk, a night of about a minute and a half, and dawn. A new game starts at sunrise.
+  - At night the picture turns dim and blue, and every lived-in house shows a warm light.
+  - The numbers over houses, the warning marks, the outlines and the building you are placing stay at full brightness, so the game reads the same at night.
+  - It follows game time, so it stops when the game is paused and runs faster at 4x.
+  - The ? panel has a "Day and night" box to switch it off. The choice is remembered.

@@ -14,6 +14,7 @@ import { paintBox } from '../src/render/art/box.js';
 import { createForestPainter, createRoadPainter, createTerrainPainter, paintTree, paintWater, shallowsOf, waterBackground } from '../src/render/art/terrain.js';
 import { buildingVisual } from '../src/render/visuals.js';
 import { paintActors } from '../src/render/art/actors.js';
+import { paintDust } from '../src/render/art/dust.js';
 import { tileToWorld } from '../src/render/iso.js';
 import { boxSilhouette } from '../src/render/iso.js';
 import { execute } from '../src/sim/index.js';
@@ -262,13 +263,14 @@ test('each drawing declares what changes its look, and looks the same otherwise'
   }
 });
 
-test('moving parts draw only while the building is working', () => {
+test('moving parts draw only while a producer is working or a house is lived in', () => {
+  assert.deepEqual(Object.keys(LIVE_ART).sort(), ['bakery', 'cottage', 'guildhouse', 'sawmill', 'townhouse']);
   for (const [id, live] of Object.entries(LIVE_ART)) {
     const idle = recorder();
     live(createKit(idle.ctx, 0, 0), { h: 22, color: '#c46f3a', working: false, progress: 0, residents: 0, time: 1 });
-    assert.equal(idle.points.length, 0, `${id} moves while idle`);
+    assert.equal(idle.points.length, 0, `${id} moves while idle or empty`);
     const busy = recorder();
-    live(createKit(busy.ctx, 0, 0), { h: 22, color: '#c46f3a', working: true, progress: 0.5, residents: 0, time: 1 });
+    live(createKit(busy.ctx, 0, 0), { h: 22, color: '#c46f3a', working: true, progress: 0.5, residents: 4, time: 1 });
     assert.ok(busy.points.length > 0, `${id} shows nothing while working`);
     for (const c of busy.colors) assert.ok(validColor(c), `${id} used a broken color: ${c}`);
   }
@@ -427,4 +429,54 @@ test('a ground painter given a range of tiles works out only that part, in the s
   assert.equal(someForest.count, 4);
   assert.ok(forest.count > someForest.count);
   assert.equal(createForestPainter(map, { x0: 14, y0: 3, x1: 17, y1: 6 }).count, 0, 'fertile land has no trees');
+});
+
+// ---- dust and house smoke ---------------------------------------------------------
+
+test('dust is drawn around where the building stands, fades as it ages, and is bigger for a demolish', () => {
+  const at = tileToWorld(11, 11); // the middle of a 2 by 2 building at 10, 10
+  const draw = (effect) => {
+    const { ctx, points, colors } = recorder();
+    paintDust(ctx, [effect]);
+    for (const c of colors) assert.ok(validColor(c), `broken color: ${c}`);
+    return { points, colors };
+  };
+  const base = { id: 7, x: 10, y: 10, w: 2, h: 2 };
+  const young = draw({ ...base, kind: 'built', age: 0.1 });
+  const old = draw({ ...base, kind: 'built', age: 0.9 });
+  const gone = draw({ ...base, kind: 'removed', age: 0.1 });
+  assert.ok(young.points.length >= 12);
+  for (const [x, y] of [...young.points, ...old.points, ...gone.points]) {
+    assert.ok(Math.abs(x - at.x) < 80 && Math.abs(y - at.y) < 60, `dust at ${(x - at.x).toFixed(0)}, ${(y - at.y).toFixed(0)} from the building`);
+  }
+  const alpha = (drawn) => Number(/, ([\d.]+)\)$/.exec(drawn.colors[0])[1]);
+  assert.ok(alpha(young) > alpha(old), 'dust does not fade');
+  assert.ok(alpha(old) < 0.1);
+  assert.ok(gone.points.length > young.points.length, 'a demolish raises no more dust than a build');
+  // Nothing to draw, nothing drawn.
+  const none = recorder();
+  paintDust(none.ctx, []);
+  assert.equal(none.points.length, 0);
+});
+
+test('a house smokes from its own chimney, on the side its look puts it, and each a little out of step', () => {
+  const info = (extra) => ({ h: 30, color: '#b9553a', working: false, progress: 0, residents: 4, time: 2, variant: 0, seed: 0, ...extra });
+  const where = (id, extra) => {
+    const { ctx, points } = recorder();
+    LIVE_ART[id](createKit(ctx, 0, 0), info(extra));
+    return points;
+  };
+  for (const id of ['cottage', 'townhouse']) {
+    const left = where(id, { variant: id === 'cottage' ? 0 : 1 });
+    const right = where(id, { variant: id === 'cottage' ? 1 : 0 });
+    const middle = (points) => points.reduce((sum, [x]) => sum + x, 0) / points.length;
+    assert.ok(middle(right) > middle(left) + 10, `${id}: the smoke does not follow the chimney`);
+  }
+  // Smoke rises above the house.
+  for (const id of ['cottage', 'townhouse', 'guildhouse']) {
+    const base = tileToWorld(1, 1);
+    for (const [, y] of where(id, {})) assert.ok(y < base.y - 15, `${id}: smoke at the wrong height`);
+    assert.notDeepEqual(where(id, { seed: 1 }), where(id, { seed: 2 }), `${id}: every house smokes in step`);
+    assert.deepEqual(where(id, { residents: 0 }), [], `${id}: an empty house smokes`);
+  }
 });

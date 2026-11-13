@@ -79,6 +79,8 @@ Harborfall/
       visuals.js          Each building's color, height and label, from the data files.
       renderer.js         Puts a frame together: water, ground, roads, buildings, people, outlines, marks.
       life.js             Where the walkers, carts and boats are. Decoration that follows the game. Pure.
+      effects.js          Notices buildings appearing and going, for the dust. Pure.
+      daylight.js         How much night there is at a moment of game time. Pure.
       art/                The drawings. Every one is code. There are no image files.
         kit.js            Drawing tools in "building space": walls, pitched roofs, posts, color mixing.
         buildings.js      One drawing per building look, picked by the `art` name in the data.
@@ -87,6 +89,7 @@ Harborfall/
         icon.js           The small building pictures on the build menu.
         sprites.js        Keeps each building look as a ready-made picture.
         actors.js         Draws the walkers, carts and boats.
+        dust.js           Draws the puffs of dust.
 
     ui/                   Input and panels.
       gameUi.js           The controller: active tool, selection, clicks into commands.
@@ -309,6 +312,7 @@ All tests run with `node --test` and need no browser.
 | `loop.test.js` | Real time becomes whole ticks. Speeds 2x and 4x, pause, and a stalled tab all behave. |
 | `save.test.js` | A game that is saved, turned into text, read back and played on ends exactly where it would have without saving. Tested on real bot games at several moments, on a won game, on another island and on a hand-made one. Twenty kinds of damaged save, a changed rule and a newer version are each refused. Changes to looks and names are not. |
 | `title.test.js` | The save slot, with a stand-in for the browser's storage: reading, writing, failing storage, unreadable text. What the title screen offers in each case, and that a new game never replaces a saved one without a second press. |
+| `atmosphere.test.js` | Dust appears only for a building that is new or gone since the last frame, never for a game just opened, and at most twelve at once. Night is 0 through the day, rises and falls smoothly, repeats every 8 game minutes, and stands still while the game is paused. Neither changes the game. |
 | `difficulty.test.js` | Normal is exactly the game as it was, with the same rules stamp. Easy and Hard change only coins, base income and tax. Each has its own stamp, so a save cannot load as another difficulty. The sensible build orders win on all three. On Hard a reckless opening strands the town, and demolishing is shown to be the way out. |
 | `artisans.test.js` | The wool and cloth chain creates and loses nothing. Artisan houses need cloth and empty without it. The win counts Workers or better. The goal after the win is recorded once. The bot reaches it 15 to 30 minutes after the win, on four islands, with the first act unchanged. A game saved before Artisans existed loads and plays on as it would have. |
 | `undo.test.js` | Undoing an action at once leaves the game exactly as it was, for buildings, road, demolishing and upgrading, and for 600 random actions. Undo gives back the whole cost. It is refused after 30 seconds, when there is nothing to undo, and when a demolish's refund has been used. The undo record is saved with the game, and a save from before undo existed still loads. |
@@ -446,3 +450,15 @@ To add a good, building or tier of your own and keep older saves working, add it
 In my test browser the one frame that makes the sharp copy took about 50 ms longer than a normal frame. After that, frames with the sharp copy were a little faster than frames with the stretched picture, because the copy goes on pixel for pixel.
 
 **House looks.** A house's look is its building number divided by three, remainder taken. The drawings take it as one more input, like "is anyone living here", and the stored pictures are keyed by it.
+
+## 17. Looks that are worked out, not stored
+
+Phase 14 added three effects. Like the walkers and the house looks before them, they follow one rule: **a look is worked out from what the game already holds, and nothing is added to the game for it.**
+
+- **Dust** needs to know a building is new. The renderer does not ask the game. It remembers which building numbers it saw last frame and compares (`src/render/effects.js`). A game that has just been opened shows none, because everything in it was already there.
+- **Day and night** is a function of the game clock (`src/render/daylight.js`): give it the game time in seconds and it returns how much night there is. Nothing is stored, so a loaded game is at the right time of day by itself.
+- **Chimney smoke** is drawn fresh each frame on top of a house's stored picture, the same way as the bakery's smoke, when the house has residents.
+
+Because none of this is in the game state, saved games are unaffected, and the check that a full game through the UI ends identical to the headless bot still holds.
+
+**Night is drawn in the middle of a frame on purpose.** The order is: water, ground, roads, buildings and figures, dust, then the night tint and house lights, and only then the numbers over houses, the outlines, the placement preview and the warning marks. So everything the player reads is drawn after the tint and is never dimmed.

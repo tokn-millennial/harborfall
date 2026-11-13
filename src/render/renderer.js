@@ -25,6 +25,9 @@ import { BUILDING_ART, LIVE_ART, artIdFor, artStateKey } from './art/buildings.j
 import { paintBox } from './art/box.js';
 import { createSpriteCache, sharpnessFor } from './art/sprites.js';
 import { paintActors } from './art/actors.js';
+import { paintDust } from './art/dust.js';
+import { createBuildEffects, popScale } from './effects.js';
+import { nightAmount } from './daylight.js';
 import { createLife } from './life.js';
 import { createForestPainter, createRoadPainter, createTerrainPainter, paintTrees, paintWater, waterBackground } from './art/terrain.js';
 import { buildingIssue, canUpgrade } from '../sim/index.js';
@@ -57,6 +60,11 @@ const CLOSE_UP_FROM = 1.35;         // how far the picture must be stretched bef
 const CLOSE_UP_SETTLE_SECONDS = 0.2;
 const CACHE_PAD = 48; // room around the map for tree tops and the shoreline
 const HOUSE_LOOKS = 3;
+const LIVE_MIN_ZOOM = 0.5;       // smoke and sawdust are too small to see below this
+// Night: a blue tint over the picture, and a warm light at each lived-in house.
+const NIGHT_TINT = [18, 28, 72];
+const NIGHT_TINT_STRENGTH = 0.36;
+const GLOW_SIZE = 96;
 const TREE_REACH = 2; // trees this close to a building are drawn in order with it
 const ACTOR_MIN_ZOOM = 0.5; // walkers, carts and boats are too small to see below this
 
@@ -73,6 +81,10 @@ export function createRenderer(canvas, rules) {
   let closeUpShown = false;
   const sprites = createSpriteCache();
   const life = createLife(rules); // walkers, carts and boats: decoration that follows the game
+  const buildEffects = createBuildEffects(rules); // dust when something is built or removed
+  let dayAndNight = true;
+  let nightNow = 0;
+  let glow = null; // a soft round light, drawn once and reused for every house
 
   const terrainColor = {};
   for (const [id, t] of Object.entries(rules.map.terrain)) terrainColor[id] = t.color;
@@ -136,11 +148,35 @@ export function createRenderer(canvas, rules) {
     return { canvas: picture, key, map };
   }
 
+  function glowPicture() {
+    if (glow) return glow;
+    glow = document.createElement('canvas');
+    glow.width = glow.height = GLOW_SIZE;
+    const g = glow.getContext('2d');
+    const light = g.createRadialGradient(GLOW_SIZE / 2, GLOW_SIZE / 2, 2, GLOW_SIZE / 2, GLOW_SIZE / 2, GLOW_SIZE / 2);
+    light.addColorStop(0, 'rgba(255, 214, 130, 0.6)');
+    light.addColorStop(0.5, 'rgba(255, 190, 100, 0.22)');
+    light.addColorStop(1, 'rgba(255, 180, 90, 0)');
+    g.fillStyle = light;
+    g.fillRect(0, 0, GLOW_SIZE, GLOW_SIZE);
+    return glow;
+  }
+
   // One building: its drawn art from a ready-made picture, or a plain box if it has none.
-  function drawBuilding(building, zoom, time, sharpness, alpha = 1) {
+  // `pop` is the age of its "just built" effect, if it has one: it is drawn a
+  // little small at first and settles to full size.
+  function drawBuilding(building, zoom, time, sharpness, alpha = 1, pop = null) {
     const def = rules.buildings[building.type];
     const visual = buildingVisual(rules, building);
     const artId = artIdFor(rules, building);
+    const size = pop === null ? 1 : popScale(pop);
+    if (size !== 1) {
+      const foot = tileToWorld(building.x + def.w / 2, building.y + def.h / 2);
+      ctx.save();
+      ctx.translate(foot.x, foot.y);
+      ctx.scale(size, size);
+      ctx.translate(-foot.x, -foot.y);
+    }
     ctx.globalAlpha = alpha;
     if (artId) {
       const p = building.production;
@@ -153,17 +189,19 @@ export function createRenderer(canvas, rules) {
         // Which of its three looks a house has. It follows the building's
         // number, so a house looks the same every time the game is opened.
         variant: Number.isInteger(building.id) ? building.id % HOUSE_LOOKS : 0,
+        seed: Number.isInteger(building.id) ? building.id : 0,
         time,
       };
       const key = `${artId}|${visual.color}|${visual.risePx}|${artStateKey(artId, info)}`;
       const picture = sprites.get(key, def.w, def.h, visual.risePx, sharpness, (g) => BUILDING_ART[artId](g, info));
       const origin = tileToWorld(building.x, building.y);
       ctx.drawImage(picture.canvas, origin.x + picture.left, origin.y + picture.top, picture.width, picture.height);
-      LIVE_ART[artId]?.(createKit(ctx, building.x, building.y), info);
+      if (zoom >= LIVE_MIN_ZOOM) LIVE_ART[artId]?.(createKit(ctx, building.x, building.y), info);
     } else {
       paintBox(ctx, building.x, building.y, def, visual, 1 / zoom, zoom >= LABEL_MIN_ZOOM);
     }
     ctx.globalAlpha = 1;
+    if (size !== 1) ctx.restore();
   }
 
   // A small plate above a house showing how many people live there.
@@ -313,6 +351,9 @@ export function createRenderer(canvas, rules) {
     // first, then a tree, then a person. Trees and people that fall between
     // the same two buildings are drawn together.
     const alpha = overlay.fadeBuildings ? 0.5 : 1;
+    const effects = buildEffects.update(state, time);
+    const popping = new Map();
+    for (const e of effects) if (e.kind === 'built') popping.set(e.id, e.age);
     const actors = life.update(game); // always brought up to date, so nothing jumps after zooming out and in
     const things = [];
     for (const b of buildings) things.push({ depth: b.depth, kind: 0, x: b.building.x, building: b.building });
@@ -335,7 +376,7 @@ export function createRenderer(canvas, rules) {
     for (const thing of things) {
       if (thing.building) {
         drawWaiting();
-        drawBuilding(thing.building, zoom, time, sharpness, alpha);
+        drawBuilding(thing.building, zoom, time, sharpness, alpha, popping.get(thing.building.id) ?? null);
       } else if (thing.tree) {
         if (people.length) drawWaiting();
         trees.push(thing.tree);
@@ -345,6 +386,33 @@ export function createRenderer(canvas, rules) {
       }
     }
     drawWaiting();
+
+    // Dust from anything just built or removed, on top of the buildings.
+    if (effects.length) paintDust(ctx, effects);
+
+    // Night: the picture so far goes blue and dim, and lived-in houses show a
+    // warm light. Everything drawn after this (numbers, outlines, marks, the
+    // building being placed) stays at full brightness, so the game reads the same.
+    nightNow = dayAndNight ? nightAmount(state.tick / rules.ticksPerSecond) : 0;
+    if (nightNow > 0) {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = `rgba(${NIGHT_TINT.join(', ')}, ${(NIGHT_TINT_STRENGTH * nightNow).toFixed(3)})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = nightNow;
+      const light = glowPicture();
+      for (const { building } of buildings) {
+        if (!building.house || building.house.residents === 0) continue;
+        const def = rules.buildings[building.type];
+        const at = tileToWorld(building.x + def.w / 2, building.y + def.h / 2);
+        const rise = buildingVisual(rules, building).risePx;
+        ctx.drawImage(light, at.x - 46, at.y - rise * 0.3 - 28, 80, 60); // toward the windows on the near wall
+      }
+      ctx.restore();
+    }
 
     if (zoom >= LABEL_MIN_ZOOM && !overlay.fadeBuildings) {
       for (const { building } of buildings) if (building.house) residentsPlate(building);
@@ -410,6 +478,13 @@ export function createRenderer(canvas, rules) {
     // Whether the last frame used the sharp close-up of the ground.
     get closeUpShown() {
       return closeUpShown;
+    },
+    // Day and night can be switched off. `night` is how dark the last frame was, 0 to 1.
+    setDayAndNight(on) {
+      dayAndNight = on === true;
+    },
+    get night() {
+      return nightNow;
     },
   };
 }

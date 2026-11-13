@@ -1008,3 +1008,59 @@ One reading that looked like a bug and was not: after the random-input run, the 
 
 **What I would change**
 - I would have decided what Hard must never do before choosing its numbers. I started from "make it harsher" and only then found the trap.
+
+**After the gate:** committed as `86f9ac2`, and pushed together with Phase 14 when you approved both.
+
+## Phase 14: Dust, smoke, and day and night
+
+Date: 2026-11-13. Status: approved by Colin with no changes ("Approve and push both").
+
+
+**Turns used:** 1 (your message "Keep going", after your usage limit reset). I took it as approval of Phase 13 and as a request to carry on (D176, D177).
+
+**What was built**
+- **Dust** when a building appears, is demolished, or is taken back with Undo, and a quick settle to full size for a new one.
+- **A wisp of smoke** from every house with people in it.
+- **Day and night**, 8 game minutes to a day, with a switch in the ? panel.
+- No rule changed, and nothing was added to the game state.
+
+**Automated tests: 404 pass, 0 fail.** That is 389 from before plus 15: 13 for when dust appears and how night comes and goes, and 2 for how dust and house smoke are drawn.
+
+**Browser checks**
+
+| Check | How | Result |
+|---|---|---|
+| Night dims the picture and lights the houses, and the numbers and marks stay bright | Ran the demo town on to full night, at two zoom levels | Pass by my eye. See `docs/screenshots/phase14-night.jpg`. |
+| The "Day and night" box switches it off and is remembered | Clicked it, read the renderer and the stored choice | Pass |
+| A new building raises dust | Placed a house and drew a frame a quarter of a second later | Pass. Pale puffs around the new house. |
+| Lived-in houses smoke, the empty new one does not | Same screenshot, zoomed in | Pass by my eye. See `docs/screenshots/phase14-dust-and-chimney-smoke.jpg`. |
+| A full game through the UI still matches the headless bot | UI playthrough on `?fresh` | Pass. Won at 28.55 minutes, identical final state. |
+| Random input | 6,000 actions over 2 runs | Pass. No errors. |
+| The error console | Read it | Empty. |
+
+**Drawing speed.** Milliseconds a frame for the demo town at full night against the same frame with night switched off, drawn in turns 25 times each, cost of measuring taken away.
+
+| Zoom | Day | Night |
+|---|---|---|
+| 0.7 | 8.9 | 11.1 |
+| 1 | 7.4 | 9.1 |
+| 2 | about 0 | 2.5 |
+
+Night costs 2 to 3.5 ms a frame in my test browser. I did not measure the smoke and dust separately: the smoke is two small dots a house, and dust is on screen for under a second.
+
+**Bugs found: 0.** No test or check failed in this phase. As I said in Phase 6, after many phases that each found several, that is more likely thin testing than perfect code. What I could not test is the part that matters most here: how the effects look in motion.
+
+One adjustment by eye: the night light sat on each roof like a spotlight. I moved it toward the windows on the near wall.
+
+**Decisions made:** 10 (D176 to D185).
+
+**Weak or unfinished**
+- **I have seen all three only in stills.** Dust lasts under a second and I caught it in one frame. I have not seen it play, nor smoke rise, nor dusk fall. Tell me if any of it looks wrong in motion.
+- **Night is a tint, not lighting.** Roads, trees and water all dim by the same amount. The house light is a soft blob, not light from the windows.
+- **Night may be tiring or may make the game harder to read for you.** I kept it mild and made it switchable, but I cannot judge comfort.
+- **Dust is the same for every building**, large or small apart from how far it spreads.
+- **Windows are lit day and night alike.** They do not come on at dusk.
+- **Not done:** your notes from playing, and a Mac test.
+
+**What I would change**
+- Nothing in how this phase was built. But this is the fourth phase in a row whose result only you can judge by eye or ear, and I have had no notes on the earlier three. The list of things I cannot verify is growing faster than the list I can.

@@ -167,6 +167,17 @@ async function start() {
     saveNote.textContent = demo ? 'The demo town is not saved.' : 'This test page does not save.';
   }
 
+  // Day and night is only a look, so it is the player's to switch off. The choice is remembered.
+  const noNight = createFlag(browserStorage(), 'harborfall.dayAndNightOff');
+  const nightBox = byId('day-and-night');
+  nightBox.checked = !noNight.get();
+  renderer.setDayAndNight(nightBox.checked);
+  nightBox.addEventListener('change', () => {
+    noNight.set(!nightBox.checked);
+    renderer.setDayAndNight(nightBox.checked);
+    nightBox.blur(); // so Space still pauses the game
+  });
+
   // ---- the ? panel ------------------------------------------------------------
   byId('help-toggle').addEventListener('click', () => { byId('help').hidden = !byId('help').hidden; });
   // A key to the ground colors, straight from map.json.
