@@ -1,7 +1,7 @@
 // The bar across the top: coins and income, goods, population, and the clock.
 
 import { el, setText } from './dom.js';
-import { clock } from './text.js';
+import { clock, currentGoal } from './text.js';
 import { goodIcon, icon } from './icons.js';
 
 export function createHud(root, rules) {
@@ -16,7 +16,10 @@ export function createHud(root, rules) {
   const goodsRow = el('div', 'hud-goods');
   for (const id of rules.goodIds) {
     const value = el('span', 'hud-value');
-    goods[id] = { value, box: el('span', { class: 'hud-good', title: rules.goods[id].name }, [goodIcon(id, rules.goods[id].color), el('span', 'hud-label', rules.goods[id].name), value]) };
+    // The storage limit is the same for every good. On a narrow window it is
+    // left out, and a good at its limit is shown by its color.
+    const cap = el('span', 'hud-cap');
+    goods[id] = { value, cap, box: el('span', { class: 'hud-good' }, [goodIcon(id, rules.goods[id].color), el('span', 'hud-label', rules.goods[id].name), value, cap]) };
     goodsRow.append(goods[id].box);
   }
 
@@ -59,15 +62,19 @@ export function createHud(root, rules) {
       if (n < 0) setText(warning, 'You are losing money. Build houses, or demolish something.');
 
       for (const id of rules.goodIds) {
-        setText(goods[id].value, `${summary.goods[id]} / ${summary.storageCap}`);
+        setText(goods[id].value, String(summary.goods[id]));
+        setText(goods[id].cap, ` / ${summary.storageCap}`);
+        goods[id].box.title = `${rules.goods[id].name}: ${summary.goods[id]} of ${summary.storageCap}`;
         goods[id].box.classList.toggle('full', summary.goods[id] >= summary.storageCap);
         goods[id].box.classList.toggle('empty', summary.goods[id] === 0);
       }
       for (const id of Object.keys(tiers)) setText(tiers[id], `${summary.residents[id]} / ${summary.housing[id]}`);
 
-      const { target, current, tier } = summary.win;
-      setText(goal, `Goal ${target}`);
-      bar.title = `${Math.min(current, target)} of ${target} ${rules.tiers[tier].name}s`;
+      const { target, current, tier } = currentGoal(rules, summary);
+      const tierName = `${rules.tiers[tier].name}s`;
+      // Before the win the bar is the win. After it, the bar names the goal it now shows.
+      setText(goal, summary.win.won ? `${target} ${tierName}` : `Goal ${target}`);
+      bar.title = `${Math.min(current, target)} of ${target} ${tierName}`;
       fill.style.width = `${Math.min(100, (current / target) * 100)}%`;
       setText(time, clock(summary.seconds));
     },

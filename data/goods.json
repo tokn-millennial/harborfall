@@ -5,5 +5,7 @@
   "planks": { "name": "Planks", "singular": "Plank", "color": "#d9a760" },
   "fish":   { "name": "Fish",   "color": "#5aa7d6" },
   "grain":  { "name": "Grain",  "color": "#e3c84a" },
-  "bread":  { "name": "Bread",  "color": "#c9853d" }
+  "bread":  { "name": "Bread",  "color": "#c9853d" },
+  "wool":   { "name": "Wool",   "color": "#e8e2d0" },
+  "cloth":  { "name": "Cloth",  "color": "#7d6fb3" }
 }

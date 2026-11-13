@@ -58,6 +58,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .hud-good { display: inline-flex; align-items: center; gap: 5px; }
 .hud-label { color: var(--text-soft); }
 .hud-value { font-variant-numeric: tabular-nums; font-weight: 600; }
+.hud-cap { font-variant-numeric: tabular-nums; font-weight: 600; white-space: pre; margin-left: -5px; }
+.hud-good.full .hud-cap { color: var(--warn); }
+.hud-good.empty .hud-cap { color: #8fa1a8; }
 .hud-good.full .hud-value { color: var(--warn); }
 .hud-good.empty .hud-value { color: #8fa1a8; }
 .hud-time { color: var(--text-soft); font-variant-numeric: tabular-nums; }
@@ -178,6 +181,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .win-box h2 { font: 700 36px/1.1 var(--display); margin: 0 0 8px; color: #8a5a12; }
 .win-box p { margin: 6px 0; font-size: 16px; }
 .win-stats { color: var(--ink-soft); }
+.win-box .win-next { margin-top: 12px; font-weight: 600; color: #6b4a12; }
 .win-box .action { margin-top: 16px; padding: 9px; font-size: 16px; }
 /* ---- title screen: the island shows behind it, the game's own panels wait ---- */
 body.title-open #top, body.title-open #bottom { visibility: hidden; }
@@ -214,18 +218,32 @@ body.title-open #game { cursor: default; }
 }
 
 /* ---- narrower windows: goods show an icon and a number, with the name on hover ---- */
-@media (max-width: 1500px) {
+/* Seven goods and three kinds of resident must fit one row at 1280 wide. */
+@media (max-width: 1640px) {
   .hud-goods .hud-label, .hud-pop .hud-good .icon + .hud-label { display: none; }
   .hud-goods { gap: 11px; }
   #hud-main { gap: 6px 16px; }
 }
-/* Thirteen tools must fit one row at 1280 wide, so they slim down a little. */
-@media (max-width: 1420px) {
+@media (max-width: 1460px) {
+  .hud-goods .hud-cap { display: none; }
+  .hud-goods { gap: 12px; }
+  .hud-pop { gap: 11px; }
+  #hud-main { gap: 6px 14px; }
+  .progress { width: 60px; }
+}
+/* Fifteen tools must fit one row at 1280 wide, so they slim down in two steps. */
+@media (max-width: 1600px) {
   #menu { gap: 5px; padding: 7px; }
   .tool { min-width: 64px; max-width: 86px; padding: 4px 4px 5px; }
 }
+@media (max-width: 1420px) {
+  .tool { min-width: 58px; max-width: 77px; padding: 4px 3px 5px; }
+  .tool-name { font-size: 12.5px; }
+  .tool-cost { font-size: 11px; }
+}
 @media (max-width: 1150px) {
   .progress { width: 60px; }
-  .tool { min-width: 58px; max-width: 76px; padding: 3px 3px 4px; }
-  .tool-name { font-size: 12px; }
+  .tool { min-width: 52px; max-width: 66px; padding: 3px 2px 4px; }
+  .tool-name { font-size: 11.5px; }
+  .tool-cost { font-size: 10.5px; }
 }

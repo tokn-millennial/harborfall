@@ -3,7 +3,7 @@
 // active tool. Each button shows its shortcut key.
 
 import { el, setText } from './dom.js';
-import { buildingBlurb, costText, shortfallText, undoLabel } from './text.js';
+import { buildingBlurb, costText, shortfallText, undoLabel, upgradePathText } from './text.js';
 import { undoStatus } from '../sim/index.js';
 import { icon } from './icons.js';
 import { drawBuildingIcon } from '../render/art/icon.js';
@@ -55,11 +55,12 @@ export function createBuildMenu(root, hintRoot, game, { onPick, onUndo = () => {
   // One Upgrade tool, priced from the first tier that can be upgraded.
   const upgradable = Object.values(rules.tiers).find((tier) => tier.upgrade);
   if (upgradable) {
-    const next = rules.tiers[upgradable.upgrade.to];
+    const steps = Object.values(rules.tiers).filter((tier) => tier.upgrade).length;
     const entry = add({ mode: 'upgrade', building: null }, 'Upgrade', costText(rules, upgradable.upgrade.cost), [
-      `Click a full, fed house to turn it into a ${next.name} house, which holds ${next.capacity}.`,
+      `Click a full, fed house to move it up: ${upgradePathText(rules)}. Each step holds more people.`,
       'A green ▲ marks houses that are ready.',
-    ], TOOL_KEYS.upgrade);
+      steps > 1 ? 'The cost shown is for the first step. Later steps cost more.' : '',
+    ].filter(Boolean), TOOL_KEYS.upgrade);
     entry.def = { cost: upgradable.upgrade.cost };
     entry.button.prepend(el('span', 'tool-glyph', [icon('upgrade', { size: 26 })]));
   }

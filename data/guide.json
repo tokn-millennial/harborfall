@@ -1,7 +1,7 @@
 {
   "_about": "The first-game guide: a short list of steps shown in a corner of the screen and ticked off as you go. It teaches the order that works. It changes nothing in the game, and the player can hide it. Keys starting with _ are notes and are ignored by the game.",
 
-  "_done": "Each step has a 'done' test. The tests you can use: { \"buildings\": \"sawmill\", \"atLeast\": 1 } counts buildings of one kind, and adding \"connected\": true counts only those joined to a warehouse by road. { \"housesServed\": 4 } counts houses within reach of a market. { \"people\": 16 } counts all residents. { \"houses\": \"worker\", \"atLeast\": 1 } counts houses of one tier. { \"stock\": \"bread\", \"atLeast\": 5 } is an amount in storage. { \"won\": true } is the win. A list of tests means all of them. Prefer tests that stay true once they are true. A step is ticked for good the first time its test passes, but one that depends on an amount in storage may never pass in a busy town, and the guide would wait on it.",
+  "_done": "Each step has a 'done' test. The tests you can use: { \"buildings\": \"sawmill\", \"atLeast\": 1 } counts buildings of one kind, and adding \"connected\": true counts only those joined to a warehouse by road. { \"housesServed\": 4 } counts houses within reach of a market. { \"people\": 16 } counts all residents. { \"houses\": \"worker\", \"atLeast\": 1 } counts houses of one tier. { \"stock\": \"bread\", \"atLeast\": 5 } is an amount in storage. { \"won\": true } is the win. { \"milestones\": 1 } is that many goals after the win reached. A list of tests means all of them. Prefer tests that stay true once they are true. A step is ticked for good the first time its test passes, but one that depends on an amount in storage may never pass in a busy town, and the guide would wait on it.",
 
   "steps": [
     {
@@ -56,6 +56,24 @@
       "text": "Grow the town to 100 Workers",
       "why": "That wins the game. You will need more of everything: fish, bread, planks and houses.",
       "done": { "won": true }
+    },
+    {
+      "text": "Build a Sheep farm and a Weaver, both joined by road",
+      "why": "There is more after the win. Wool becomes cloth, which Artisans need.",
+      "done": [
+        { "buildings": "sheepfarm", "atLeast": 1, "connected": true },
+        { "buildings": "weaver", "atLeast": 1, "connected": true }
+      ]
+    },
+    {
+      "text": "Upgrade a full Worker house to Artisans",
+      "why": "It needs cloth in storage first. An Artisan house holds 12 people and pays the most tax.",
+      "done": { "houses": "artisan", "atLeast": 1 }
+    },
+    {
+      "text": "Grow the town to 100 Artisans",
+      "why": "The last goal. A second sawmill helps, and the town will need more fish and bread.",
+      "done": { "milestones": 1 }
     }
   ]
 }

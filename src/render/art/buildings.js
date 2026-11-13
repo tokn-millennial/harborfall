@@ -70,6 +70,11 @@ function smoke(g, u, v, z, time) {
 function crate(g, u, v, size, color = '#b08a5a') {
   g.box(u, v, u + size, v + size, 0, size * 16, color);
 }
+// One sheep: a woolly body and a dark head.
+function sheep(g, u, v) {
+  g.oval(u, v, 2.6, 3.3, 2.3, '#f4f1e6');
+  g.dot(u + 0.1, v + 0.03, 3.4, 1.25, '#3b342c');
+}
 function barrel(g, u, v) {
   g.box(u, v, u + 0.14, v + 0.14, 0, 4.5, '#8a5f3c');
 }
@@ -210,6 +215,60 @@ export const BUILDING_ART = {
     g.ground(0.9, 1.68, 1.12, 1.95, '#c9b68e');
   },
 
+  // A fenced pasture with a few sheep and a small shelter.
+  sheepfarm(g, { h, color }) {
+    g.ground(0.04, 0.04, 1.96, 1.96, '#9cc27a', 'rgba(60, 90, 50, 0.35)');
+    const wall = h * 0.8;
+    g.box(0.14, 0.14, 0.86, 0.7, 0, wall, WOOD, { top: false });
+    g.onLit(0.38, 0.62, 0, wall * 0.7, 0.7, DARK_WOOD);
+    g.gable(0.14, 0.14, 0.86, 0.7, wall, h * 0.7, color, { axis: 'u', wall: WOOD, lines: 2 });
+    for (const [u, v] of [[1.3, 0.5], [1.62, 0.98], [0.6, 1.25], [1.15, 1.5], [0.35, 1.66]]) sheep(g, u, v);
+    // The fence along the two near sides.
+    for (let i = 0; i <= 4; i++) {
+      g.post(0.08 + i * 0.46, 1.92, 0, 5, DARK_WOOD, 1);
+      g.post(1.92, 0.08 + i * 0.46, 0, 5, DARK_WOOD, 1);
+    }
+    g.line(g.P(0.08, 1.92, 3.5), g.P(1.92, 1.92, 3.5), DARK_WOOD, 0.8);
+    g.line(g.P(1.92, 1.92, 3.5), g.P(1.92, 0.08, 3.5), tone(DARK_WOOD, 0.8), 0.8);
+  },
+
+  // A weaver's workshop, with dyed cloth hung out to dry and a bale of wool by the wall.
+  weaver(g, { h, color, working }) {
+    const wall = h * 0.55;
+    g.box(0.22, 0.28, 1.78, 1.66, 0, wall, PLASTER, { top: false });
+    g.line(g.P(0.22, 1.66, wall * 0.55), g.P(1.78, 1.66, wall * 0.55), DARK_WOOD, 0.8);
+    door(g, 0.4, 0.64, wall * 0.75, 1.66);
+    windowLit(g, 0.9, 1.6, wall * 0.3, wall * 0.8, 1.66, working); // the wide workshop window
+    windowShade(g, 0.6, 1.0, wall * 0.35, wall * 0.8, 1.78, working);
+    g.gable(0.22, 0.28, 1.78, 1.66, wall, h * 0.5, color, { axis: 'u', wall: PLASTER, overhang: 0.1, lines: 4 });
+    g.post(0.3, 1.88, 0, 8, DARK_WOOD, 1);
+    g.post(1.1, 1.88, 0, 8, DARK_WOOD, 1);
+    g.line(g.P(0.3, 1.88, 8), g.P(1.1, 1.88, 8), DARK_WOOD, 0.8);
+    ['#7d6fb3', '#c9506b', '#e0c04a'].forEach((dye, i) => g.onLit(0.36 + i * 0.24, 0.54 + i * 0.24, 2.5, 8, 1.88, dye));
+    crate(g, 1.5, 1.74, 0.16, '#e8e2d0');
+  },
+
+  // A tall three-storey house on a stone ground floor, with a slate roof, for Artisans.
+  guildhouse(g, { h, color, residents }) {
+    const wall = h * 0.68;
+    const lived = residents > 0;
+    const upper = '#efe6cf';
+    g.box(0.22, 0.26, 1.78, 1.72, 0, wall * 0.34, STONE, { top: false });
+    g.box(0.22, 0.26, 1.78, 1.72, wall * 0.34, wall, upper, { top: false });
+    g.line(g.P(0.22, 1.72, wall * 0.67), g.P(1.78, 1.72, wall * 0.67), DARK_WOOD, 0.9);
+    g.line(g.P(1.78, 1.72, wall * 0.67), g.P(1.78, 0.26, wall * 0.67), tone(DARK_WOOD, 0.8), 0.9);
+    door(g, 0.88, 1.12, wall * 0.27, 1.72);
+    for (const [u0, u1] of [[0.4, 0.62], [1.38, 1.6]]) windowLit(g, u0, u1, wall * 0.09, wall * 0.26, 1.72, lived);
+    for (const [z0, z1] of [[0.41, 0.6], [0.74, 0.93]]) {
+      for (const [u0, u1] of [[0.36, 0.58], [0.89, 1.11], [1.42, 1.64]]) windowLit(g, u0, u1, wall * z0, wall * z1, 1.72, lived);
+      for (const [v0, v1] of [[0.5, 0.78], [1.14, 1.42]]) windowShade(g, v0, v1, wall * z0, wall * z1, 1.78, lived);
+    }
+    g.gable(0.22, 0.26, 1.78, 1.72, wall, h * 0.42, color, { axis: 'u', wall: upper, overhang: 0.1, lines: 5 });
+    chimney(g, 0.45, 0.55, wall + h * 0.15, wall + h * 0.62, BRICK);
+    chimney(g, 1.4, 0.55, wall + h * 0.15, wall + h * 0.62, BRICK);
+    g.ground(0.88, 1.72, 1.12, 1.95, '#c9b68e');
+  },
+
   // A paved square with three striped stalls.
   market(g, { h, color }) {
     g.ground(0.06, 0.06, 1.94, 1.94, PAVING, 'rgba(90, 75, 50, 0.4)');
@@ -234,6 +293,8 @@ export const ART_USES = {
   bakery: ['working'],
   cottage: ['residents'],
   townhouse: ['residents'],
+  guildhouse: ['residents'],
+  weaver: ['working'],
 };
 
 // Moving parts, drawn fresh every frame on top of the building.

@@ -139,6 +139,46 @@ export function reasonText(game, code, options = {}) {
   return 'That cannot be done.';
 }
 
+// The goal the player is working toward: the win, then each goal after it in
+// turn, and once all are done, the last of them.
+// `summary` is what getSummary(game) returned.
+export function currentGoal(rules, summary) {
+  const win = { tier: summary.win.tier, target: summary.win.target, current: summary.win.current, reached: summary.win.won, title: null };
+  if (!summary.win.won) return win;
+  const next = summary.milestones.find((m) => m.reachedAtTick === null) ?? summary.milestones[summary.milestones.length - 1];
+  return next ? { tier: next.tier, target: next.target, current: next.current, reached: next.reachedAtTick !== null, title: next.title } : win;
+}
+
+// What the win screen says. `buildings` is how many stand on the island.
+export function winMessage(rules, summary, buildings) {
+  const name = (tier) => `${rules.tiers[tier].name}s`;
+  const next = summary.milestones.find((m) => m.reachedAtTick === null);
+  return {
+    title: 'You win!',
+    detail: `${summary.win.target} ${name(summary.win.tier)} live on your island. It took ${clock(summary.win.wonAtSeconds)} of game time.`,
+    stats: `You finished with ${summary.coins} coins and ${buildings} buildings.`,
+    next: next ? `There is more, if you want it. Next goal: ${next.target} ${name(next.tier)}.` : null,
+  };
+}
+
+// What the screen says when goal number `index` after the win is reached.
+export function milestoneMessage(rules, summary, index, buildings) {
+  const name = (tier) => `${rules.tiers[tier].name}s`;
+  const m = summary.milestones[index];
+  const next = summary.milestones.find((other) => other.reachedAtTick === null);
+  return {
+    title: m.title ?? 'Goal reached!',
+    detail: `${m.target} ${name(m.tier)} live on your island. It took ${clock(m.reachedAtSeconds)} of game time.`,
+    stats: `You have ${summary.coins} coins and ${buildings} buildings.`,
+    next: next ? `Next goal: ${next.target} ${name(next.tier)}.` : 'That was the last goal. The island is yours.',
+  };
+}
+
+// How houses move up, in words: "Farmer to Worker, Worker to Artisan".
+export function upgradePathText(rules) {
+  return Object.values(rules.tiers).filter((tier) => tier.upgrade).map((tier) => `${tier.name} to ${rules.tiers[tier.upgrade.to].name}`).join(', ');
+}
+
 // The short line under the Undo button: what an undo would take back.
 // `status` is what undoStatus(game) returned.
 export function undoLabel(rules, status) {

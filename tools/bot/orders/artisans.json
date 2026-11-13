@@ -1,0 +1,112 @@
+{
+  "name": "Artisans",
+  "description": "The standard order to the win, then on to the goal after it: a second sawmill, wool and cloth, more food as the town grows, and Worker houses upgraded to Artisans three at a time.",
+  "pastWin": true,
+  "steps": [
+    {
+      "build": "lumberjack",
+      "count": 2
+    },
+    {
+      "build": "fisherman"
+    },
+    {
+      "build": "market"
+    },
+    {
+      "build": "house",
+      "count": 5
+    },
+    {
+      "build": "sawmill"
+    },
+    {
+      "build": "fisherman"
+    },
+    {
+      "build": "house",
+      "count": 5
+    },
+    {
+      "build": "fisherman"
+    },
+    {
+      "build": "house",
+      "count": 4
+    },
+    {
+      "build": "farm",
+      "count": 2
+    },
+    {
+      "build": "bakery"
+    },
+    {
+      "build": "fisherman"
+    },
+    {
+      "upgrade": 6
+    },
+    {
+      "build": "fisherman"
+    },
+    {
+      "build": "farm",
+      "count": 2
+    },
+    {
+      "build": "bakery"
+    },
+    {
+      "build": "fisherman"
+    },
+    {
+      "upgrade": 8
+    },
+    {
+      "build": "sawmill"
+    },
+    {
+      "build": "sheepfarm",
+      "count": 2
+    },
+    {
+      "build": "weaver"
+    },
+    {
+      "build": "fisherman"
+    },
+    {
+      "upgrade": 3,
+      "to": "artisan"
+    },
+    {
+      "build": "farm",
+      "count": 2
+    },
+    {
+      "build": "bakery"
+    },
+    {
+      "build": "fisherman"
+    },
+    {
+      "upgrade": 3,
+      "to": "artisan"
+    },
+    {
+      "build": "sheepfarm",
+      "count": 2
+    },
+    {
+      "build": "weaver"
+    },
+    {
+      "build": "fisherman"
+    },
+    {
+      "upgrade": 3,
+      "to": "artisan"
+    }
+  ]
+}

@@ -17,14 +17,15 @@ const GUIDE = loadData().guide;
 test('the shipped guide has no mistakes in it', () => {
   const game = createGame(loadData());
   assert.deepEqual(guideProblems(game.rules, GUIDE), []);
-  assert.ok(GUIDE.steps.length >= 8 && GUIDE.steps.length <= 14);
+  assert.ok(GUIDE.steps.length >= 8 && GUIDE.steps.length <= 16);
   for (const s of GUIDE.steps) {
     assert.ok(s.text.length <= 70, `"${s.text}" is too long for the panel`);
     assert.ok(typeof s.why === 'string' && s.why.length > 10, `"${s.text}" does not say why`);
     assert.doesNotMatch(s.text + s.why, /_|undefined/);
   }
-  // It ends at the win.
-  assert.deepEqual(GUIDE.steps[GUIDE.steps.length - 1].done, { won: true });
+  // It passes through the win, and ends at the last goal after it.
+  assert.equal(GUIDE.steps.filter((s) => s.done.won === true).length, 1);
+  assert.deepEqual(GUIDE.steps[GUIDE.steps.length - 1].done, { milestones: game.rules.milestones.length });
 });
 
 test('the guide is loaded with the data, and is not one of the rules', () => {
@@ -68,6 +69,7 @@ test('a guide with mistakes is refused, with a sentence for each', () => {
     [{ steps: [{ text: 'Go', done: { people: 2.5 } }] }, /whole number/],
     [{ steps: [{ text: 'Go', done: { housesServed: -1 } }] }, /whole number/],
     [{ steps: [{ text: 'Go', done: { won: false } }] }, /"won" can only be true/],
+    [{ steps: [{ text: 'Go', done: { milestones: 5 } }] }, /"milestones" must be a whole number, at most 1/],
     [{ steps: [ok, { text: 'Go', done: [ok.done, { stock: 'gold', atLeast: 1 }] }] }, /step 2, test 2 names an unknown good/],
   ];
   for (const [guide, pattern] of bad) {
@@ -113,6 +115,10 @@ test('each kind of "done" test counts the right thing', () => {
   game.state.won = true;
   assert.equal(met({ won: true }), true);
 
+  assert.equal(met({ milestones: 1 }), false);
+  game.state.milestones[0] = 12345;
+  assert.equal(met({ milestones: 1 }), true);
+
   // A list needs every test in it.
   assert.equal(met([{ people: 3 }, { stock: 'bread', atLeast: 5 }]), true);
   assert.equal(met([{ people: 3 }, { stock: 'bread', atLeast: 6 }]), false);
@@ -147,8 +153,9 @@ test('playing the scripted mini-city ticks every step but the win, and never unt
     asked.add(model.at);
     last = model;
   });
-  assert.equal(last.done, GUIDE.steps.length - 1);
-  assert.equal(last.at, GUIDE.steps.length - 1, 'after the first upgrade, only the win is left');
+  const winStep = GUIDE.steps.findIndex((s) => s.done.won === true);
+  assert.equal(last.done, winStep);
+  assert.equal(last.at, winStep, 'after the first upgrade, the win is the step being asked for');
   assert.equal(last.finished, false);
   // The mini-city builds its sawmill early, before anyone has moved in. The
   // guide ticked it then, and still asked for the residents in their turn.
@@ -175,11 +182,22 @@ test('through a full winning game the guide only moves forward, and finishes at 
   // a game picked up there is already well along. It then moves on at least once more.
   assert.ok(places[0] >= 4, `after 1 minute the bot is only on step ${places[0] + 1}`);
   assert.ok(new Set(places).size >= 2, `the guide never moved: ${places.join(', ')}`);
-  assert.equal(last, GUIDE.steps.length - 1, 'late in the game only the win should be left');
+  const winStep = GUIDE.steps.findIndex((s) => s.done.won === true);
+  assert.equal(last, winStep, 'late in the game the win should be the step asked for');
 
   const game = createGame(loadData());
   assert.equal(runBot(game, loadOrder('standard')).won, true);
-  const end = createGuideTracker(game, GUIDE).update();
+  // At the win the guide moves on to what comes after it.
+  const atWin = createGuideTracker(game, GUIDE).update();
+  assert.equal(atWin.at, winStep + 1);
+  assert.equal(atWin.finished, false);
+  assert.match(atWin.current.text, /Sheep farm/);
+
+  // Played on to the last goal, every step is ticked.
+  const long = createGame(loadData());
+  const result = runBot(long, loadOrder('artisans'), { maxMinutes: 90 });
+  assert.notEqual(result.milestones[0].reachedAtMinutes, null);
+  const end = createGuideTracker(long, GUIDE).update();
   assert.equal(end.finished, true);
   assert.equal(end.current, null);
   assert.ok(end.steps.every((s) => s.done));

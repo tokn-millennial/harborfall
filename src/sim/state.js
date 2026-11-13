@@ -37,6 +37,7 @@ export function createGame(rawData, options = {}) {
     lastIncome: null,
     won: false,
     wonAtTick: null,
+    milestones: rules.milestones.map(() => null), // the tick each goal after the win was reached
     undo: null, // what is needed to take back the last command (see undo.js)
   };
   const game = { rules, state };

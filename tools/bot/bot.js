@@ -15,7 +15,8 @@ export function expandOrder(order) {
     if (entry.build) {
       for (let i = 0; i < (entry.count ?? 1); i++) steps.push({ kind: 'build', building: entry.build, label: `build ${entry.build}` });
     } else if (entry.upgrade) {
-      for (let i = 0; i < entry.upgrade; i++) steps.push({ kind: 'upgrade', label: 'upgrade house' });
+      // "to" picks which upgrade: { upgrade: 9, to: 'artisan' } only moves houses up to Artisans.
+      for (let i = 0; i < entry.upgrade; i++) steps.push({ kind: 'upgrade', to: entry.to ?? null, label: entry.to ? `upgrade to ${entry.to}` : 'upgrade house' });
     } else {
       throw new Error(`Build order entry not understood: ${JSON.stringify(entry)}`);
     }
@@ -26,13 +27,15 @@ export function expandOrder(order) {
 const RETRY = Symbol('retry');
 
 // When several houses refuse an upgrade, report the one closest to being ready.
-const UPGRADE_REASON_RANK = ['not_enough_coins', 'not_enough_goods', 'no_bread', 'needs_unmet', 'house_not_full', 'no_market', 'max_tier'];
+const UPGRADE_REASON_RANK = ['not_enough_coins', 'not_enough_goods', 'no_bread', 'no_cloth', 'needs_unmet', 'house_not_full', 'no_market', 'max_tier'];
 
 export function runBot(game, order, options = {}) {
   // options.pace makes the bot act at a person's speed, not instantly. It is
   // { seed, startSeconds, thinkSeconds: [min, max], roadTileSeconds, pauseChance, pauseSeconds: [min, max] }.
   // See tools/bot/paces.json. Without it the bot acts the moment it can afford a step.
-  const { maxMinutes = 90, decisionSeconds = 1, stallMinutes = 5, pace = null } = options;
+  // options.pastWin keeps the bot playing after the win, until its order is done
+  // and every milestone is reached (or time runs out).
+  const { maxMinutes = 90, decisionSeconds = 1, stallMinutes = 5, pace = null, pastWin = false } = options;
   const { rules, state } = game;
   const planner = createPlanner(game);
   const steps = expandOrder(order);
@@ -71,6 +74,7 @@ export function runBot(game, order, options = {}) {
       net: s.income.net,
       farmer: s.residents.farmer ?? 0,
       worker: s.residents[rules.win.tier] ?? 0,
+      residents: s.residents,
       goods: s.goods,
     });
   };
@@ -113,6 +117,7 @@ export function runBot(game, order, options = {}) {
     let bestReason = null;
     for (const b of state.buildings) {
       if (!b.house || !rules.tiers[b.house.tier].upgrade) continue;
+      if (current.to && rules.tiers[b.house.tier].upgrade.to !== current.to) continue;
       const check = canUpgrade(game, b.id);
       if (check.ok) {
         execute(game, { action: 'upgrade', id: b.id });
@@ -126,7 +131,10 @@ export function runBot(game, order, options = {}) {
   }
 
   sample();
-  while (state.tick < maxTicks && !state.won) {
+  // A build order can also ask to be played past the win ("pastWin": true).
+  const playOn = pastWin || order.pastWin === true;
+  const finished = () => (playOn ? index >= steps.length && state.milestones.every((tick) => tick !== null) : state.won);
+  while (state.tick < maxTicks && !finished()) {
     if (state.tick % decisionTicks === 0 && state.tick >= readyAtTick) {
       while (index < steps.length) {
         const current = steps[index];
@@ -186,6 +194,8 @@ export function runBot(game, order, options = {}) {
     order: order.name ?? 'unnamed',
     won: state.won,
     wonAtMinutes: state.won ? summary.win.wonAtSeconds / 60 : null,
+    playedPastWin: playOn,
+    milestones: summary.milestones.map((m) => ({ title: m.title, tier: m.tier, target: m.target, current: m.current, reachedAtMinutes: m.reachedAtSeconds === null ? null : m.reachedAtSeconds / 60 })),
     endedAtMinutes: summary.seconds / 60,
     stepsDone: index,
     stepsTotal: steps.length,

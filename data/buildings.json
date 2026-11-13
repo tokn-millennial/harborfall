@@ -91,6 +91,32 @@
     "visual": { "art": "bakery", "color": "#c46f3a", "height": 1.35 }
   },
 
+  "sheepfarm": {
+    "name": "Sheep farm",
+    "key": "P",
+    "category": "producer",
+    "size": [2, 2],
+    "cost": { "coins": 60, "goods": { "wood": 10, "planks": 5 } },
+    "upkeepPerMinute": 4,
+    "requiresRoad": true,
+    "_placement": "Sheep need pasture: at least minTiles grass tiles within the radius.",
+    "placement": { "terrainInRadius": { "terrain": "grass", "radius": 3, "minTiles": 16 } },
+    "production": { "cycleSeconds": 20, "inputs": {}, "outputs": { "wool": 1 } },
+    "visual": { "art": "sheepfarm", "color": "#9a7b4f", "height": 0.7 }
+  },
+
+  "weaver": {
+    "name": "Weaver",
+    "key": "V",
+    "category": "producer",
+    "size": [2, 2],
+    "cost": { "coins": 90, "goods": { "planks": 15 } },
+    "upkeepPerMinute": 6,
+    "requiresRoad": true,
+    "production": { "cycleSeconds": 20, "inputs": { "wool": 2 }, "outputs": { "cloth": 1 } },
+    "visual": { "art": "weaver", "color": "#6f5fa8", "height": 1.3 }
+  },
+
   "house": {
     "name": "House",
     "key": "H",

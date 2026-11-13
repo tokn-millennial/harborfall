@@ -853,3 +853,81 @@ Eight of my new tests were wrong when first written, not the game: a road that I
 
 **What I would change**
 - I would run every new piece over a whole scripted game before trusting its rule. Both real bugs in the logic came from that, and neither showed in a single hand-built case.
+
+**After the gate:** committed as `2612622` and pushed at your request.
+
+## Phase 12: Artisans and a goal after the win
+
+Date: 2026-11-13. Status: approved by Colin. His reply was "Moved and please proceed", which I read as "Approved".
+
+
+**Turns used:** 1 (your message "just keep going"). No plan was shown first. The roadmap asked you for three choices before this item, and with no answer I made them (D151 to D155).
+
+**What was built**
+- **Two new goods and two new buildings:** a Sheep farm makes wool, and a Weaver turns wool into cloth.
+- **A third kind of resident:** Artisans, 12 to a house, who need fish, bread and cloth and pay the most tax.
+- **A goal after the win:** 100 Artisans, with its own screen.
+- **Older saved games still load.**
+- The game up to the win is unchanged.
+
+**Automated tests: 373 pass, 0 fail.** That is 352 from before plus 21 new ones. Ten older tests were also brought up to date, because they stated things that are no longer so: that there are five goods, that a Worker house cannot be upgraded, that the guide ends at the win. Each was changed to state the new fact, and none was weakened.
+
+**Balance, by the bot**
+
+| | First numbers | Final numbers |
+|---|---|---|
+| Artisan tax per resident a minute | 0.9 | 1.2 |
+| Upgrade to Artisan | 40 coins, 8 planks | 30 coins, 8 planks |
+| Bot's build order for the second act | one sawmill | a second sawmill first |
+| Win | 28.6 min | 28.6 min |
+| 100 Artisans | 67.8 min, 39 after the win | 49.8 min, 21 after the win |
+| Income at the end | +30.6 a minute | +58.8 a minute |
+| Lowest income after the win | +15.2 | +29.2 |
+
+- With the first numbers the second act made the town poorer than it was at the win. That is a tier not worth building.
+- **Planks are the bottleneck.** The second act needs about 140 planks, and one sawmill makes under 4 a minute. The bot now builds a second sawmill first, and the guide says so.
+- On two other islands the second act took 20.3 minutes.
+- The three original build orders give exactly the results they gave before: 28.6, 30.4 and 52.9 minutes.
+
+**Your saved game**
+- The rules stamp was `6fe08f1bee9bb754` before this phase and is `b16fd0a9142282c9` now. A changed stamp normally means a saved game is refused.
+- The rules now also work out the stamp they would have without the new content. It comes to exactly `6fe08f1bee9bb754`, so a save from before is recognised and carried forward.
+- I made a save in the browser under the old data files. It carried the old stamp. The title screen offered Continue, and it loaded with wool and cloth at zero, the new buildings on offer, and the guide on step 10 of 13.
+
+**Browser checks**
+
+| Check | How | Result |
+|---|---|---|
+| A save made under the old rules is offered for Continue and loads | As above | Pass |
+| The new buildings and the Artisan house are drawn | A town played to 45 minutes by the bot, then zoomed in | Pass by my eye. See `docs/screenshots/phase12-*.jpg`. |
+| The win screen mentions the next goal | Read it | Pass. "There is more, if you want it. Next goal: 100 Artisans." |
+| The goal screen appears at 100 Artisans, after the win screen, and pauses the game | Played to the end by the bot | Pass. "A city of Artisans ... That was the last goal. The island is yours." |
+| The goal bar switches from the win to the next goal | Read it | Pass. "Goal 100", then "100 Artisans". |
+| Fifteen tools fit one row at 1280 wide | Measured | Failed at first, then fixed. See bug 1. |
+| The top bar fits one row at 1280 wide, early and late in a game | Measured | Failed at first, then fixed. See bug 2. |
+| A full game through the UI still matches the headless bot | UI playthrough on `?fresh` | Pass. Won at 28.55 minutes, identical final state. The same game then went on to 100 Artisans at 51.4 minutes. |
+| Random input, which now also places the new buildings | 6,000 actions over 2 runs | Pass. No errors. A sheep farm and a weaver were among the buildings it placed. |
+| The error console | Read it | Empty. |
+
+**Bugs found: 3, all fixed. One design problem, fixed by tuning.**
+1. **The tool row wrapped onto two lines** at 1280 wide with 15 buttons. The buttons now slim down in two steps.
+2. **The top bar wrapped onto two and three lines** with seven goods and three kinds of resident. Under 1460 pixels the storage limit is left out, and the goal label is shorter.
+3. **A save with an empty list of goals was refused as damaged** when carried forward. Your real save has no such list at all, so it would have loaded, but the test built its save a slightly different way and caught the gap.
+4. **Design problem:** the second act as first tuned took 39 minutes and lost money. See the table above.
+
+**Decisions made:** 14 (D151 to D164).
+
+**Weak or unfinished**
+- **Every choice here was mine.** The names, the chain, the goal, and that the win stays put. You may want none of it, or something else.
+- **The second act is the first act again with one more need.** There is no new idea in it: no new kind of placement, no trade-off. It is more game, not different game.
+- **After 100 Artisans there is nothing.**
+- **Balance was checked by one build order on four islands.** A player who does not build a second sawmill will wait a long time for planks. The guide mentions it. The tip line will say "Planks keep running out. Build another sawmill."
+- **Cloth is only used by Artisans.** Wool is only used for cloth. Neither matters until after the win.
+- **The top bar no longer shows the storage limit at 1280 wide.** You learn a good is full by its color, or by hovering.
+- **"Sheep farm" wraps onto two lines on its button** at 1280 wide.
+- **The drawings are in the same simple style**, and I judged them from stills.
+- **No new sounds.**
+- **Not done:** your notes from playing, and a Mac test.
+
+**What I would change**
+- I would have asked you the three questions as one short message before starting. I had asked for other things three gates running and got "keep going", so I did not. A phase this size deserved one more try.

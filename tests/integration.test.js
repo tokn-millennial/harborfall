@@ -22,7 +22,8 @@ test('full chain from the real starting resources: wood, planks, fish, grain, br
     previous = { ...game.state.goods };
   });
 
-  assert.deepEqual(Object.keys(produced).sort(), [...game.rules.goodIds].sort(), 'every good was produced at least once');
+  // The mini-city runs the chain up to bread. Wool and cloth come after the win and have their own tests.
+  assert.deepEqual(Object.keys(produced).sort(), ['bread', 'fish', 'grain', 'planks', 'wood'], 'every good in the chain was produced at least once');
   assert.equal(workerHouse.house.tier, 'worker');
   assert.equal(workerHouse.house.residents, game.rules.tiers.worker.capacity);
   assert.equal(getSummary(game).residents.worker, game.rules.tiers.worker.capacity);

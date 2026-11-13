@@ -27,7 +27,18 @@
       "capacity": 8,
       "taxPerResidentPerMinute": 0.85,
       "needs": { "fish": 0.2, "bread": 0.075 },
+      "upgrade": {
+        "to": "artisan",
+        "cost": { "coins": 30, "goods": { "planks": 8 } }
+      },
       "visual": { "art": "townhouse", "color": "#b9553a", "height": 1.5 }
+    },
+    "artisan": {
+      "name": "Artisan",
+      "capacity": 12,
+      "taxPerResidentPerMinute": 1.2,
+      "needs": { "fish": 0.2, "bread": 0.075, "cloth": 0.05 },
+      "visual": { "art": "guildhouse", "color": "#5d6f8c", "height": 2.0 }
     }
   }
 }

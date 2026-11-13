@@ -158,6 +158,14 @@ export function upgradeHouse(game, building) {
   h.declineTimer = 0;
 }
 
+// Residents of a tier or of any tier above it. Goals are counted this way.
+export function countAtLeast(game, tierId) {
+  const counts = countResidents(game);
+  let total = 0;
+  for (const id of game.rules.tiers[tierId].andAbove) total += counts[id];
+  return total;
+}
+
 // Residents per tier, for the HUD and the win check.
 export function countResidents(game) {
   const counts = {};

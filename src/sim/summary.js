@@ -2,7 +2,7 @@
 
 import { MILLI } from './rules.js';
 import { incomeRates } from './economy.js';
-import { countResidents } from './population.js';
+import { countAtLeast, countResidents } from './population.js';
 
 export function getSummary(game) {
   const { rules, state } = game;
@@ -33,11 +33,20 @@ export function getSummary(game) {
     win: {
       tier: rules.win.tier,
       target: rules.win.residents,
-      current: residents[rules.win.tier],
+      current: countAtLeast(game, rules.win.tier),
       won: state.won,
       wonAtTick: state.wonAtTick,
       wonAtSeconds: state.wonAtTick === null ? null : state.wonAtTick / rules.ticksPerSecond,
     },
+    // The goals for after the win, in order.
+    milestones: rules.milestones.map((m, i) => ({
+      tier: m.tier,
+      target: m.residents,
+      title: m.title,
+      current: countAtLeast(game, m.tier),
+      reachedAtTick: state.milestones[i],
+      reachedAtSeconds: state.milestones[i] === null ? null : state.milestones[i] / rules.ticksPerSecond,
+    })),
   };
 }
 

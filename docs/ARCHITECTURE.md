@@ -309,6 +309,7 @@ All tests run with `node --test` and need no browser.
 | `loop.test.js` | Real time becomes whole ticks. Speeds 2x and 4x, pause, and a stalled tab all behave. |
 | `save.test.js` | A game that is saved, turned into text, read back and played on ends exactly where it would have without saving. Tested on real bot games at several moments, on a won game, on another island and on a hand-made one. Twenty kinds of damaged save, a changed rule and a newer version are each refused. Changes to looks and names are not. |
 | `title.test.js` | The save slot, with a stand-in for the browser's storage: reading, writing, failing storage, unreadable text. What the title screen offers in each case, and that a new game never replaces a saved one without a second press. |
+| `artisans.test.js` | The wool and cloth chain creates and loses nothing. Artisan houses need cloth and empty without it. The win counts Workers or better. The goal after the win is recorded once. The bot reaches it 15 to 30 minutes after the win, on four islands, with the first act unchanged. A game saved before Artisans existed loads and plays on as it would have. |
 | `undo.test.js` | Undoing an action at once leaves the game exactly as it was, for buildings, road, demolishing and upgrading, and for 600 random actions. Undo gives back the whole cost. It is refused after 30 seconds, when there is nothing to undo, and when a demolish's refund has been used. The undo record is saved with the game, and a save from before undo existed still loads. |
 | `guide.test.js` | The shipped guide has no mistakes, and 23 kinds of mistake are each refused with a sentence. Each kind of test counts the right thing. Steps are ticked and never unticked. A full winning game finishes the guide. The guide never changes the game and is not one of the rules. |
 | `sound.test.js` | Every sound is short, not too loud, and starts and ends in silence so it cannot click. Good news rises and bad news falls. The sea loops with no join. With a stand-in for the browser: nothing plays before the first click, the same sound cannot pile up, muting silences everything, and a browser with no sound causes no error. |
@@ -404,3 +405,25 @@ Why make sounds from numbers and not use the browser's built-in tone makers: a l
 **The guide is not a rule.** Its steps are in `data/guide.json`, loaded with the other data files, but only the UI reads it. `src/ui/guide.js` has the tests a step can use and the rule for which step is shown. It has no page code and is tested in Node.
 
 **Saved games and the data files.** A saved game is refused when the rules it was played under have changed. Two things added in this phase live in the data files and are not rules in that sense: how long undo lasts, and the guide. Both are left out of the rules stamp, so adding them did not make existing saved games unusable. The stamp was checked before and after and is unchanged.
+
+## 15. Adding content, and games saved before it
+
+Phase 12 added two goods, two buildings and a tier by editing data files, with three small changes to the rules code. This section is for whoever adds the next thing.
+
+**What was already general.** Goods, buildings, tiers, needs, upgrade paths, the tip line and the info panel all read the data. A new good or producer needs no code.
+
+**What had to be written.**
+- **Goals count a tier "or better".** Each tier knows itself and every tier above it (`andAbove`, worked out from the upgrade paths). The win is 100 Workers or better. Without this, upgrading Workers to Artisans would have pushed the win further away.
+- **Milestones.** `config.json` may list goals for after the win. The state records the tick each was reached, the same way it records the win.
+- **Drawings.** Each new building and tier needs a drawing in `src/render/art/buildings.js`, or it shows as a plain box.
+
+**Older saved games.** A saved game is normally refused once the rules change, because old numbers under new rules can describe an impossible game. Adding things is the exception: a game saved before wool existed is still a possible game, with no wool in it.
+
+- `config.json` has an entry, `addedLater`, naming everything added since saved games began.
+- The rules work out a second stamp, `olderStamp`: what the stamp would be without those things.
+- A save whose stamp matches the older one is carried forward: the new goods are added at zero, and no goal after the win counts as reached. Then it is checked like any other save.
+- If one of the old numbers has changed as well, the older stamp no longer matches, and the save is refused as before. Changing one of the new numbers does not affect it.
+
+To add a good, building or tier of your own and keep older saves working, add its name to `addedLater`. The stamp before Phase 12 was `6fe08f1bee9bb754`. A save made in the browser under the old data carried exactly that stamp and was continued under the new data.
+
+**The bot.** A build order may carry `"pastWin": true` to play on after the win until its steps are done and every milestone is reached. An upgrade step may say which upgrade: `{ "upgrade": 3, "to": "artisan" }`.

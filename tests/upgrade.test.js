@@ -85,12 +85,21 @@ test('a failed upgrade changes nothing, and checking never changes anything', ()
   assert.equal(snapshot(game), before);
 });
 
-test('only Farmer houses can be upgraded', () => {
+test('only houses can be upgraded, one step at a time, and not past the top tier', () => {
   const { game, house } = readyHouse();
   const market = game.state.buildings.find((b) => b.type === 'market');
   assert.equal(upgrade(game, market.id).reason, 'not_a_house');
   assert.equal(upgrade(game, 9999).reason, 'not_a_house');
   assert.equal(upgrade(game, house.id).ok, true);
+  assert.equal(house.house.tier, 'worker');
+  assert.equal(upgrade(game, house.id).reason, 'house_not_full', 'a Worker house must fill up before the next step');
   fillHouse(game, house);
+  game.state.goods.cloth = 10;
+  game.state.goods.planks = 50;
+  game.state.coinsMilli = 1000000;
+  assert.equal(upgrade(game, house.id).ok, true);
+  assert.equal(house.house.tier, 'artisan');
+  fillHouse(game, house);
+  assert.equal(house.house.residents, game.rules.tiers.artisan.capacity);
   assert.equal(upgrade(game, house.id).reason, 'max_tier');
 });

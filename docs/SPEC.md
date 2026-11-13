@@ -151,9 +151,9 @@ The worst case is slow recovery, not a dead end. Phase 2 tested this with the bo
 
 ## 9. Winning
 
-- You win when the number of residents living in Worker houses reaches 100 (`config.json` → `win`). Farmers do not count.
+- You win when 100 residents live in Worker houses or better (`config.json` → `win`). Farmers do not count. Artisans do, so upgrading a Worker house never moves the win away.
 - That takes at least 13 full Worker houses (13 x 8 = 104).
-- After the win screen you can keep playing.
+- After the win screen you can keep playing, and there is one more goal: 100 Artisans. See section 13.
 
 ## 10. Balance, as measured by the bot
 
@@ -278,7 +278,8 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 
 **Top bar**
 - Coins and net income per minute. Income turns red when negative, with a line saying what to do.
-- Each good with its storage limit. On windows narrower than 1500 pixels a good shows as its color and number, with the name on hover.
+- Each good with its storage limit. On windows narrower than 1640 pixels a good shows as its icon and number, with the name on hover. Under 1460 pixels the limit is left out too, and a good at its limit turns amber.
+- After the win, the goal bar shows the next goal by name, for example "100 Artisans".
 - Farmers and Workers, each with housing capacity, and a bar toward the goal of 100 Workers.
 - Game time, Pause, 1x, 2x, 4x, and a ? button for the controls. The ? panel also shows when the game was last saved and has the button back to the title screen.
 - A tip line appears when something has been short for 30 game seconds, for example "Fish keeps running out. Build another fisherman." It names the root of the shortage: if bread is out because the bakery has no grain, it talks about grain.
@@ -307,3 +308,40 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 ## 12. Not in Version 1
 
 More than one saved game, save files to download or share, undoing more than your last action, music, more islands, ships and trade, combat, carriers that really carry goods (the carts are for show), workforce requirements for buildings, building rotation, a tutorial, touch controls, and painted art from image files.
+
+## 13. After the win: wool, cloth and Artisans
+
+Added in Phase 12. Nothing in sections 1 to 10 changed: the game up to the win plays exactly as before.
+
+**Two new goods:** Wool and Cloth.
+
+**Two new buildings** (`buildings.json`)
+
+| Building | Cost | Upkeep a minute | What it does | Needs |
+|---|---|---|---|---|
+| Sheep farm | 60 coins, 10 wood, 5 planks | 4 | Makes 1 wool every 20 seconds | Pasture: 16 or more grass tiles within 3 tiles |
+| Weaver | 90 coins, 15 planks | 6 | Turns 2 wool into 1 cloth every 20 seconds | Nothing special |
+
+One weaver keeps two sheep farms busy and clothes about 60 Artisans.
+
+**A third kind of resident** (`population.json`)
+
+| | Farmer | Worker | Artisan |
+|---|---|---|---|
+| A house holds | 4 | 8 | 12 |
+| Tax per resident a minute | 0.8 | 0.85 | 1.2 |
+| Needs | fish | fish, bread | fish, bread, cloth |
+| Upgrade to the next | 20 coins, 5 planks | 30 coins, 8 planks | none |
+
+- A full, fed Worker house can be upgraded to an Artisan house, once there is cloth in storage. The Workers stay and four more people move in.
+- Each Artisan uses 0.05 cloth a minute.
+- Without cloth, Artisans leave one by one, as any resident does when a need is unmet. A house never moves back down.
+
+**The goal after the win** (`config.json` → `milestones`)
+- 100 Artisans. That takes at least 9 full Artisan houses (9 x 12 = 108).
+- It is reached like the win, recorded once, and never taken back.
+- A screen marks it, as the win screen marks the win. After it there are no more goals.
+
+**How long it takes.** The bot wins at 28.6 minutes and reaches 100 Artisans at 49.8, which is 21 minutes later. On two other islands it took 20 minutes. It builds a second sawmill first, because the second act needs about 140 planks.
+
+**Saved games.** A game saved before Phase 12 can still be continued. It has no wool or cloth and has not reached the new goal, and the new buildings are there to build.

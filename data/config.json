@@ -22,8 +22,23 @@
     "demolishRefundRatio": 0.5
   },
 
+  "_win": "The win: this many residents of this tier, or of any tier above it.",
   "win": {
     "tier": "worker",
     "residents": 100
+  },
+
+  "_milestones": "Goals for after the win, in order. Each is reached like the win and shown on the goal bar once the one before it is done.",
+  "milestones": [
+    { "tier": "artisan", "residents": 100, "title": "A city of Artisans" }
+  ],
+
+  "_addedLater": "What has been added to the game since saved games first existed. A game saved before these were added can still be continued: it simply has none of them. If you add a good, a building or a tier of your own, list it here and older saved games keep working.",
+  "addedLater": {
+    "goods": ["wool", "cloth"],
+    "buildings": ["sheepfarm", "weaver"],
+    "tiers": ["artisan"],
+    "upgradesFrom": ["worker"],
+    "config": ["milestones"]
   }
 }

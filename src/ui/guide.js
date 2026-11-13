@@ -29,6 +29,7 @@ export function conditionMet(game, condition) {
   }
   if (condition.stock !== undefined) return (state.goods[condition.stock] ?? 0) >= condition.atLeast;
   if (condition.won !== undefined) return state.won === condition.won;
+  if (condition.milestones !== undefined) return state.milestones.filter((tick) => tick !== null).length >= condition.milestones;
   return false;
 }
 
@@ -49,7 +50,7 @@ export function guideProblems(rules, guide) {
       problems.push(`${where} has no "done" test`);
       return;
     }
-    const kinds = ['buildings', 'housesServed', 'people', 'houses', 'stock', 'won'].filter((k) => condition[k] !== undefined);
+    const kinds = ['buildings', 'housesServed', 'people', 'houses', 'stock', 'won', 'milestones'].filter((k) => condition[k] !== undefined);
     if (kinds.length !== 1) {
       problems.push(`${where} must use exactly one kind of test, and uses ${kinds.length}`);
       return;
@@ -66,6 +67,8 @@ export function guideProblems(rules, guide) {
     } else if (kind === 'stock') {
       if (!rules.goodIds.includes(condition.stock)) problems.push(`${where} names an unknown good "${condition.stock}"`);
       if (!whole(condition.atLeast)) problems.push(`${where} needs "atLeast" as a whole number`);
+    } else if (kind === 'milestones') {
+      if (!whole(condition.milestones) || condition.milestones > rules.milestones.length) problems.push(`${where}: "milestones" must be a whole number, at most ${rules.milestones.length}`);
     } else if (kind === 'won') {
       if (condition.won !== true) problems.push(`${where}: "won" can only be true`);
     } else if (!whole(condition[kind])) {

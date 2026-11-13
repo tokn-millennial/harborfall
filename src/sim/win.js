@@ -1,12 +1,18 @@
-// The win check: enough residents of the target tier. There is no lose state.
+// The win check: enough residents of the target tier, or of any tier above it.
+// There is no lose state. After the win come the milestones, which are counted
+// the same way and never take the win away.
 
-import { countResidents } from './population.js';
+import { countAtLeast } from './population.js';
 
 export function checkWin(game) {
   const { rules, state } = game;
-  if (state.won) return;
-  if (countResidents(game)[rules.win.tier] >= rules.win.residents) {
+  if (!state.won && countAtLeast(game, rules.win.tier) >= rules.win.residents) {
     state.won = true;
     state.wonAtTick = state.tick;
+  }
+  for (let i = 0; i < rules.milestones.length; i++) {
+    if (state.milestones[i] !== null) continue;
+    const m = rules.milestones[i];
+    if (countAtLeast(game, m.tier) >= m.residents) state.milestones[i] = state.tick;
   }
 }

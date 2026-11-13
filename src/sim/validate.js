@@ -202,6 +202,35 @@ export function validateData(data) {
     if (!tiers[config.win.tier]) err(`config.win.tier names an unknown tier "${config.win.tier}"`);
     number(config.win.residents, 'config.win.residents', { min: 1, integer: true });
   }
+  if (config.milestones !== undefined) {
+    if (!Array.isArray(config.milestones)) err('config.milestones must be a list');
+    else {
+      config.milestones.forEach((m, i) => {
+        const where = `config.milestones[${i}]`;
+        if (!isObject(m)) { err(`${where} must be an object`); return; }
+        if (!tiers[m.tier]) err(`${where}.tier names an unknown tier "${m.tier}"`);
+        number(m.residents, `${where}.residents`, { min: 1, integer: true });
+        if (m.title !== undefined && typeof m.title !== 'string') err(`${where}.title must be text`);
+      });
+    }
+  }
+  if (config.addedLater !== undefined) {
+    if (!isObject(config.addedLater)) err('config.addedLater must be an object');
+    else {
+      for (const [key, list] of Object.entries(config.addedLater)) {
+        if (!['goods', 'buildings', 'tiers', 'upgradesFrom', 'config'].includes(key)) err(`config.addedLater has an unknown entry "${key}"`);
+        else if (!Array.isArray(list) || !list.every((id) => typeof id === 'string')) err(`config.addedLater.${key} must be a list of names`);
+      }
+    }
+  }
+  // An upgrade path must end. Farmer to Worker to Farmer would go round for ever.
+  for (const id of Object.keys(tiers)) {
+    const seen = [];
+    for (let at = id; isObject(tiers[at]) && isObject(tiers[at].upgrade); at = tiers[at].upgrade.to) {
+      if (seen.includes(at)) { err(`population.tiers.${id} upgrades in a circle`); break; }
+      seen.push(at);
+    }
+  }
 
   return errors;
 }

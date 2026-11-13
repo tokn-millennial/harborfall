@@ -125,8 +125,9 @@ test('the summary reports coins, goods, storage, residents and win progress', ()
   assert.equal(s.coins, Math.floor(coins(game)));
   assert.deepEqual(s.goods, game.state.goods);
   assert.equal(s.storageCap, game.state.storageCap);
-  assert.deepEqual(s.residents, { farmer: game.rules.tiers.farmer.capacity, worker: 0 });
-  assert.deepEqual(s.housing, { farmer: game.rules.tiers.farmer.capacity, worker: 0 });
+  assert.deepEqual(s.residents, { farmer: game.rules.tiers.farmer.capacity, worker: 0, artisan: 0 });
+  assert.deepEqual(s.housing, { farmer: game.rules.tiers.farmer.capacity, worker: 0, artisan: 0 });
+  assert.deepEqual(s.milestones, [{ tier: 'artisan', target: 100, title: 'A city of Artisans', current: 0, reachedAtTick: null, reachedAtSeconds: null }]);
   assert.deepEqual(s.win, {
     tier: game.rules.win.tier, target: game.rules.win.residents, current: 0,
     won: false, wonAtTick: null, wonAtSeconds: null,

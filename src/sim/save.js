@@ -44,7 +44,10 @@ export function loadGame(rawData, save) {
   if (save.format < 1) return fail('not_a_save');
 
   const rules = compileRules(Number.isInteger(save.seed) ? withSeed(rawData, save.seed) : rawData);
-  if (save.rulesStamp !== rules.stamp) return fail('rules_changed');
+  // A game saved before the latest things were added (config.addedLater) is
+  // still a possible game: it has none of them. It is carried forward below.
+  const older = save.rulesStamp !== rules.stamp && rules.olderStamp !== null && save.rulesStamp === rules.olderStamp;
+  if (save.rulesStamp !== rules.stamp && !older) return fail('rules_changed');
 
   let state;
   try {
@@ -54,6 +57,11 @@ export function loadGame(rawData, save) {
   }
   // A save from before undo existed has no undo record. That is fine: there is nothing to undo.
   if (state !== null && typeof state === 'object' && state.undo === undefined) state.undo = null;
+  if (older && state !== null && typeof state === 'object') {
+    // None of the new goods, and no goal after the win reached yet.
+    if (state.goods !== null && typeof state.goods === 'object') for (const good of rules.goodIds) state.goods[good] ??= 0;
+    state.milestones = rules.milestones.map(() => null);
+  }
   const problem = stateProblem(rules, state) ?? undoProblem(rules, state);
   if (problem) return fail('damaged', problem);
 
@@ -81,6 +89,8 @@ function stateProblem(rules, state) {
   if (typeof state.won !== 'boolean') return 'the win flag is missing';
   if (state.wonAtTick !== null && !isCount(state.wonAtTick)) return 'the win time is wrong';
   if (state.won !== (state.wonAtTick !== null)) return 'the win flag and the win time disagree';
+  if (!Array.isArray(state.milestones) || state.milestones.length !== rules.milestones.length) return 'the list of goals after the win is the wrong length';
+  if (!state.milestones.every((tick) => tick === null || isCount(tick))) return 'a goal after the win has a wrong time';
 
   if (state.goods === null || typeof state.goods !== 'object') return 'the goods are missing';
   for (const id of rules.goodIds) {

@@ -1,6 +1,6 @@
 # Harborfall: Roadmap
 
-Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 11, by Fable 5.2.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 12, by Fable 5.2.
 
 This is a list of what could come next, in the order I would do it. **Nothing here is decided.** Every item is a proposal, and you choose. The working rule from the brief still stands: nothing gets built that you did not ask for.
 
@@ -8,8 +8,8 @@ Read `HANDOFF.md` first if you are picking the project up after a break.
 
 ## Where the project stands
 
-- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), and undo with a first-game guide (Phase 11).
-- **Proven by machines:** 352 automated tests pass. A bot wins in 28.6 minutes. A script wins through the real UI and ends in exactly the bot's game.
+- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), undo with a first-game guide (Phase 11), and a third kind of resident with a goal after the win (Phase 12).
+- **Proven by machines:** 373 automated tests pass. A bot wins in 28.6 minutes. A script wins through the real UI and ends in exactly the bot's game.
 - **Checked by you:** you played for about 40 minutes on 2026-11-12. The game runs smoothly and the figures move well.
 - **Still not known:** whether you won and how long it took, how the sounds are, whether the guide helps someone new, and how any of it works on a Mac.
 
@@ -34,7 +34,8 @@ Each phase so far took one long working session. The sizes compare with that.
 | 9 | **Done.** Life on the map (C1) | Medium | The biggest gain in feel for no change in rules. |
 | 10 | **Done, unheard.** Sound (C2) | Medium | Made by code, because you had not chosen. Nobody has listened to it yet. |
 | 11 | **Done.** Undo and a guided first game (B3, B4) | Medium | The guide is my best guess at what a new player needs. Nobody new has tried it. |
-| 13 onward | More game: a third tier, then workforce or carriers (Stage D) | Large each | Only worth doing once the small game feels good. |
+| 12 | **Done.** A third kind of resident and a goal after the win (D1) | Large | It turned out smaller than feared, because the data files already allowed it. |
+| 13 onward | More game: workforce, real carriers, trade (the rest of Stage D) | Large each | Each changes how the game plays, not just how long it lasts. They need your say first. |
 | Any time | Put it online (E1) | Small | Independent of the rest. Read the privacy note there first. |
 
 ---
@@ -124,7 +125,9 @@ Each phase so far took one long working session. The sizes compare with that.
 
 Every item here changes the rules. Each one needs new data, new tests, a new bot build order, and a fresh balance pass with the bot. That is why they are large.
 
-### D1. A third population tier and one or two new production chains
+### D1. A third population tier and one or two new production chains (done in Phase 12)
+- **What was built:** Artisans, wool and cloth, a Sheep farm and a Weaver, and a goal of 100 Artisans after the win. The win itself did not move.
+- **Left over:** a fourth tier, a second new chain, and anything that makes the second act play differently from the first.
 - **What you get:** a reason to keep playing past 100 Workers. For example a third tier that needs a new good made from a new farm and a new workshop.
 - **Why it is the cheapest "more game":** tiers, needs, goods and buildings are all data. In Phase 5 a new good and a new building were added by editing two data files with no code change. The upgrade path, the win target and the drawings would need work.
 - **Decisions you must make:** what the tier is called, what it needs, and whether the win moves.
@@ -190,10 +193,10 @@ These are not features. They are debts and loose ends, smallest first.
 
 One line is enough. For example:
 
-> Phase 12: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
+> Phase 13: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
 
 or
 
-> Phase 12: build D5 from the roadmap. Show me the plan first.
+> Phase 13: build D5 from the roadmap. Show me the plan first.
 
 The helper should then follow the working rules in `HANDOFF.md` section 6: plan first, one feature at a time, test everything itself, stop at the gate with the five-part report, and commit only after you approve.

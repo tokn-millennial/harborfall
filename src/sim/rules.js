@@ -28,7 +28,7 @@ export function withSeed(rawData, seed) {
 // Keys that cannot make a saved game impossible: how things look, what they
 // are called, how long an undo lasts, and the first-game guide. A change to
 // one of these does not make an older saved game unusable.
-const LOOKS_ONLY = new Set(['visual', 'color', 'name', 'singular', 'key', 'undoSeconds', 'guide']);
+const LOOKS_ONLY = new Set(['visual', 'color', 'name', 'singular', 'key', 'title', 'undoSeconds', 'guide', 'addedLater']);
 
 // Text that is the same for the same value whatever order its keys are in.
 export function stableText(value) {
@@ -54,9 +54,21 @@ function withoutLooks(value) {
 // A short stamp of every rule that matters to a game in progress. Two sets of
 // data files with the same stamp play the same. The island seed, the notes,
 // and names, colors and shortcut keys are left out.
-export function rulesStamp(rawData) {
+//
+// `without` names things to leave out as well: goods, buildings, tiers, the
+// upgrade out of a tier, and config entries. That gives the stamp these data
+// files would have had before those things were added, which is how a game
+// saved back then is recognised.
+export function rulesStamp(rawData, without = null) {
   const data = withoutLooks(stripNotes(rawData));
   if (data.map) delete data.map.seed;
+  if (without) {
+    for (const id of without.goods ?? []) delete data.goods?.[id];
+    for (const id of without.buildings ?? []) delete data.buildings?.[id];
+    for (const id of without.tiers ?? []) delete data.population?.tiers?.[id];
+    for (const id of without.upgradesFrom ?? []) delete data.population?.tiers?.[id]?.upgrade;
+    for (const key of without.config ?? []) delete data.config?.[key];
+  }
   const text = stableText(data);
   let h1 = 0xdeadbeef;
   let h2 = 0x41c6ce57;
@@ -140,6 +152,13 @@ export function compileRules(rawData) {
       visual: t.visual ?? null,
     };
   }
+  // For each tier, itself and every tier a house can be upgraded to from it.
+  // "100 Workers" means Workers or better, so upgrading never moves a goal away.
+  for (const tier of Object.values(compiledTiers)) {
+    const chain = [];
+    for (let at = tier; at && !chain.includes(at.id); at = at.upgrade ? compiledTiers[at.upgrade.to] : null) chain.push(at.id);
+    tier.andAbove = chain;
+  }
 
   return deepFreeze({
     ticksPerSecond,
@@ -165,9 +184,13 @@ export function compileRules(rawData) {
       freeBuilding: (config.start.freeBuildings ?? [])[0] ?? null,
     },
     win: { tier: config.win.tier, residents: config.win.residents },
+    // Goals for after the win, in order.
+    milestones: (config.milestones ?? []).map((m) => ({ tier: m.tier, residents: m.residents, title: m.title ?? null })),
     // How long the last command can be undone. 30 seconds if the data does not say.
     undoTicks: Math.round((config.undoSeconds ?? 30) * ticksPerSecond),
     map,
     stamp: rulesStamp(data),
+    // The stamp these rules had before the things in config.addedLater existed.
+    olderStamp: config.addedLater ? rulesStamp(data, config.addedLater) : null,
   });
 }

@@ -40,24 +40,31 @@ if (result.won) {
 } else {
   console.log(`RESULT: DID NOT WIN in ${result.endedAtMinutes.toFixed(0)} minutes. Steps done: ${result.stepsDone} of ${result.stepsTotal}.`);
 }
-if (result.stuckOn && !result.won) {
+for (const m of result.playedPastWin ? result.milestones : []) {
+  const name = game.rules.tiers[m.tier].name;
+  if (m.reachedAtMinutes !== null) console.log(`AFTER THE WIN: ${m.target} ${name}s reached at ${m.reachedAtMinutes.toFixed(1)} minutes, ${(m.reachedAtMinutes - result.wonAtMinutes).toFixed(1)} after the win.`);
+  else console.log(`AFTER THE WIN: ${m.target} ${name}s NOT reached in ${result.endedAtMinutes.toFixed(0)} minutes (${m.current} so far).`);
+}
+if (result.stuckOn && (!result.won || result.playedPastWin)) {
   const s = result.stuckOn;
   console.log(`Stopped at step ${s.step} (${s.label}), waiting ${clock(s.waitedSeconds).trim()} for: ${s.waitedFor}.`);
 }
 const inc = result.summary.income;
 console.log(`At the end: ${result.summary.coins} coins, net ${inc.net >= 0 ? '+' : ''}${inc.net.toFixed(1)} a minute (taxes ${inc.taxes.toFixed(1)}, base ${inc.base}, upkeep ${inc.upkeep}).`);
-console.log(`Residents: ${result.summary.residents.farmer} Farmers, ${result.summary.residents.worker} Workers.`);
+console.log(`Residents: ${Object.entries(result.summary.residents).map(([tier, n]) => `${n} ${game.rules.tiers[tier].name}s`).join(', ')}.`);
 console.log(`Buildings: ${Object.entries(result.counts).map(([t, n]) => `${n} ${t}`).join(', ')}, ${result.roadsBuilt} road tiles.`);
 console.log(`Time at zero coins: ${result.zeroCoinMinutes.toFixed(1)} min. Time losing money: ${result.lossMinutes.toFixed(1)} min.`);
 
 console.log('');
 console.log('Curve (every 2 game minutes)');
-console.log(' min  coins  net/min  farmers  workers   wood planks  fish grain bread');
+const tierIds = Object.keys(game.rules.tiers);
+const goodIds = game.rules.goodIds;
+console.log(` min  coins  net/min ${tierIds.map((t) => pad(`${t}s`, 9)).join('')}  ${goodIds.map((g) => pad(g, 7)).join('')}`);
 for (const s of result.samples) {
   if (s.minute % 2 !== 0 && s !== result.samples[result.samples.length - 1]) continue;
   console.log(
-    `${pad(s.minute, 4)} ${pad(s.coins, 6)} ${pad((s.net >= 0 ? '+' : '') + s.net.toFixed(1), 8)} ${pad(s.farmer, 8)} ${pad(s.worker, 8)} ` +
-      `${pad(s.goods.wood, 6)} ${pad(s.goods.planks, 6)} ${pad(s.goods.fish, 5)} ${pad(s.goods.grain, 5)} ${pad(s.goods.bread, 5)}`,
+    `${pad(s.minute, 4)} ${pad(s.coins, 6)} ${pad((s.net >= 0 ? '+' : '') + s.net.toFixed(1), 8)} ${tierIds.map((t) => pad(s.residents[t] ?? 0, 9)).join('')}  ` +
+      `${goodIds.map((g) => pad(s.goods[g] ?? 0, 7)).join('')}`,
   );
 }
 

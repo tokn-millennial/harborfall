@@ -14,6 +14,7 @@ const SHADOW = 'rgba(15, 35, 20, 0.26)';
 const CLOTHES = {
   farmer: { tunics: ['#b08a4a', '#8a9a5b', '#a8683e', '#c9b27a'], hat: '#e0c878' },
   worker: { tunics: ['#3f6f9a', '#9a4a3f', '#5d5d80', '#4a7d6a'], hat: '#33343d' },
+  artisan: { tunics: ['#7d6fb3', '#5d6f8c', '#8c4f6f', '#3f7a6a'], hat: '#c9a55a' },
 };
 const PLAIN = { tunics: ['#8c7a5c'], hat: '#5a4a3a' };
 const CART = { body: '#8a5f3a', rim: '#6b4729', wheel: '#33271f' };

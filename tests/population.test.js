@@ -144,9 +144,9 @@ test('residents are counted per tier, and a demolished house takes its residents
   fillHouse(game, place(game, 'house', 16, 11));
   fillHouse(game, place(game, 'house', 16, 13));
   const capacity = farmer(game).capacity;
-  assert.deepEqual(countResidents(game), { farmer: capacity * 2, worker: 0 });
+  assert.deepEqual(countResidents(game), { farmer: capacity * 2, worker: 0, artisan: 0 });
   execute(game, { action: 'demolish', x: 16, y: 13 });
-  assert.deepEqual(countResidents(game), { farmer: capacity, worker: 0 });
+  assert.deepEqual(countResidents(game), { farmer: capacity, worker: 0, artisan: 0 });
 });
 
 test('a worker house needs bread as well as fish to fill, and empties without it', () => {

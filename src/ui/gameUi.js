@@ -13,7 +13,7 @@ import { createSpeedControls } from './speedControls.js';
 import { createWinScreen } from './winScreen.js';
 import { panelModel } from './panelModel.js';
 import { anchorFor, previewBuild, previewDemolish, previewRoad, previewUpgrade, rangeTiles, requiredTerrain, roadLine, terrainTiles } from './tools.js';
-import { clock, costText, reasonText, refundText } from './text.js';
+import { clock, costText, milestoneMessage, reasonText, refundText, winMessage } from './text.js';
 import { setText } from './dom.js';
 import { createAdvisor } from './advice.js';
 
@@ -43,6 +43,7 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
   let roadDrag = null;      // { start: {x, y}, end: {x, y} } while a road is being dragged out
   let messageTimer = 0;
   let winShown = state.won; // a game loaded already won (the demo town) does not announce it
+  const milestonesShown = state.milestones.map((tick) => tick !== null); // nor goals already reached
   const terrainCache = {};  // terrain name -> its tiles, for highlighting where a building may go
   let armed = null;         // { id, seconds }: a building clicked once with Demolish, waiting for the second click
   let flipCorner = false;   // Shift is held: put a dragged road's corner on the other side
@@ -336,13 +337,16 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
       onSound('win');
       speed.setSpeed(0);
       setTool(SELECT);
-      win.show({
-        target: rules.win.residents,
-        tierName: rules.tiers[rules.win.tier].name,
-        time: clock(summary.win.wonAtSeconds),
-        coins: summary.coins,
-        buildings: state.buildings.length,
-      });
+      win.show(winMessage(rules, summary, state.buildings.length));
+    }
+    // A goal after the win, once the win screen is out of the way.
+    const reached = state.milestones.findIndex((tick, i) => tick !== null && !milestonesShown[i]);
+    if (reached !== -1 && !win.visible) {
+      milestonesShown[reached] = true;
+      onSound('win');
+      speed.setSpeed(0);
+      setTool(SELECT);
+      win.show(milestoneMessage(rules, summary, reached, state.buildings.length));
     }
   }
 

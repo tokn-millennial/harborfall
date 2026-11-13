@@ -269,6 +269,21 @@ test('the info panel for a house: residents, needs, taxes, and an upgrade button
   model = panelModel(game, house);
   assert.equal(model.title, 'Worker house');
   assert.ok(model.lines.some((l) => l.label === 'Bread' && l.value === 'Supplied'));
+  // A Worker house offers the next step, to Artisans.
+  upgrade = model.actions.find((a) => a.id === 'upgrade');
+  assert.equal(upgrade.label, 'Upgrade to Artisan house');
+  assert.equal(upgrade.detail, '30 coins, 8 planks. Holds 12.');
+  assert.deepEqual([upgrade.enabled, upgrade.reason], [false, 'The house must be full before it can be upgraded.']);
+  fillHouse(game, house);
+  game.state.goods.cloth = 0;
+  upgrade = panelModel(game, house).actions.find((a) => a.id === 'upgrade');
+  assert.deepEqual([upgrade.enabled, upgrade.reason], [false, 'No cloth in stock.']);
+  game.state.goods.cloth = 10;
+  execute(game, { action: 'upgrade', id: house.id });
+  run(game, 1);
+  model = panelModel(game, house);
+  assert.equal(model.title, 'Artisan house');
+  assert.ok(model.lines.some((l) => l.label === 'Cloth' && l.value === 'Supplied'));
   assert.equal(model.actions.some((a) => a.id === 'upgrade'), false, 'no further upgrade');
 });
 
@@ -324,6 +339,14 @@ test('the upgrade tool preview agrees with what the click then does', () => {
   preview = previewUpgrade(game, house);
   assert.deepEqual([preview.ok, preview.reason], [true, null]);
   assert.deepEqual(preview.cost, game.rules.tiers.farmer.upgrade.cost);
+  assert.equal(execute(game, { action: 'upgrade', id: house.id }).ok, true);
+
+  // Now a Worker house: the next step is to Artisans, at its own cost.
+  preview = previewUpgrade(game, house);
+  assert.deepEqual([preview.ok, preview.reason, preview.to], [false, 'house_not_full', 'artisan']);
+  assert.deepEqual(preview.cost, game.rules.tiers.worker.upgrade.cost);
+  fillHouse(game, house);
+  assert.equal(previewUpgrade(game, house).ok, true);
   assert.equal(execute(game, { action: 'upgrade', id: house.id }).ok, true);
 
   preview = previewUpgrade(game, house);

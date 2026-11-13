@@ -14,7 +14,7 @@ const perMinute = (rules, type, good) => {
 test('starting resources match the brief: 500 coins, 40 wood, 20 planks', () => {
   const s = getSummary(testGame());
   assert.equal(s.coins, 500);
-  assert.deepEqual(s.goods, { wood: 40, planks: 20, fish: 0, grain: 0, bread: 0 });
+  assert.deepEqual(s.goods, { wood: 40, planks: 20, fish: 0, grain: 0, bread: 0, wool: 0, cloth: 0 });
 });
 
 test('on paper, one fisherman feeds about 20 residents', () => {
