@@ -9,6 +9,7 @@
 import { compileRules, stableText, withSeed } from './rules.js';
 import { refresh } from './refresh.js';
 import { footprint, inBounds, tileIndex } from './grid.js';
+import { undoProblem } from './undo.js';
 
 export const SAVE_FORMAT = 1;
 const APP = 'harborfall';
@@ -51,7 +52,9 @@ export function loadGame(rawData, save) {
   } catch {
     return fail('damaged', 'the state cannot be read');
   }
-  const problem = stateProblem(rules, state);
+  // A save from before undo existed has no undo record. That is fine: there is nothing to undo.
+  if (state !== null && typeof state === 'object' && state.undo === undefined) state.undo = null;
+  const problem = stateProblem(rules, state) ?? undoProblem(rules, state);
   if (problem) return fail('damaged', problem);
 
   // Everything worked out from what is built where (road connections, storage,

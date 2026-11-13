@@ -70,6 +70,7 @@ Harborfall/
       win.js              The win check.
       summary.js          The numbers the HUD, bot and reports read.
       save.js             Turns a game into plain data and back, and refuses a save that cannot be trusted.
+      undo.js             Remembers how to take back the last command, and does it.
 
     render/               Drawing. Reads state, never changes it.
       iso.js              Tile to world math and back, box outlines, draw order. Pure math.
@@ -97,6 +98,8 @@ Harborfall/
       titleModel.js       What the title screen says and offers. Pure.
       titleScreen.js      Shows the title screen and reports the choice.
       soundControls.js    The speaker button and the volume slider.
+      guide.js            Which step of the first-game guide the player is on. Pure.
+      guidePanel.js       The guide's small panel.
       hud.js              Coins and income, goods, population, clock.
       buildMenu.js        The tool buttons and the hint strip above them.
       infoPanel.js        Shows a panel model, reports button presses.
@@ -116,6 +119,7 @@ Harborfall/
       saveStore.js        Keeps one saved game in a storage box that is handed to it.
       audio.js            Plays sounds through a sound system that is handed to it.
       soundSettings.js    Remembers the volume and whether sound is off.
+      flagStore.js        Remembers one yes-or-no choice, such as "the guide is hidden".
 
     main.js               Browser start-up: load data, title screen, pick the game, wire layers, autosave.
 
@@ -305,6 +309,8 @@ All tests run with `node --test` and need no browser.
 | `loop.test.js` | Real time becomes whole ticks. Speeds 2x and 4x, pause, and a stalled tab all behave. |
 | `save.test.js` | A game that is saved, turned into text, read back and played on ends exactly where it would have without saving. Tested on real bot games at several moments, on a won game, on another island and on a hand-made one. Twenty kinds of damaged save, a changed rule and a newer version are each refused. Changes to looks and names are not. |
 | `title.test.js` | The save slot, with a stand-in for the browser's storage: reading, writing, failing storage, unreadable text. What the title screen offers in each case, and that a new game never replaces a saved one without a second press. |
+| `undo.test.js` | Undoing an action at once leaves the game exactly as it was, for buildings, road, demolishing and upgrading, and for 600 random actions. Undo gives back the whole cost. It is refused after 30 seconds, when there is nothing to undo, and when a demolish's refund has been used. The undo record is saved with the game, and a save from before undo existed still loads. |
+| `guide.test.js` | The shipped guide has no mistakes, and 23 kinds of mistake are each refused with a sentence. Each kind of test counts the right thing. Steps are ticked and never unticked. A full winning game finishes the guide. The guide never changes the game and is not one of the rules. |
 | `sound.test.js` | Every sound is short, not too loud, and starts and ends in silence so it cannot click. Good news rises and bad news falls. The sea loops with no join. With a stand-in for the browser: nothing plays before the first click, the same sound cannot pile up, muting silences everything, and a browser with no sound causes no error. |
 | `life.test.js` | Walkers and carts only ever stand on roads, and boats only on water. A cart carries what its producer made and ends beside a warehouse. A boat goes out and comes home with the fisherman's work. Nothing moves while paused. A game with life ends identical to one without. Removing roads, loading another game and a jump in time cause no error. |
 | `art.test.js` | Every building and house tier has a drawing. Every drawing runs in every state, uses only valid colors and stays inside its own plot. A building with no drawing falls back to a box. Stored pictures change only when the look changes. Drawing never changes the game. |
@@ -383,3 +389,18 @@ Sound follows the same split as saving.
 Why make sounds from numbers and not use the browser's built-in tone makers: a list of numbers can be checked in a test (how long, how loud, silent at both ends), is the same in every browser, and is not tied to browsers at all.
 
 **Limit.** A test can measure a sound. It cannot hear one. Whether these sounds are pleasant has not been checked by anyone.
+
+## 14. Undo and the guide
+
+**Undo is a command.** The UI may only change the game through commands, so undo is one: `{ action: 'undo' }`. Every command that works leaves a note in the state (`state.undo`) saying how to take it back, and the next command replaces the note. Because the note is part of the state, it is saved with the game, and two games given the same commands still match exactly.
+
+- A building just placed: remove it and return its whole cost. Its number is handed back too.
+- Road just laid: lift those tiles and return their cost.
+- A building just demolished: put its record back in the same place in the list (older houses are fed first), and take back what the demolish gave. If that has been used, the undo is refused.
+- A house just upgraded: put its old record back and return the cost.
+
+**The promise that is tested.** Undoing an action in the same instant leaves the state identical to what it was before the action, to the last number. A test does this for 600 random actions. It found one thing that did not come back: the one-word status of a producer that had been cut off and reconnected read "working" where it had read "storage full". The game corrects that word on its next tick, but the undo now restores it exactly.
+
+**The guide is not a rule.** Its steps are in `data/guide.json`, loaded with the other data files, but only the UI reads it. `src/ui/guide.js` has the tests a step can use and the rule for which step is shown. It has no page code and is tested in Node.
+
+**Saved games and the data files.** A saved game is refused when the rules it was played under have changed. Two things added in this phase live in the data files and are not rules in that sense: how long undo lasts, and the guide. Both are left out of the rules stamp, so adding them did not make existing saved games unusable. The stamp was checked before and after and is unchanged.

@@ -1,0 +1,61 @@
+{
+  "_about": "The first-game guide: a short list of steps shown in a corner of the screen and ticked off as you go. It teaches the order that works. It changes nothing in the game, and the player can hide it. Keys starting with _ are notes and are ignored by the game.",
+
+  "_done": "Each step has a 'done' test. The tests you can use: { \"buildings\": \"sawmill\", \"atLeast\": 1 } counts buildings of one kind, and adding \"connected\": true counts only those joined to a warehouse by road. { \"housesServed\": 4 } counts houses within reach of a market. { \"people\": 16 } counts all residents. { \"houses\": \"worker\", \"atLeast\": 1 } counts houses of one tier. { \"stock\": \"bread\", \"atLeast\": 5 } is an amount in storage. { \"won\": true } is the win. A list of tests means all of them. Prefer tests that stay true once they are true. A step is ticked for good the first time its test passes, but one that depends on an amount in storage may never pass in a busy town, and the guide would wait on it.",
+
+  "steps": [
+    {
+      "text": "Build a Lumberjack beside the forest",
+      "why": "Wood is needed for almost everything you build.",
+      "done": { "buildings": "lumberjack", "atLeast": 1 }
+    },
+    {
+      "text": "Join the Lumberjack to your warehouse with Road",
+      "why": "A building does nothing until a road links it to a warehouse.",
+      "done": { "buildings": "lumberjack", "atLeast": 1, "connected": true }
+    },
+    {
+      "text": "Build a Fisherman on the coast and join it by road",
+      "why": "Everyone who moves in will need fish.",
+      "done": { "buildings": "fisherman", "atLeast": 1, "connected": true }
+    },
+    {
+      "text": "Build a Market and join it by road",
+      "why": "A market hands out goods to the houses around it.",
+      "done": { "buildings": "market", "atLeast": 1, "connected": true }
+    },
+    {
+      "text": "Build 4 Houses inside the Market's reach",
+      "why": "Farmers move in and pay taxes. The Market tool shows its reach.",
+      "done": { "housesServed": 4 }
+    },
+    {
+      "text": "Grow to 16 residents",
+      "why": "Give it a moment. People arrive while there is fish. Speed up with the 2x and 4x buttons.",
+      "done": { "people": 16 }
+    },
+    {
+      "text": "Build a Sawmill and join it by road",
+      "why": "It turns wood into planks, which the bigger buildings need.",
+      "done": { "buildings": "sawmill", "atLeast": 1, "connected": true }
+    },
+    {
+      "text": "Build a Farm on fertile land and a Bakery, both joined by road",
+      "why": "The farm grows grain and the bakery turns it into bread.",
+      "done": [
+        { "buildings": "farm", "atLeast": 1, "connected": true },
+        { "buildings": "bakery", "atLeast": 1, "connected": true }
+      ]
+    },
+    {
+      "text": "Upgrade a full house with the Upgrade tool",
+      "why": "It needs bread in storage first. A Worker house holds 8 people and pays more tax. A green mark shows a house that is ready.",
+      "done": { "houses": "worker", "atLeast": 1 }
+    },
+    {
+      "text": "Grow the town to 100 Workers",
+      "why": "That wins the game. You will need more of everything: fish, bread, planks and houses.",
+      "done": { "won": true }
+    }
+  ]
+}

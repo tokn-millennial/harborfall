@@ -51,7 +51,12 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
   // ---- panels ---------------------------------------------------------------
   const hud = createHud(elements.hud, rules);
   const speed = createSpeedControls(elements.speed, loop, rules.speeds);
-  const menu = createBuildMenu(elements.menu, elements.hint, game, { onPick: setTool });
+  const menu = createBuildMenu(elements.menu, elements.hint, game, {
+    onPick: setTool,
+    onUndo: () => {
+      if (act({ action: 'undo' }) && selectedId !== null && !buildingById(game, selectedId)) deselect();
+    },
+  });
   const info = createInfoPanel(elements.info, {
     onClose: () => deselect(),
     onAction: (id) => {
@@ -108,7 +113,7 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
   // Sends a command. On failure, tells the player why. Returns whether it worked.
   function act(command, context = {}) {
     const result = execute(game, command);
-    if (result.ok) onSound(command.action);
+    if (result.ok) onSound(command.action === 'undo' ? 'pick' : command.action);
     else say(reasonText(game, result.reason, context));
     return result.ok;
   }

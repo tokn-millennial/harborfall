@@ -177,6 +177,7 @@ export function validateData(data) {
 
   // --- config ---------------------------------------------------------------
   number(config.ticksPerSecond, 'config.ticksPerSecond', { min: 1, integer: true });
+  if (config.undoSeconds !== undefined) number(config.undoSeconds, 'config.undoSeconds', { min: 0 });
   if (!Array.isArray(config.speeds) || config.speeds.length === 0) err('config.speeds must be a list of speed multipliers');
   if (!isObject(config.start)) err('config.start is missing');
   else {

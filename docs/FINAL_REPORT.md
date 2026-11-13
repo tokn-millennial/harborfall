@@ -111,3 +111,10 @@ Tests at the end of Phase 6: 220 of 220.
 - **Handoff:** `HANDOFF.md` says how to pick the project up, and `ROADMAP.md` says what could come next.
 
 Tests at the end of Phase 7: 236 of 236.
+
+## Addendum: after Phase 11
+
+- **Scorecard item 5, "I can win by hand":** stronger than it was, and still not closed. On 2026-11-13 you reported playing for about 40 minutes and said the game runs smoothly. You did not say whether you won. Until you do, it stays a pass on your word.
+- **Since Phase 7:** saving with a title screen (8), people, carts and boats (9), sound that nobody has yet described to me (10), and undo with a first-game guide (11).
+
+Tests at the end of Phase 11: 352 of 352.

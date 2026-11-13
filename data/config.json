@@ -4,6 +4,9 @@
   "ticksPerSecond": 10,
   "speeds": [1, 2, 4],
 
+  "_undoSeconds": "How long, in game seconds, your last action can be taken back with Undo. 0 switches Undo off.",
+  "undoSeconds": 30,
+
   "start": {
     "coins": 500,
     "goods": { "wood": 40, "planks": 20 },

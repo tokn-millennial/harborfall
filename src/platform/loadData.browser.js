@@ -1,7 +1,8 @@
 // Loads the data files in the browser. The simulation never imports this:
 // it is handed the result as a plain object.
 
-export const DATA_FILES = ['config', 'goods', 'buildings', 'population', 'map'];
+// The first five are the rules of the game. The guide is only read by the UI.
+export const DATA_FILES = ['config', 'goods', 'buildings', 'population', 'map', 'guide'];
 
 export async function loadData(baseUrl = new URL('../../data/', import.meta.url)) {
   const entries = await Promise.all(

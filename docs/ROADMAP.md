@@ -1,6 +1,6 @@
 # Harborfall: Roadmap
 
-Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 10, by Fable 5.2.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 11, by Fable 5.2.
 
 This is a list of what could come next, in the order I would do it. **Nothing here is decided.** Every item is a proposal, and you choose. The working rule from the brief still stands: nothing gets built that you did not ask for.
 
@@ -8,11 +8,12 @@ Read `HANDOFF.md` first if you are picking the project up after a break.
 
 ## Where the project stands
 
-- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), and sound (Phase 10).
-- **Proven by machines:** 317 automated tests pass. A bot wins in 28.6 minutes. A script wins through the real UI and ends in exactly the bot's game.
-- **Not proven by a person:** nobody has told me how a hand-played game went, how smooth it is on a real screen, or how it works on a Mac.
+- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), and undo with a first-game guide (Phase 11).
+- **Proven by machines:** 352 automated tests pass. A bot wins in 28.6 minutes. A script wins through the real UI and ends in exactly the bot's game.
+- **Checked by you:** you played for about 40 minutes on 2026-11-12. The game runs smoothly and the figures move well.
+- **Still not known:** whether you won and how long it took, how the sounds are, whether the guide helps someone new, and how any of it works on a Mac.
 
-That last line shapes the order below. The cheapest and most useful next step is an hour of your own play.
+A few notes from your play would now help more than any single feature: what confused you, what you waited for, and what the sounds are like.
 
 ## How to read the sizes
 
@@ -29,10 +30,10 @@ Each phase so far took one long working session. The sizes compare with that.
 | Phase | What | Size | Why here |
 |---|---|---|---|
 | 8 | **Done.** Save and load, title screen, island choice (B1, B2), and the drawing speed fix from A2 | Medium | A 30 minute game that was lost on a refresh was hard to enjoy or to test. |
-| Next | Play it and fix what you find (A1, the rest of A2, A3) | Small to medium | Still the most useful next step. Everything else builds on a game nobody has played by hand. Now that the game saves, it no longer has to be one sitting. |
+| Next | Your notes from playing (A1), and a Mac test (A3) | Small | You have played. What I am missing is what you thought: the time to win, what confused you, how it sounds. |
 | 9 | **Done.** Life on the map (C1) | Medium | The biggest gain in feel for no change in rules. |
 | 10 | **Done, unheard.** Sound (C2) | Medium | Made by code, because you had not chosen. Nobody has listened to it yet. |
-| 12 | A guided first game and undo (B3, B4) | Medium | Best done after you have watched someone new play. |
+| 11 | **Done.** Undo and a guided first game (B3, B4) | Medium | The guide is my best guess at what a new player needs. Nobody new has tried it. |
 | 13 onward | More game: a third tier, then workforce or carriers (Stage D) | Large each | Only worth doing once the small game feels good. |
 | Any time | Put it online (E1) | Small | Independent of the rest. Read the privacy note there first. |
 
@@ -40,7 +41,9 @@ Each phase so far took one long working session. The sizes compare with that.
 
 ## Stage A: Close the open questions
 
-### A1. Play a full game by hand and tell me how it went
+### A1. Play a full game by hand and tell me how it went (partly done)
+- **Done:** you played for about 40 minutes on 2026-11-12 and said it runs smoothly and the figures move well.
+- **Still wanted:** whether you won, the time on the win screen, anything that confused or annoyed you, and how the sounds are.
 - **What you do:** play from a fresh start to the win, once. Note the time, and anything that confused, bored or annoyed you. `HANDOFF.md` section 8 has a short note sheet.
 - **What I do:** turn your notes into a ranked fix list, as in Phase 5, and fix the top ones.
 - **Why:** the one item on the final scorecard that is passed "on your word" is "I can win by hand". All of my time estimates are guesses.
@@ -48,7 +51,7 @@ Each phase so far took one long working session. The sizes compare with that.
 
 ### A2. Check drawing speed on your screen (partly done in Phase 8)
 - **Done:** the slow zoom levels were traced to a smoothing setting and fixed. Frame time there halved in my test browser and is now even across all zoom levels. The middle-sized ground picture I proposed here was measured first, made no difference, and was not built.
-- **Still unknown:** whether the game is smooth on a real graphics card. In my test browser a frame takes 20 to 28 ms, and smooth is under 16. Please tell me how it feels.
+- **Confirmed by you on 2026-11-13:** the game runs smoothly on your screen.
 - **Still open:** zoomed far in, the ground looks a little soft. If speed is a problem on your screen, the next places to look are the roads (drawn shape by shape every frame, about 3.5 ms) and the trees beside buildings (about 3 ms).
 - **Size:** small.
 
@@ -76,12 +79,14 @@ Each phase so far took one long working session. The sizes compare with that.
 - **Risk:** a random island may be harder or easier. The map generator guarantees enough forest, fertile land and coast, and a test checks it, but balance was tuned on seed 1407.
 - **Size:** small.
 
-### B3. Undo
+### B3. Undo (done in Phase 11)
+- **Left over:** undoing more than the last action, and redo. Neither is planned.
 - **What you get:** undo the last build or demolish, with a full refund, for a short time.
 - **Design notes:** the simple version keeps a copy of the state from before the last command and restores it, with the clock kept running. Decide whether undo is allowed after time has passed.
 - **Size:** small to medium.
 
-### B4. A guided first game
+### B4. A guided first game (done in Phase 11)
+- **Left over:** a guide that adapts to what you are doing, arrows that point at the map, and a try-out with someone who has never played.
 - **What you get:** a short list of goals in a corner, ticked off as you go: build a lumberjack, connect it by road, build a fisherman, a market, four houses, and so on.
 - **Why wait:** the tip line already covers shortages. A guide should be written from what a real new player gets stuck on, which is what A1 finds out.
 - **Design notes:** the goal list belongs in a data file. The checks read the game's summary and change nothing.
@@ -185,10 +190,10 @@ These are not features. They are debts and loose ends, smallest first.
 
 One line is enough. For example:
 
-> Phase 11: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
+> Phase 12: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
 
 or
 
-> Phase 11: build B3 and B4 from the roadmap. Show me the plan first.
+> Phase 12: build D5 from the roadmap. Show me the plan first.
 
 The helper should then follow the working rules in `HANDOFF.md` section 6: plan first, one feature at a time, test everything itself, stop at the gate with the five-part report, and commit only after you approve.

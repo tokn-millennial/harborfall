@@ -2,7 +2,8 @@
 // The simulation never imports this: it is handed the result as a plain object.
 import { readFileSync } from 'node:fs';
 
-export const DATA_FILES = ['config', 'goods', 'buildings', 'population', 'map'];
+// The first five are the rules of the game. The guide is only read by the UI.
+export const DATA_FILES = ['config', 'goods', 'buildings', 'population', 'map', 'guide'];
 
 const DEFAULT_DIR = new URL('../../data/', import.meta.url);
 

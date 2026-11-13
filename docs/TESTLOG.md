@@ -786,3 +786,70 @@ I checked that the browser was asked to play each sound. I could not check that 
 
 **What I would change**
 - I would have said at the start of this phase, not at the end, that I would be building something I cannot check. You may have preferred to pick the sound source yourself.
+
+**After the gate:** committed as `09978b7` and pushed at your request.
+
+## What you told me after playing (2026-11-13)
+
+You played for about 40 minutes on the evening of 2026-11-12 and reported:
+- **The game runs smoothly.** This settles the question open since Phase 7. My test browser draws at 20 to 28 ms a frame, which says nothing about your screen.
+- **The characters' movement looks fairly smooth.** This settles the Phase 9 question. I had only seen stills.
+
+What you did not say, and I still do not know:
+- Whether you won, and how long it took. "I can win by hand" is still passed on your word from Phase 4 only.
+- How the sounds are. Nobody has yet told me.
+- Whether anything confused or annoyed you.
+
+## Phase 11: Undo and the first-game guide
+
+Date: 2026-11-13. Status: approved by Colin with no changes.
+
+**Turns used:** 1 (your message "Let's keep going, keep building"). No plan was shown first (D138).
+
+**What was built**
+- **Undo.** Z, Ctrl+Z or the Undo button takes back your last build, road, upgrade or demolish, for 30 seconds of game time, and gives back everything.
+- **A first-game guide.** A small panel with the step you are on, ten steps from the first lumberjack to the win.
+- No rule of the economy changed. The bot's result is identical.
+
+**Automated tests: 352 pass, 0 fail.** That is 317 from before plus 35: 22 for undo, 12 for the guide, and 1 more from the guard that keeps browser code out of the simulation.
+
+**Your saved game.** The data files gained a setting and a guide in this phase, and a changed data file normally makes a saved game refuse to load. I made sure it does not here. The rules stamp read `6fe08f1bee9bb754` before the phase and reads the same after it. In the browser, a save with no undo record in it (the shape yours has) was offered for Continue and loaded.
+
+**Browser checks**
+
+| Check | How | Result |
+|---|---|---|
+| A save from before this phase still loads | Removed the new field from a stored save, reloaded, continued | Pass |
+| The guide starts on step 1 and moves on when the step is done | Placed a lumberjack | Pass. "1 of 10" became "2 of 10: Join the Lumberjack to your warehouse with Road". |
+| The Undo button says what it would take back, and does it | Placed a lumberjack, pressed the button | Pass. It read "Lumberjack". The building went and the coins returned to 500. |
+| Z and Ctrl+Z do the same | Placed and undid twice more | Pass, both |
+| Undo with nothing to take back | Pressed the button again | Pass. "There is nothing to undo." Nothing changed. |
+| The guide hides while the ? panel is open, and can be hidden and brought back | Opened the panel, used its button | Pass. The choice was stored. |
+| "All steps" shows the list with ticks | Pressed it | Pass. One done, one current, eight to come. |
+| All 13 tools fit one row at 1280 wide | Measured | Failed at first, then fixed. See bug 3. |
+| No guide on the demo town or the test page | Looked | Pass |
+| A full game through the UI still matches the headless bot | UI playthrough on `?fresh` | Pass. Won at 28.55 minutes, identical final state. |
+| Random input, now including the undo key | 6,000 actions over 2 runs | Pass. No errors. Both games still saved and loaded afterwards. |
+| The error console | Read it | Empty. |
+
+**Bugs found: 3, all fixed. 8 mistakes in my own tests, corrected.**
+1. **Undo did not put one thing back.** After a demolish that cut a producer off from the warehouse was undone, that producer's status read "working" where it had read "storage full". The game corrects the word on its next tick, so nothing went wrong in play, but the promise was "exactly as it was". Found by the test that undoes 600 random actions. Undo now restores it.
+2. **The guide skipped steps.** My first rule moved the guide past any step that came before one already done. Building a sawmill early then skipped "build 4 houses" and "grow to 16 residents". Found by running the guide over a scripted game. The rule is now: tick each step when it is true, show the first one not ticked.
+3. **The tool row wrapped onto two lines** at 1280 wide once Undo made 13 buttons, pushing the menu off the bottom. The buttons are now slightly narrower under 1420 pixels.
+
+Eight of my new tests were wrong when first written, not the game: a road that I thought would hit a building and did not, a bot I tried to pause and resume when it cannot be, and the like. Each failed, I read why, and I fixed the test. None was loosened to let a real fault through.
+
+**Decisions made:** 13 (D138 to D150).
+
+**Weak or unfinished**
+- **The guide is my guess at what a new player needs.** You gave no notes on what confused you, and nobody new to the game has tried it. Its wording has never been read by a first-time player.
+- **The guide does not adapt.** It is the same ten steps whatever you do. It does not notice that you are out of wood or that your market is in the wrong place. The tip line still covers shortages.
+- **Undo is one step.** Two mistakes in a row, and only the second can be taken back.
+- **30 game seconds is 7.5 real seconds at 4x speed.** That may feel short. It is one number in `config.json`.
+- **Undo then reload can confuse the guide.** If you undo the building a step asked for, the step stays ticked for that visit. After a reload the guide works out its place afresh.
+- **Below about 1200 pixels wide I did not check the tool row** beyond one measurement at 1100, which fitted.
+- **Still unknown from your play:** whether you won, how long it took, and how the sounds are.
+- **Not done:** a Mac test.
+
+**What I would change**
+- I would run every new piece over a whole scripted game before trusting its rule. Both real bugs in the logic came from that, and neither showed in a single hand-built case.

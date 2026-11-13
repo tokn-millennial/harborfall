@@ -16,6 +16,9 @@ import { createAudio } from './platform/audio.js';
 import { createSoundSettings } from './platform/soundSettings.js';
 import { DEFAULT_VOLUME, SEA, SEA_SHARE, SOUNDS } from './audio/sounds.js';
 import { createSoundControls } from './ui/soundControls.js';
+import { createGuidePanel } from './ui/guidePanel.js';
+import { guideProblems } from './ui/guide.js';
+import { createFlag } from './platform/flagStore.js';
 import { createGame, loadGame, saveGame, step } from './sim/index.js';
 import { createCamera, MAX_ZOOM, MIN_ZOOM } from './render/camera.js';
 import { createRenderer } from './render/renderer.js';
@@ -187,11 +190,26 @@ async function start() {
   });
   byId('demo-link').hidden = demo;
 
+  // The first-game guide. Not on the demo town or the test page. A guide with a
+  // mistake in it is left out, with the reason in the console, and the game goes on.
+  let guide = null;
+  if (titled) {
+    const problems = guideProblems(game.rules, data.guide);
+    if (problems.length) console.warn(`The guide is not shown:\n- ${problems.join('\n- ')}`);
+    else {
+      guide = createGuidePanel({
+        root: byId('guide'), toggle: byId('guide-toggle'), game, guide: data.guide,
+        hidden: createFlag(browserStorage(), 'harborfall.guideHidden'),
+      });
+    }
+  }
+
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(MAX_FRAME_SECONDS, Math.max(0, (now - last) / 1000));
     last = now;
     ui.frame(dt);
+    guide?.frame(dt);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

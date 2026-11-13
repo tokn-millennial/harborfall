@@ -15,7 +15,7 @@ import { createRng } from '../src/sim/rng.js';
 import { getSummary } from '../src/sim/index.js';
 import { MAX_ZOOM, MIN_ZOOM } from '../src/render/camera.js';
 
-const KEYS = ['Escape', ' ', '1', '2', '3', 'c', 'w', 'a', 's', 'd', '+', '-', 'Home', 'ArrowLeft', 'ArrowUp', 'q', 'r', 'h', 'm', 'l', 'f', 'u', 'x', 'x', 'Shift'];
+const KEYS = ['Escape', ' ', '1', '2', '3', 'c', 'w', 'a', 's', 'd', '+', '-', 'Home', 'ArrowLeft', 'ArrowUp', 'q', 'r', 'h', 'm', 'l', 'f', 'u', 'x', 'x', 'z', 'z', 'Shift'];
 
 export function monkey({ game, camera, renderer, ui }, { actions = 5000, seed = 1 } = {}) {
   const { rules, state } = game;

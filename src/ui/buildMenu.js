@@ -3,7 +3,8 @@
 // active tool. Each button shows its shortcut key.
 
 import { el, setText } from './dom.js';
-import { buildingBlurb, costText, shortfallText } from './text.js';
+import { buildingBlurb, costText, shortfallText, undoLabel } from './text.js';
+import { undoStatus } from '../sim/index.js';
 import { icon } from './icons.js';
 import { drawBuildingIcon } from '../render/art/icon.js';
 
@@ -13,15 +14,15 @@ export const sameTool = (a, b) => a.mode === b.mode && a.building === b.building
 // Keys that already mean something else, so no tool may take them.
 const TAKEN_KEYS = new Set(['w', 'a', 's', 'd', 'c', '1', '2', '3', '4', '5']);
 // Keys for the tools that are not buildings. Building keys come from buildings.json.
-const TOOL_KEYS = { select: 'q', upgrade: 'u', demolish: 'x' };
+const TOOL_KEYS = { select: 'q', upgrade: 'u', demolish: 'x', undo: 'z' };
 
-export function createBuildMenu(root, hintRoot, game, { onPick }) {
+export function createBuildMenu(root, hintRoot, game, { onPick, onUndo = () => {} }) {
   const { rules } = game;
   const buttons = [];
   const byKey = new Map();
   let hovered = null;
 
-  function add(tool, name, cost, blurb, key = null) {
+  function add(tool, name, cost, blurb, key = null, onClick = null) {
     // A key that is taken, or already given to an earlier button, is dropped.
     const usable = key && !TAKEN_KEYS.has(key) && !byKey.has(key) ? key : null;
     const button = el('button', { class: 'tool', type: 'button' }, [
@@ -30,7 +31,7 @@ export function createBuildMenu(root, hintRoot, game, { onPick }) {
       el('span', 'tool-cost', cost ?? ''),
     ]);
     const entry = { tool, button, name, blurb, cost, key: usable };
-    button.addEventListener('click', () => onPick(tool));
+    button.addEventListener('click', onClick ?? (() => onPick(tool)));
     button.addEventListener('pointerenter', () => { hovered = entry; });
     button.addEventListener('pointerleave', () => { if (hovered === entry) hovered = null; });
     if (usable) byKey.set(usable, entry);
@@ -66,11 +67,28 @@ export function createBuildMenu(root, hintRoot, game, { onPick }) {
     'Click a road to remove it. Click a building twice to remove it. Half the cost is returned.',
   ], TOOL_KEYS.demolish);
   demolish.button.prepend(el('span', 'tool-glyph', [icon('demolish', { size: 26 })]));
+  // Undo is not a tool to pick: pressing it acts at once.
+  const undoSeconds = Math.round(rules.undoTicks / rules.ticksPerSecond);
+  const undo = undoSeconds > 0 ? add({ mode: 'undo', building: null }, 'Undo', 'Nothing yet', [
+    'Takes back the last thing you built, upgraded or demolished, and gives back everything it cost.',
+    `Works for ${undoSeconds} seconds of game time after you act. Ctrl+Z does the same.`,
+  ], TOOL_KEYS.undo, () => onUndo()) : null;
+  if (undo) {
+    undo.button.prepend(el('span', 'tool-glyph', [icon('undo', { size: 26 })]));
+    undo.costLine = undo.button.querySelector('.tool-cost');
+  }
 
   window.addEventListener('keydown', (event) => {
-    if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
-    const entry = byKey.get(event.key?.toLowerCase());
-    if (entry) onPick(entry.tool);
+    if (event.repeat) return;
+    const key = event.key?.toLowerCase();
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && key === 'z' && undo) {
+      onUndo();
+      event.preventDefault();
+      return;
+    }
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    const entry = byKey.get(key);
+    if (entry) entry.button.click();
   });
 
   return {
@@ -78,6 +96,11 @@ export function createBuildMenu(root, hintRoot, game, { onPick }) {
       for (const entry of buttons) {
         entry.button.classList.toggle('active', sameTool(entry.tool, activeTool));
         if (entry.def) entry.button.classList.toggle('unaffordable', shortfallText(game, entry.def.cost) !== null);
+      }
+      if (undo) {
+        const status = undoStatus(game);
+        setText(undo.costLine, undoLabel(rules, status));
+        undo.button.classList.toggle('idle', !status.ok);
       }
       const active = buttons.find((entry) => sameTool(entry.tool, activeTool));
       const shown = hovered ?? active;

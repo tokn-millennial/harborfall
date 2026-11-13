@@ -108,6 +108,9 @@ const FIXED_REASONS = {
   no_road: 'Not connected to a warehouse by road.',
   missing_input: 'Waiting for materials.',
   storage_full: 'Storage is full.',
+  nothing_to_undo: 'There is nothing to undo.',
+  undo_expired: 'It is too late to undo that.',
+  undo_spent: 'That cannot be undone: what it gave back has already been used.',
   unknown_command: 'That action is not understood.',
   bad_command: 'That action is not understood.',
 };
@@ -134,6 +137,19 @@ export function reasonText(game, code, options = {}) {
     return `No ${rules.goods[good] ? lower(rules, good) : good.replace(/_/g, ' ')} in stock.`;
   }
   return 'That cannot be done.';
+}
+
+// The short line under the Undo button: what an undo would take back.
+// `status` is what undoStatus(game) returned.
+export function undoLabel(rules, status) {
+  if (!status.ok) return status.reason === 'undo_expired' ? 'Too late' : 'Nothing yet';
+  const name = status.type ? rules.buildings[status.type]?.name ?? 'Building' : null;
+  if (status.kind === 'place') return name ?? 'Building';
+  if (status.kind === 'road') return status.count === 1 ? 'Road, 1 tile' : `Road, ${status.count} tiles`;
+  if (status.kind === 'demolish') return `${name} back`;
+  if (status.kind === 'unroad') return 'Road back';
+  if (status.kind === 'upgrade') return 'Upgrade';
+  return 'Last action';
 }
 
 // Which problems are serious (red) and which are a wait (amber).

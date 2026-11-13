@@ -25,9 +25,10 @@ export function withSeed(rawData, seed) {
   return { ...rawData, map: { ...rawData.map, seed } };
 }
 
-// Keys that only change how things look or what they are called. A change to
+// Keys that cannot make a saved game impossible: how things look, what they
+// are called, how long an undo lasts, and the first-game guide. A change to
 // one of these does not make an older saved game unusable.
-const LOOKS_ONLY = new Set(['visual', 'color', 'name', 'singular', 'key']);
+const LOOKS_ONLY = new Set(['visual', 'color', 'name', 'singular', 'key', 'undoSeconds', 'guide']);
 
 // Text that is the same for the same value whatever order its keys are in.
 export function stableText(value) {
@@ -164,6 +165,8 @@ export function compileRules(rawData) {
       freeBuilding: (config.start.freeBuildings ?? [])[0] ?? null,
     },
     win: { tier: config.win.tier, residents: config.win.residents },
+    // How long the last command can be undone. 30 seconds if the data does not say.
+    undoTicks: Math.round((config.undoSeconds ?? 30) * ticksPerSecond),
     map,
     stamp: rulesStamp(data),
   });

@@ -267,6 +267,7 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 - Road: click for one tile, or drag for an L-shaped line. Hold Shift while dragging to put the corner on the other side. The note shows the tile count and cost.
 - Upgrade: pick it, then click any house marked with a green ▲. One click per house.
 - Demolish: pick it, then click a road once or a building twice. The second click must come within 4 seconds. The note shows what you get back.
+- Undo: press Z, Ctrl+Z or the Undo button to take back your last build, road, upgrade or demolish. Everything it cost comes back, and a demolished building returns exactly as it was, residents and all. It works on your last action only, and for 30 seconds of game time after it (`undoSeconds` in `config.json`). The time does not run out while the game is paused. An undo cannot itself be undone. The button shows what it would take back.
 - Every tool has a shortcut key, shown in the corner of its button. Building keys are set in `buildings.json`.
 - Right-click, Esc, or the same menu button again puts the tool away.
 
@@ -281,6 +282,14 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 - Farmers and Workers, each with housing capacity, and a bar toward the goal of 100 Workers.
 - Game time, Pause, 1x, 2x, 4x, and a ? button for the controls. The ? panel also shows when the game was last saved and has the button back to the title screen.
 - A tip line appears when something has been short for 30 game seconds, for example "Fish keeps running out. Build another fisherman." It names the root of the shortage: if bread is out because the bakery has no grain, it talks about grain.
+
+**The first-game guide**
+- A small panel at the top left shows the step you are on, why it matters, and how far along you are: "First steps, 2 of 10".
+- The ten steps go from the first lumberjack to the win. They are in `data/guide.json`, and each has a test the game checks, such as "one sawmill joined by road".
+- A step is ticked the moment its test is true, and stays ticked. Doing a later step early ticks it, but the guide still asks for the earlier one.
+- "All steps" opens the whole list. The × hides the guide, and the ? panel brings it back. The choice is remembered.
+- The guide only reads the game. It changes nothing, is not saved with the game, and is not shown on the demo town.
+- A game picked up part-way starts just past the furthest step that is true.
 
 **Sound**
 - The game makes its own sounds. There are no sound files.
@@ -297,4 +306,4 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 
 ## 12. Not in Version 1
 
-More than one saved game, save files to download or share, undo, music, more islands, ships and trade, combat, carriers that really carry goods (the carts are for show), workforce requirements for buildings, building rotation, a tutorial, touch controls, and painted art from image files.
+More than one saved game, save files to download or share, undoing more than your last action, music, more islands, ships and trade, combat, carriers that really carry goods (the carts are for show), workforce requirements for buildings, building rotation, a tutorial, touch controls, and painted art from image files.

@@ -15,6 +15,7 @@ const SVG = {
   upgrade: '<path d="M8 1.8l5.5 6h-3.3v6.2H5.8V7.8H2.5z" fill="#4fae62" stroke="#1f5a2c" stroke-width="1" stroke-linejoin="round"/>',
   sound: '<path d="M2 6h2.8L8.5 2.8v10.4L4.8 10H2z" fill="#f1ead8" stroke="#1c2a31" stroke-width="0.8" stroke-linejoin="round"/><path d="M10.6 5.6c1.2 1.2 1.2 3.6 0 4.8M12.4 3.8c2.2 2.2 2.2 6.2 0 8.4" fill="none" stroke="#f1ead8" stroke-width="1.3" stroke-linecap="round"/>',
   muted: '<path d="M2 6h2.8L8.5 2.8v10.4L4.8 10H2z" fill="#8fa1a8" stroke="#1c2a31" stroke-width="0.8" stroke-linejoin="round"/><path d="M10.6 5.8l4 4.4M14.6 5.8l-4 4.4" fill="none" stroke="#ff9488" stroke-width="1.5" stroke-linecap="round"/>',
+  undo: '<path d="M6.2 2.6L2.4 6.2l3.8 3.6V7.6h3.3a2.6 2.6 0 0 1 0 5.2H5.2v-2.1h4.3a0.5 0.5 0 0 0 0-1H6.2z" fill="#e9c46a" stroke="#6b4a12" stroke-width="1" stroke-linejoin="round"/>',
   demolish: '<path d="M9 2.2l4.8 4.8-2 2-1.2-1.2-5.8 5.8-1.6-1.6 5.8-5.8L7.8 5z" fill="#b7b0a2" stroke="#3c3a36" stroke-width="1" stroke-linejoin="round"/><path d="M2.8 13.2l2-2" stroke="#7a5a3a" stroke-width="2.2" stroke-linecap="round"/>',
 };
 

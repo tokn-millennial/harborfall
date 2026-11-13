@@ -21,13 +21,18 @@ export function pay(game, cost) {
 
 // Gives back a share of a cost, rounded down to whole coins and whole goods.
 // Returned goods that do not fit in storage are lost.
+// Returns what was actually given: { coinsMilli, goods }.
 export function refund(game, cost, ratio) {
   const { state } = game;
-  state.coinsMilli += Math.floor((cost.coinsMilli / MILLI) * ratio) * MILLI;
+  const given = { coinsMilli: Math.floor((cost.coinsMilli / MILLI) * ratio) * MILLI, goods: {} };
+  state.coinsMilli += given.coinsMilli;
   for (const [good, amount] of Object.entries(cost.goods)) {
     const room = Math.max(0, state.storageCap - state.goods[good]);
-    state.goods[good] += Math.min(room, Math.floor(amount * ratio));
+    const back = Math.min(room, Math.floor(amount * ratio));
+    state.goods[good] += back;
+    if (back > 0) given.goods[good] = back;
   }
+  return given;
 }
 
 // Total storage room per good: every storage building adds its share.

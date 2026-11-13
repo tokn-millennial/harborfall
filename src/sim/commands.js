@@ -8,6 +8,7 @@ import { upgradeHouse, upgradeReason } from './population.js';
 import { canPlace } from './placement.js';
 import { pay, refund } from './economy.js';
 import { refresh } from './refresh.js';
+import { producerStatuses, remember, undoLast } from './undo.js';
 
 const fail = (reason) => ({ ok: false, reason });
 
@@ -18,6 +19,7 @@ export function execute(game, command) {
     case 'road': return road(game, command);
     case 'demolish': return demolish(game, command);
     case 'upgrade': return upgrade(game, command);
+    case 'undo': return undoLast(game);
     default: return fail('unknown_command');
   }
 }
@@ -34,6 +36,7 @@ function place(game, { building, x, y }) {
   pay(game, rules.buildings[building].cost);
   const created = addBuilding(game, building, x, y);
   refresh(game);
+  remember(game, { kind: 'place', id: created.id });
   return { ok: true, id: created.id };
 }
 
@@ -46,6 +49,7 @@ function road(game, { tiles }) {
   let placed = 0;
   let failed = 0;
   let reason = null;
+  const laid = [];
   for (const tile of tiles) {
     const [x, y] = Array.isArray(tile) ? tile : [];
     if (inBounds(state.map, x, y) && state.roads[tileIndex(state.map, x, y)]) continue;
@@ -57,9 +61,13 @@ function road(game, { tiles }) {
     }
     pay(game, rules.buildings.road.cost);
     state.roads[tileIndex(state.map, x, y)] = 1;
+    laid.push([x, y]);
     placed++;
   }
-  if (placed > 0) refresh(game);
+  if (placed > 0) {
+    refresh(game);
+    remember(game, { kind: 'road', tiles: laid });
+  }
   return failed === 0 ? { ok: true, placed } : { ok: false, reason, placed, failed };
 }
 
@@ -68,15 +76,18 @@ function demolish(game, { x, y }) {
   const { rules, state } = game;
   if (!Number.isInteger(x) || !Number.isInteger(y) || !inBounds(state.map, x, y)) return fail('out_of_bounds');
   const ratio = rules.economy.demolishRefundRatio;
+  const statuses = producerStatuses(game); // as they are before anything is cut off
 
   const building = buildingAt(game, x, y);
   if (building) {
     const def = rules.buildings[building.type];
     if (def.category === 'storage' && countCategory(game, 'storage') === 1) return fail('last_warehouse');
+    const index = state.buildings.indexOf(building);
     removeBuilding(game, building);
     refresh(game);
     // The free starting building cost nothing, so it returns nothing.
-    if (!building.free) refund(game, def.cost, ratio);
+    const given = building.free ? { coinsMilli: 0, goods: {} } : refund(game, def.cost, ratio);
+    remember(game, { kind: 'demolish', building: JSON.parse(JSON.stringify(building)), index, given, statuses });
     return { ok: true, removed: building.type };
   }
 
@@ -84,7 +95,8 @@ function demolish(game, { x, y }) {
   if (state.roads[i]) {
     state.roads[i] = 0;
     refresh(game);
-    refund(game, rules.buildings.road.cost, ratio);
+    const given = refund(game, rules.buildings.road.cost, ratio);
+    remember(game, { kind: 'unroad', x, y, given, statuses });
     return { ok: true, removed: 'road' };
   }
   return fail('nothing_here');
@@ -95,6 +107,8 @@ function upgrade(game, { id }) {
   const building = buildingById(game, id);
   const reason = upgradeReason(game, building);
   if (reason) return fail(reason);
+  const before = JSON.parse(JSON.stringify(building.house));
   upgradeHouse(game, building);
+  remember(game, { kind: 'upgrade', id: building.id, house: before });
   return { ok: true, tier: building.house.tier };
 }
