@@ -48,7 +48,15 @@ const PICTURE_MAX_DETAIL = 1.5;
 // large one would be shown at a third of its size and look grainy.
 const SMALL_PICTURE_DETAIL = 0.5;
 const SMALL_PICTURE_BELOW_SCALE = 0.62;
+// Zoomed far in, the ground picture is stretched and looks soft. Once the
+// view has been still for a moment, the part of the ground on screen is drawn
+// afresh at exactly the size shown, and that sharp copy is used until the
+// view moves again. While it moves, the stretched picture is used, so nothing
+// slows down.
+const CLOSE_UP_FROM = 1.35;         // how far the picture must be stretched before this is worth doing
+const CLOSE_UP_SETTLE_SECONDS = 0.2;
 const CACHE_PAD = 48; // room around the map for tree tops and the shoreline
+const HOUSE_LOOKS = 3;
 const TREE_REACH = 2; // trees this close to a building are drawn in order with it
 const ACTOR_MIN_ZOOM = 0.5; // walkers, carts and boats are too small to see below this
 
@@ -59,6 +67,10 @@ export function createRenderer(canvas, rules) {
   let groundPicture = null; // the ground and forest, painted once
   let smallPicture = null;  // the same, smaller, for when zoomed far out
   let pictureMap = null;    // the island those pictures show
+  let closeUp = null;       // { canvas, key, map }: the sharp copy of what is on screen
+  let viewKey = null;       // where the view was last frame
+  let viewStillSince = 0;
+  let closeUpShown = false;
   const sprites = createSpriteCache();
   const life = createLife(rules); // walkers, carts and boats: decoration that follows the game
 
@@ -107,6 +119,23 @@ export function createRenderer(canvas, rules) {
     return { picture, x: bounds.left - CACHE_PAD, y: bounds.top - CACHE_PAD, width, height };
   }
 
+  // Draws the ground and forest that are on screen, sharp, into a hidden canvas
+  // the size of the screen. Only the tiles in view are worked out.
+  function buildCloseUp(map, range, key, scale, camera) {
+    const picture = closeUp?.canvas ?? document.createElement('canvas');
+    if (picture.width !== canvas.width || picture.height !== canvas.height) {
+      picture.width = canvas.width;
+      picture.height = canvas.height;
+    }
+    const g = picture.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, picture.width, picture.height);
+    g.setTransform(scale, 0, 0, scale, pixelRatio * (view.width / 2 - camera.x * camera.zoom), pixelRatio * (view.height / 2 - camera.y * camera.zoom));
+    createTerrainPainter(map, terrainColor, range).paint(g, scale);
+    createForestPainter(map, range).paint(g);
+    return { canvas: picture, key, map };
+  }
+
   // One building: its drawn art from a ready-made picture, or a plain box if it has none.
   function drawBuilding(building, zoom, time, sharpness, alpha = 1) {
     const def = rules.buildings[building.type];
@@ -121,6 +150,9 @@ export function createRenderer(canvas, rules) {
         working: p ? p.active && p.status === 'working' : false,
         progress: p ? p.progress / def.production.cycleTicks : 0,
         residents: building.house?.residents ?? 0,
+        // Which of its three looks a house has. It follows the building's
+        // number, so a house looks the same every time the game is opened.
+        variant: Number.isInteger(building.id) ? building.id % HOUSE_LOOKS : 0,
         time,
       };
       const key = `${artId}|${visual.color}|${visual.risePx}|${artStateKey(artId, info)}`;
@@ -213,13 +245,29 @@ export function createRenderer(canvas, rules) {
       groundPicture = smallPicture = null;
       pictureMap = map;
     }
-    let ground;
-    if (scale < SMALL_PICTURE_BELOW_SCALE) {
-      ground = smallPicture ??= buildGroundPicture(map, SMALL_PICTURE_DETAIL);
-    } else {
-      ground = groundPicture ??= buildGroundPicture(map, Math.min(PICTURE_MAX_DETAIL, Math.max(PICTURE_MIN_DETAIL, pixelRatio)));
+    const fullDetail = Math.min(PICTURE_MAX_DETAIL, Math.max(PICTURE_MIN_DETAIL, pixelRatio));
+    const key = `${camera.x}|${camera.y}|${zoom}|${canvas.width}|${canvas.height}`;
+    if (key !== viewKey) {
+      viewKey = key;
+      viewStillSince = time;
     }
-    ctx.drawImage(ground.picture, ground.x, ground.y, ground.width, ground.height);
+    closeUpShown = scale > fullDetail * CLOSE_UP_FROM && time - viewStillSince >= CLOSE_UP_SETTLE_SECONDS;
+    if (closeUpShown) {
+      if (!closeUp || closeUp.key !== key || closeUp.map !== map) closeUp = buildCloseUp(map, range, key, scale, camera);
+      // The copy is exactly the size of the screen, so it goes on pixel for pixel.
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(closeUp.canvas, 0, 0);
+      ctx.restore();
+    } else {
+      let ground;
+      if (scale < SMALL_PICTURE_BELOW_SCALE) {
+        ground = smallPicture ??= buildGroundPicture(map, SMALL_PICTURE_DETAIL);
+      } else {
+        ground = groundPicture ??= buildGroundPicture(map, fullDetail);
+      }
+      ctx.drawImage(ground.picture, ground.x, ground.y, ground.width, ground.height);
+    }
 
     // 3. Roads, then ground markers.
     roads.paint(ctx, state);
@@ -357,5 +405,11 @@ export function createRenderer(canvas, rules) {
   }
 
   resize();
-  return { draw, resize, view, tileHeight: TILE_H, sprites, life };
+  return {
+    draw, resize, view, tileHeight: TILE_H, sprites, life,
+    // Whether the last frame used the sharp close-up of the ground.
+    get closeUpShown() {
+      return closeUpShown;
+    },
+  };
 }

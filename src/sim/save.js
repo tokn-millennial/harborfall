@@ -6,7 +6,7 @@
 // stamp of the rules it was played under. Loading refuses a save whose rules
 // have changed, because its numbers may no longer make sense.
 
-import { compileRules, stableText, withSeed } from './rules.js';
+import { compileRules, stableText, withDifficulty, withSeed } from './rules.js';
 import { refresh } from './refresh.js';
 import { footprint, inBounds, tileIndex } from './grid.js';
 import { undoProblem } from './undo.js';
@@ -24,6 +24,7 @@ export function saveGame(game) {
     format: SAVE_FORMAT,
     rulesStamp: game.rules.stamp,
     seed: game.rules.map.seed,
+    difficulty: game.rules.difficulty,
     state: copy(game.state),
   };
 }
@@ -43,7 +44,12 @@ export function loadGame(rawData, save) {
   if (save.format > SAVE_FORMAT) return fail('newer_version');
   if (save.format < 1) return fail('not_a_save');
 
-  const rules = compileRules(Number.isInteger(save.seed) ? withSeed(rawData, save.seed) : rawData);
+  // The rules the game was played under: its island, and its difficulty. A
+  // save from before difficulties existed was played on the default one.
+  const seeded = Number.isInteger(save.seed) ? withSeed(rawData, save.seed) : rawData;
+  const wanted = typeof save.difficulty === 'string' ? save.difficulty : null;
+  if (wanted !== null && rawData.config?.difficulties && !Object.hasOwn(rawData.config.difficulties, wanted)) return fail('rules_changed');
+  const rules = compileRules(withDifficulty(seeded, wanted));
   // A game saved before the latest things were added (config.addedLater) is
   // still a possible game: it has none of them. It is carried forward below.
   const older = save.rulesStamp !== rules.stamp && rules.olderStamp !== null && save.rulesStamp === rules.olderStamp;

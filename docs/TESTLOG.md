@@ -931,3 +931,80 @@ Date: 2026-11-13. Status: approved by Colin. His reply was "Moved and please pro
 
 **What I would change**
 - I would have asked you the three questions as one short message before starting. I had asked for other things three gates running and got "keep going", so I did not. A phase this size deserved one more try.
+
+**After the gate:** committed as `89035d0` and pushed at your request.
+
+## Phase 13: Small polish
+
+Date: 2026-11-13. Status: taken as approved. Colin's reply to the gate was "Keep going".
+
+
+**Turns used:** 1 (your message "Small polish", chosen from the options I gave at the Phase 12 gate). No separate plan was shown: the three items were the plan.
+
+**What was built**
+- **Difficulty.** Easy, Normal and Hard, picked on the title screen for a new game.
+- **Three looks for each kind of house.**
+- **A sharp ground when zoomed far in,** once the view stops moving.
+- On Normal, nothing about the rules changed.
+
+**Automated tests: 389 pass, 0 fail.** That is 373 from before plus 16: 14 for difficulty, 1 for house looks and 1 for drawing part of the ground.
+
+**Your saved game.** The rules stamp for Normal is `b16fd0a9142282c9`, the same as before this phase, and the older stamp is still recognised. A test also checks that a game with no difficulty recorded in it loads as Normal.
+
+**Balance, by the bot** (minutes to the win)
+
+| Build order | Easy | Normal | Hard |
+|---|---|---|---|
+| Standard | 28.6 | 28.6 | 36.9 |
+| Careless | 30.4 | 30.4 | 30.8 |
+| Reckless (bread first) | 33.4 | 52.9 | stuck |
+| Standard, then 100 Artisans | 48.8 | 49.8 | 69.6 |
+
+I tried thirteen versions of Hard. In twelve the reckless opening never won, including two that kept all 500 starting coins and only cut tax. In one (450 coins, 22 a minute, 15% less tax) it won, after 114 minutes. So I found no Hard that is both harder and safe from that opening. The version shipped keeps Normal's safety-net income, and the stuck town is shown by a test to be rescued by demolishing.
+
+**Browser checks**
+
+| Check | How | Result |
+|---|---|---|
+| The title screen offers Easy, Normal and Hard, starting on Normal | Read and seen | Pass |
+| Picking Hard and starting a game gives a Hard game | Real clicks | Pass. 350 coins, Farmer tax 0.72, and the ? panel reads "Island 1407, the standard island. Hard." |
+| The Hard game is saved as Hard, and Continue says so | Reloaded the page | Pass. "0:02 played, 0 of 100 Workers, 350 coins, Hard". |
+| A Normal game saved before this phase is still offered | It was in the save slot from Phase 12's checks | Pass |
+| The ground is sharp when zoomed in and still, and not while moving | Read the renderer's own flag at zoom 1, 2 and 3 | Pass. Off at zoom 1. At 2 and 3: off while moving, on when still. |
+| It looks sharper | Two screenshots of the same spot, before and after stopping | Pass by my eye. Tile edges and grass are crisp in the second. |
+| Houses in a town differ | Screenshot at zoom 3 | Pass by my eye. Chimneys on different sides, roofs of slightly different shades. |
+| A full game through the UI still matches the headless bot | UI playthrough on `?fresh` | Pass. Won at 28.55 minutes, identical final state. |
+| Random input | 6,000 actions over 2 runs | Pass. No errors. |
+| The error console | Read it | Empty. |
+
+**Drawing speed with the sharp ground** (my test browser, 1920 by 1080, milliseconds a frame, not adjusted for the cost of measuring)
+
+| Zoom | While moving | The one frame that makes the sharp copy | When still |
+|---|---|---|---|
+| 2 | 29 | 78 | 22 |
+| 3 | 31 | 79 | 23 |
+
+- The sharp copy costs one slow frame each time you stop, about 50 ms more than usual in my browser.
+- After that, a still view draws a little faster than before, because the copy goes on pixel for pixel.
+- These numbers are from my slow test browser. You have told me the game runs smoothly on your screen. I do not know whether the one slow frame shows there.
+
+**Bugs found: 1 design problem, 2 small faults, all dealt with.**
+1. **Design problem: my first Hard could trap a player for good.** With the safety-net income cut, a reckless opening ended at zero coins, losing money, with no way to recover but demolishing, and several versions were worse still. Hard now keeps that income. One opening still needs a demolish to recover, which is recorded as a decision (D168) and tested.
+2. A broken list of difficulties in the data gave an unhelpful error from the wrong place. It now reaches the data check, which names the mistake.
+3. One of my tests tried to rescue the stranded town with a build order that made things worse. I looked at the town, saw it had no market or houses, and wrote the rescue a person would do.
+
+One reading that looked like a bug and was not: after the random-input run, the sharp ground did not appear. My test browser had stopped drawing frames. Drawn by hand, it appeared.
+
+**Decisions made:** 11 (D165 to D175).
+
+**Weak or unfinished**
+- **Easy does not speed up a good player.** It only forgives a bad start. Someone who picks Easy expecting a shorter game will not get one.
+- **Hard is mostly "slower", not "different".** Eight more minutes to the win, twenty more to 100 Artisans. Nothing new to think about.
+- **On Hard, one bad opening needs a demolish to recover.** The game says so in a line of text, and nothing more.
+- **The house looks are subtle.** At normal zoom you may not notice them.
+- **The sharp ground pops in** a moment after you stop. It is a visible change, like a map sharpening.
+- **One slow frame each time you stop while zoomed in.** Unmeasured on your screen.
+- **Still unknown from your play:** whether you won, how the sounds are, whether the guide and the second act make sense.
+
+**What I would change**
+- I would have decided what Hard must never do before choosing its numbers. I started from "make it harsher" and only then found the trap.

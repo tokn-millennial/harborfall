@@ -25,10 +25,42 @@ export function withSeed(rawData, seed) {
   return { ...rawData, map: { ...rawData.map, seed } };
 }
 
+// The same data with one of the difficulties in config.json applied: its
+// starting coins, base income and tax. The original is left alone. A game is
+// then played under these numbers, and its saved games carry their stamp, so
+// an Easy game and a Hard game never load as each other.
+// With no id, the default difficulty is used. Data with no difficulties at
+// all comes back as it is.
+export function withDifficulty(rawData, id = null) {
+  const all = rawData.config?.difficulties;
+  if (!all) return rawData;
+  const chosen = id ?? rawData.config.defaultDifficulty ?? Object.keys(all)[0];
+  const d = all[chosen];
+  if (d === null || typeof d !== 'object') {
+    // Asked for by name and not there: say so. A broken list or default is
+    // left for the data check, which explains it better.
+    if (id !== null) throw new Error(`There is no difficulty called "${chosen}" in config.json`);
+    return rawData;
+  }
+  const config = { ...rawData.config, difficulty: chosen, start: { ...rawData.config.start }, economy: { ...rawData.config.economy } };
+  if (d.startCoins !== undefined) config.start.coins = d.startCoins;
+  if (d.baseIncomePerMinute !== undefined) config.economy.baseIncomePerMinute = d.baseIncomePerMinute;
+  let population = rawData.population;
+  if (d.taxMultiplier !== undefined && population?.tiers) {
+    const tiers = {};
+    for (const [tierId, tier] of Object.entries(population.tiers)) {
+      // Rounded to a thousandth of a coin, the smallest amount the game counts.
+      tiers[tierId] = { ...tier, taxPerResidentPerMinute: Math.round(tier.taxPerResidentPerMinute * d.taxMultiplier * 1000) / 1000 };
+    }
+    population = { ...population, tiers };
+  }
+  return { ...rawData, config, population };
+}
+
 // Keys that cannot make a saved game impossible: how things look, what they
 // are called, how long an undo lasts, and the first-game guide. A change to
 // one of these does not make an older saved game unusable.
-const LOOKS_ONLY = new Set(['visual', 'color', 'name', 'singular', 'key', 'title', 'undoSeconds', 'guide', 'addedLater']);
+const LOOKS_ONLY = new Set(['visual', 'color', 'name', 'singular', 'key', 'title', 'undoSeconds', 'guide', 'addedLater', 'difficulties', 'defaultDifficulty', 'difficulty', 'about']);
 
 // Text that is the same for the same value whatever order its keys are in.
 export function stableText(value) {
@@ -184,6 +216,10 @@ export function compileRules(rawData) {
       freeBuilding: (config.start.freeBuildings ?? [])[0] ?? null,
     },
     win: { tier: config.win.tier, residents: config.win.residents },
+    // Which difficulty these rules are for, and the ones there are to choose from.
+    difficulty: config.difficulty ?? null,
+    difficulties: Object.entries(config.difficulties ?? {}).map(([id, d]) => ({ id, name: d.name ?? id, about: d.about ?? '' })),
+    defaultDifficulty: config.defaultDifficulty ?? Object.keys(config.difficulties ?? {})[0] ?? null,
     // Goals for after the win, in order.
     milestones: (config.milestones ?? []).map((m) => ({ tier: m.tier, residents: m.residents, title: m.title ?? null })),
     // How long the last command can be undone. 30 seconds if the data does not say.

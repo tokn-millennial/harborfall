@@ -309,6 +309,7 @@ All tests run with `node --test` and need no browser.
 | `loop.test.js` | Real time becomes whole ticks. Speeds 2x and 4x, pause, and a stalled tab all behave. |
 | `save.test.js` | A game that is saved, turned into text, read back and played on ends exactly where it would have without saving. Tested on real bot games at several moments, on a won game, on another island and on a hand-made one. Twenty kinds of damaged save, a changed rule and a newer version are each refused. Changes to looks and names are not. |
 | `title.test.js` | The save slot, with a stand-in for the browser's storage: reading, writing, failing storage, unreadable text. What the title screen offers in each case, and that a new game never replaces a saved one without a second press. |
+| `difficulty.test.js` | Normal is exactly the game as it was, with the same rules stamp. Easy and Hard change only coins, base income and tax. Each has its own stamp, so a save cannot load as another difficulty. The sensible build orders win on all three. On Hard a reckless opening strands the town, and demolishing is shown to be the way out. |
 | `artisans.test.js` | The wool and cloth chain creates and loses nothing. Artisan houses need cloth and empty without it. The win counts Workers or better. The goal after the win is recorded once. The bot reaches it 15 to 30 minutes after the win, on four islands, with the first act unchanged. A game saved before Artisans existed loads and plays on as it would have. |
 | `undo.test.js` | Undoing an action at once leaves the game exactly as it was, for buildings, road, demolishing and upgrading, and for 600 random actions. Undo gives back the whole cost. It is refused after 30 seconds, when there is nothing to undo, and when a demolish's refund has been used. The undo record is saved with the game, and a save from before undo existed still loads. |
 | `guide.test.js` | The shipped guide has no mistakes, and 23 kinds of mistake are each refused with a sentence. Each kind of test counts the right thing. Steps are ticked and never unticked. A full winning game finishes the guide. The guide never changes the game and is not one of the rules. |
@@ -427,3 +428,21 @@ Phase 12 added two goods, two buildings and a tier by editing data files, with t
 To add a good, building or tier of your own and keep older saves working, add its name to `addedLater`. The stamp before Phase 12 was `6fe08f1bee9bb754`. A save made in the browser under the old data carried exactly that stamp and was continued under the new data.
 
 **The bot.** A build order may carry `"pastWin": true` to play on after the win until its steps are done and every milestone is reached. An upgrade step may say which upgrade: `{ "upgrade": 3, "to": "artisan" }`.
+
+## 16. Difficulty, and the sharp close-up
+
+**Difficulty is applied to the data before the rules are made.** `withDifficulty(data, id)` in `src/sim/rules.js` returns a copy of the data files with one difficulty's numbers written in. The rules are then compiled from that copy, exactly as from any data. So the simulation has no "if hard" anywhere: it only ever sees numbers.
+
+- A saved game records its difficulty, as it records its island seed, and loading rebuilds the same rules.
+- Each difficulty gives a different rules stamp, because the numbers differ. A saved Easy game is refused if someone edits what Easy means, and a save cannot be loaded as another difficulty.
+- The list of difficulties itself is left out of the stamp, and Normal changes no number. So adding difficulties did not disturb any existing saved game. The stamp was checked before and after and is unchanged.
+
+**The sharp close-up.** The ground is normally one large picture, stretched or shrunk to the zoom. Zoomed far in, stretching makes it soft. Drawing the ground shape by shape every frame was measured in Phase 7 as far too slow. The answer is in between:
+
+- When the picture would be stretched by more than about 1.4 times, and the view has not moved for a fifth of a second, the renderer draws only the tiles on screen into a hidden canvas the size of the screen, and shows that.
+- It is drawn once and reused for as long as the view is still. The moment the view moves, the stretched picture is used again.
+- `createTerrainPainter` and `createForestPainter` take a range of tiles for this, so only what is in view is worked out.
+
+In my test browser the one frame that makes the sharp copy took about 50 ms longer than a normal frame. After that, frames with the sharp copy were a little faster than frames with the stretched picture, because the copy goes on pixel for pixel.
+
+**House looks.** A house's look is its building number divided by three, remainder taken. The drawings take it as one more input, like "is anyone living here", and the stored pictures are keyed by it.

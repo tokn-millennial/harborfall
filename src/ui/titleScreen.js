@@ -5,11 +5,29 @@ import { el } from './dom.js';
 
 const CONFIRM_SECONDS = 4;
 
-// Returns a promise for the id of the chosen button: 'continue', 'new' or 'random'.
+// Returns a promise for { choice, difficulty }: the id of the chosen button
+// ('continue', 'new' or 'random') and the difficulty picked for a new game.
 export function showTitle(root, model, { demoHref }) {
   return new Promise((resolve) => {
     root.replaceChildren();
     let armed = null; // { button, timer }: pressed once, waiting for the second press
+    let difficulty = model.difficulty;
+
+    // The difficulty for a new game: a row of small buttons, one lit.
+    const about = el('p', 'title-about');
+    const levels = model.difficulties.map((d) => {
+      const button = el('button', { class: 'title-level', type: 'button', 'data-difficulty': d.id, title: d.about }, d.name);
+      button.addEventListener('click', () => {
+        difficulty = d.id;
+        showLevel();
+      });
+      return { ...d, button };
+    });
+    function showLevel() {
+      for (const level of levels) level.button.classList.toggle('active', level.id === difficulty);
+      about.textContent = levels.find((level) => level.id === difficulty)?.about ?? '';
+    }
+    showLevel();
 
     const disarm = () => {
       if (!armed) return;
@@ -36,7 +54,7 @@ export function showTitle(root, model, { demoHref }) {
         if (armed) clearTimeout(armed.timer);
         root.hidden = true;
         root.replaceChildren();
-        resolve(b.id);
+        resolve({ choice: b.id, difficulty });
       });
       return button;
     });
@@ -46,6 +64,8 @@ export function showTitle(root, model, { demoHref }) {
       el('p', 'title-tagline', 'Settle the island. Grow it to a town of 100 Workers.'),
       ...model.notices.map((text) => el('p', 'title-notice', text)),
       el('div', 'title-buttons', buttons),
+      levels.length ? el('div', 'title-levels', [el('span', 'title-levels-label', 'A new game is'), ...levels.map((level) => level.button)]) : null,
+      levels.length ? about : null,
       el('p', 'title-foot', [
         model.footnote ? el('span', null, `${model.footnote} `) : null,
         el('a', { href: demoHref }, 'Watch a finished town'),

@@ -8,6 +8,7 @@
 //          working   true while a producer is in a cycle
 //          progress  how far through its cycle a producer is, 0 to 1
 //          residents how many people live in a house
+//          variant   0, 1 or 2: which of a house's three looks to draw
 //          time      seconds, for small animations
 //
 // A building type with no entry here is drawn as a plain box, so a building
@@ -70,6 +71,12 @@ function smoke(g, u, v, z, time) {
 function crate(g, u, v, size, color = '#b08a5a') {
   g.box(u, v, u + size, v + size, 0, size * 16, color);
 }
+// Houses come in three looks, so a street is not one house repeated. The roof
+// is a shade darker or lighter, and one detail moves or is added.
+function variedRoof(color, variant) {
+  return variant === 1 ? mix(color, '#000000', 0.11) : variant === 2 ? mix(color, '#ffffff', 0.1) : color;
+}
+
 // One sheep: a woolly body and a dark head.
 function sheep(g, u, v) {
   g.oval(u, v, 2.6, 3.3, 2.3, '#f4f1e6');
@@ -180,24 +187,32 @@ export const BUILDING_ART = {
   },
 
   // A thatched cottage. Its windows glow once someone lives there.
-  cottage(g, { h, color, residents }) {
+  cottage(g, { h, color, residents, variant = 0 }) {
     const wall = h * 0.5;
     const lived = residents > 0;
+    const roof = variedRoof(color, variant);
     g.box(0.3, 0.36, 1.7, 1.62, 0, wall, PLASTER, { top: false });
     door(g, 0.9, 1.12, wall * 0.8, 1.62);
     windowLit(g, 0.46, 0.72, wall * 0.35, wall * 0.8, 1.62, lived);
     windowLit(g, 1.3, 1.56, wall * 0.35, wall * 0.8, 1.62, lived);
     windowShade(g, 0.8, 1.1, wall * 0.35, wall * 0.8, 1.7, lived);
-    g.gable(0.3, 0.36, 1.7, 1.62, wall, h * 0.7, color, { axis: 'u', wall: PLASTER, overhang: 0.12, lines: 3 });
-    chimney(g, 0.5, 0.7, wall + h * 0.3, wall + h * 0.85);
-    // A little garden path.
+    g.gable(0.3, 0.36, 1.7, 1.62, wall, h * 0.7, roof, { axis: 'u', wall: PLASTER, overhang: 0.12, lines: 3 });
+    chimney(g, variant === 1 ? 1.3 : 0.5, 0.7, wall + h * 0.3, wall + h * 0.85);
+    // A little garden path, and for some a bed of flowers beside it.
     g.ground(0.9, 1.62, 1.12, 1.95, '#c9b68e');
+    if (variant === 2) {
+      g.ground(0.36, 1.68, 0.82, 1.92, '#7fa65a');
+      g.dot(0.47, 1.8, 1, 1.1, '#e06a7a');
+      g.dot(0.6, 1.76, 1, 1.1, '#f2d24b');
+      g.dot(0.72, 1.82, 1, 1.1, '#e06a7a');
+    }
   },
 
   // A taller two-storey house with a tiled roof, for Workers.
-  townhouse(g, { h, color, residents }) {
+  townhouse(g, { h, color, residents, variant = 0 }) {
     const wall = h * 0.62;
     const lived = residents > 0;
+    const roof = variedRoof(color, variant);
     g.box(0.26, 0.3, 1.74, 1.68, 0, wall, '#e3d2b0', { top: false });
     // Timber framing.
     g.line(g.P(0.26, 1.68, wall * 0.5), g.P(1.74, 1.68, wall * 0.5), DARK_WOOD, 0.9);
@@ -210,8 +225,10 @@ export const BUILDING_ART = {
     windowLit(g, 0.9, 1.12, wall * 0.6, wall * 0.88, 1.68, lived);
     windowShade(g, 0.6, 0.86, wall * 0.6, wall * 0.88, 1.74, lived);
     windowShade(g, 1.1, 1.36, wall * 0.6, wall * 0.88, 1.74, lived);
-    g.gable(0.26, 0.3, 1.74, 1.68, wall, h * 0.5, color, { axis: 'u', wall: '#e3d2b0', overhang: 0.1, lines: 4 });
-    chimney(g, 1.3, 0.6, wall + h * 0.2, wall + h * 0.75, BRICK);
+    // Some have boxes of flowers under the ground-floor windows.
+    if (variant === 2) for (const [u0, u1] of [[0.42, 0.66], [1.34, 1.58]]) g.onLit(u0, u1, wall * 0.08, wall * 0.14, 1.68, '#c9506b');
+    g.gable(0.26, 0.3, 1.74, 1.68, wall, h * 0.5, roof, { axis: 'u', wall: '#e3d2b0', overhang: 0.1, lines: 4 });
+    chimney(g, variant === 1 ? 0.55 : 1.3, 0.6, wall + h * 0.2, wall + h * 0.75, BRICK);
     g.ground(0.9, 1.68, 1.12, 1.95, '#c9b68e');
   },
 
@@ -249,9 +266,10 @@ export const BUILDING_ART = {
   },
 
   // A tall three-storey house on a stone ground floor, with a slate roof, for Artisans.
-  guildhouse(g, { h, color, residents }) {
+  guildhouse(g, { h, color, residents, variant = 0 }) {
     const wall = h * 0.68;
     const lived = residents > 0;
+    const roof = variedRoof(color, variant);
     const upper = '#efe6cf';
     g.box(0.22, 0.26, 1.78, 1.72, 0, wall * 0.34, STONE, { top: false });
     g.box(0.22, 0.26, 1.78, 1.72, wall * 0.34, wall, upper, { top: false });
@@ -263,9 +281,11 @@ export const BUILDING_ART = {
       for (const [u0, u1] of [[0.36, 0.58], [0.89, 1.11], [1.42, 1.64]]) windowLit(g, u0, u1, wall * z0, wall * z1, 1.72, lived);
       for (const [v0, v1] of [[0.5, 0.78], [1.14, 1.42]]) windowShade(g, v0, v1, wall * z0, wall * z1, 1.78, lived);
     }
-    g.gable(0.22, 0.26, 1.78, 1.72, wall, h * 0.42, color, { axis: 'u', wall: upper, overhang: 0.1, lines: 5 });
+    // Some hang a guild banner by the door.
+    if (variant === 2) g.onLit(1.2, 1.31, wall * 0.36, wall * 0.62, 1.72, '#c9a55a');
+    g.gable(0.22, 0.26, 1.78, 1.72, wall, h * 0.42, roof, { axis: 'u', wall: upper, overhang: 0.1, lines: 5 });
     chimney(g, 0.45, 0.55, wall + h * 0.15, wall + h * 0.62, BRICK);
-    chimney(g, 1.4, 0.55, wall + h * 0.15, wall + h * 0.62, BRICK);
+    if (variant !== 1) chimney(g, 1.4, 0.55, wall + h * 0.15, wall + h * 0.62, BRICK);
     g.ground(0.88, 1.72, 1.12, 1.95, '#c9b68e');
   },
 
@@ -291,9 +311,9 @@ export const BUILDING_ART = {
 export const ART_USES = {
   farm: ['progress'],
   bakery: ['working'],
-  cottage: ['residents'],
-  townhouse: ['residents'],
-  guildhouse: ['residents'],
+  cottage: ['residents', 'variant'],
+  townhouse: ['residents', 'variant'],
+  guildhouse: ['residents', 'variant'],
   weaver: ['working'],
 };
 
@@ -330,6 +350,7 @@ export function artStateKey(id, info) {
     if (use === 'progress') parts.push(Math.min(5, Math.floor(info.progress * 6)));
     else if (use === 'working') parts.push(info.working ? 1 : 0);
     else if (use === 'residents') parts.push(info.residents > 0 ? 1 : 0);
+    else if (use === 'variant') parts.push(info.variant ?? 0);
   }
   return parts.join('.');
 }

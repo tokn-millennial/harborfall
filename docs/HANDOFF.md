@@ -1,6 +1,6 @@
 # Harborfall: Handoff Guide
 
-Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 12, by Fable 5.2.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 13, by Fable 5.2.
 
 This is the one document to read when you come back to the project, or when you hand it to a new helper, human or AI. It says what exists, how to run and check it, how we worked, and what is still unproven. `ROADMAP.md` says what could come next.
 
@@ -8,8 +8,8 @@ This is the one document to read when you come back to the project, or when you 
 
 - **What it is:** a small Anno-style city builder that runs in a desktop browser. One island, 11 buildings, 7 goods, three kinds of resident. You win at 100 Workers, in about 30 minutes, and can play on to 100 Artisans in about 20 more. The game saves itself.
 - **How it is made:** plain JavaScript, with no framework, no build step and nothing to install except Node. All game rules are in five data files. All art is drawn by code.
-- **Size:** about 13,400 lines of code, tests and tools. The whole project is 150 files, counting documents and screenshots.
-- **State:** Phases 0 to 12 are done. 373 automated tests pass.
+- **Size:** about 13,900 lines of code, tests and tools. The whole project is 153 files, counting documents and screenshots.
+- **State:** Phases 0 to 13 are done. 389 automated tests pass.
 - **Where:** the folder `Harborfall` in your Documents, and the private GitHub repository `tokn-millennial/harborfall`, branch `main`.
 
 ## 2. What to read, in order
@@ -22,12 +22,12 @@ This is the one document to read when you come back to the project, or when you 
 | `docs/BRIEF.md` | Your original brief, word for word. The working rules come from here. | A helper is new to the project. |
 | `docs/SPEC.md` | Every rule of the game in plain words, with the data file each number lives in. | You want to know how something works, or tune it. |
 | `docs/ARCHITECTURE.md` | How the code is put together, folder by folder, and the test plan. | A helper is about to change code. |
-| `docs/DECISIONS.md` | Every choice made, numbered Q1 to Q5 (yours) and D1 to D164 (mine), with the reason and how to change it. | You wonder "why is it like this?" |
+| `docs/DECISIONS.md` | Every choice made, numbered Q1 to Q5 (yours) and D1 to D175 (mine), with the reason and how to change it. | You wonder "why is it like this?" |
 | `docs/TESTLOG.md` | Per phase: what was built, tested, broken and fixed, and what is weak. | You want the honest history. |
 | `docs/PLAYTEST.md` | The 73-point checklist from Phase 5 and the ranked problem list. | Planning a playtest. |
 | `docs/FINAL_REPORT.md` | The scorecard for the original test, as written at the end of Phase 5, with short notes for Phases 6 and 7. | You want the verdict on the original brief. |
 | `CLAUDE.md` (top folder) | Standing instructions that an AI helper reads on its own at the start of a session. | You never need to. It is for the helper. |
-| `docs/screenshots/` | Pictures from Phases 3 to 12. | You want to see how it looked at each stage. |
+| `docs/screenshots/` | Pictures from Phases 3 to 13. | You want to see how it looked at each stage. |
 
 ## 3. How to run it
 
@@ -43,12 +43,13 @@ These are typed in a terminal opened in the project folder. A helper runs them f
 
 | Command | What it does | A good result |
 |---|---|---|
-| `node --test` | Runs all 373 automated tests. A few seconds. | `pass 373`, `fail 0` |
+| `node --test` | Runs all 389 automated tests. A few seconds. | `pass 389`, `fail 0` |
 | `node tools/bot.mjs` | A bot plays a whole game with no screen and prints a report. | Wins in 28.6 minutes, no long waits. |
 | `node tools/bot.mjs careless` | The same, with a sloppier build order. | Wins in 30.4 minutes. |
 | `node tools/bot.mjs bread-first` | The same, with a reckless opening. | Wins in 52.9 minutes. Slower than the target, which is a known open issue. The point is that it recovers. |
 | `node tools/bot.mjs standard --seed 42` | The standard order on a different island. | Wins in 25.9 minutes. |
 | `node tools/bot.mjs artisans` | Plays past the win to the goal after it. | Wins at 28.6 minutes, then 100 Artisans at 49.8. |
+| `node tools/bot.mjs standard --difficulty hard` | The standard order on Hard. Also `easy`. | Wins in 36.9 minutes. |
 | `node tools/pace.mjs` | Estimates how long a person takes, by adding human delays. | All games inside 25 to 40 minutes. |
 | `node tools/tune.mjs` | Tries changed numbers side by side without editing the data files. | A table to compare. |
 | `node tools/print-map.mjs` | Prints the island as text. | A map. |
@@ -85,6 +86,7 @@ Every number is in a file in the `data` folder. Open one in any text editor, cha
 | The island's shape | `map.json` | `seed`. Any whole number gives a different island. |
 | How long Undo works | `config.json` | `undoSeconds`. Safe to change with a game saved. |
 | The goal after the win | `config.json` | `milestones` |
+| What Easy and Hard change | `config.json` | `difficulties`. Changing Easy or Hard affects only saved games on that difficulty. Normal changes nothing by design: leave it empty. |
 | What a house needs to become an Artisan house | `population.json` | the Worker tier's `upgrade`, and the Artisan tier's `needs` |
 | The steps of the first-game guide | `guide.json` | `steps`. Safe to change with a game saved. A mistake here hides the guide and is reported in the browser's console. |
 | Colors of ground, roofs and goods | `map.json`, `buildings.json`, `population.json`, `goods.json` | `color` |
@@ -139,7 +141,7 @@ If the helper starts in a different folder, tell it the project is in `Documents
 
 | Claim | Status | Evidence |
 |---|---|---|
-| The rules work as the spec says | **Proven** | 373 automated tests. |
+| The rules work as the spec says | **Proven** | 389 automated tests. |
 | A saved game comes back exactly | **Proven** | Saved, loaded and played-on games end identical to never-saved ones, in tests and in the browser. |
 | The game cannot leave you permanently stuck | **Proven** for the cases tested | Tests for zero coins, and bot wins from three bad openings. |
 | A win takes 25 to 40 minutes | **Proven for a bot,** estimated for a person | Bot: 28.6 minutes. With guessed human delays: 29 to 35. |
@@ -150,6 +152,7 @@ If the helper starts in a different folder, tell it the project is in `Documents
 | The figures move naturally | **Confirmed by you** | "Fairly smooth", 2026-11-13. I have only seen stills. |
 | The second act (to 100 Artisans) is balanced | **Proven for a bot** | About 21 minutes after the win, on four islands, by one build order. No person has played it. |
 | A game saved before Phase 12 still loads | **Proven** | In tests, and in the browser with a save carrying the old rules stamp. |
+| Every difficulty can be won | **Proven for a bot** | Two sensible build orders win on all three. On Hard a reckless opening needs a demolish to recover. |
 | The first-game guide helps a new player | **Unknown** | The steps are my guess. Nobody new to the game has tried it. |
 | It works on a Mac, a trackpad, a touch screen | **Unknown** | Never tried. |
 | The art looks good | **My opinion only** | Judged from still screenshots. |
@@ -190,7 +193,9 @@ Open today. Fixed problems are in `TESTLOG.md` and `PLAYTEST.md`.
 - The art is drawn by code. It is clean and consistent, and it is not painted art.
 - The people, carts and boats are for show. Walkers wander with no errand, figures pass through each other, and a cart is a picture of a delivery that has already happened.
 - A frame takes 20 to 28 ms in my test browser, which is not smooth. The cost grows with the number of buildings on screen.
-- The ground looks a little soft when zoomed far in.
+- Zoomed far in, the ground sharpens a moment after you stop moving the view. That costs one slow frame each time.
+- On Hard, a reckless opening (farms and a bakery before any house) strands the town until something is demolished.
+- Easy does not make a good build order faster. It forgives a bad one.
 - The game uses about 90 MB more memory than before the art.
 - Top bar icons are small. Names show on wide windows and on hover. Under 1460 pixels wide the storage limit is not shown: a good at its limit turns amber.
 

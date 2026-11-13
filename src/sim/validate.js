@@ -202,6 +202,26 @@ export function validateData(data) {
     if (!tiers[config.win.tier]) err(`config.win.tier names an unknown tier "${config.win.tier}"`);
     number(config.win.residents, 'config.win.residents', { min: 1, integer: true });
   }
+  if (config.difficulties !== undefined) {
+    if (!isObject(config.difficulties) || Object.keys(config.difficulties).length === 0) err('config.difficulties must list at least one difficulty');
+    else {
+      for (const [id, d] of Object.entries(config.difficulties)) {
+        const where = `config.difficulties.${id}`;
+        if (!isObject(d)) { err(`${where} must be an object`); continue; }
+        if (typeof d.name !== 'string') err(`${where} needs a name`);
+        if (d.about !== undefined && typeof d.about !== 'string') err(`${where}.about must be text`);
+        if (d.startCoins !== undefined) number(d.startCoins, `${where}.startCoins`, { integer: true });
+        if (d.baseIncomePerMinute !== undefined) number(d.baseIncomePerMinute, `${where}.baseIncomePerMinute`);
+        if (d.taxMultiplier !== undefined) number(d.taxMultiplier, `${where}.taxMultiplier`, { min: 0, minExclusive: true });
+        for (const key of Object.keys(d)) {
+          if (!['name', 'about', 'startCoins', 'baseIncomePerMinute', 'taxMultiplier'].includes(key)) err(`${where} has an unknown setting "${key}"`);
+        }
+      }
+      if (config.defaultDifficulty !== undefined && !isObject(config.difficulties[config.defaultDifficulty])) {
+        err(`config.defaultDifficulty names an unknown difficulty "${config.defaultDifficulty}"`);
+      }
+    }
+  }
   if (config.milestones !== undefined) {
     if (!Array.isArray(config.milestones)) err('config.milestones must be a list');
     else {

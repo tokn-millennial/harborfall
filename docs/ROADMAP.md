@@ -1,6 +1,6 @@
 # Harborfall: Roadmap
 
-Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 12, by Fable 5.2.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 13, by Fable 5.2.
 
 This is a list of what could come next, in the order I would do it. **Nothing here is decided.** Every item is a proposal, and you choose. The working rule from the brief still stands: nothing gets built that you did not ask for.
 
@@ -8,8 +8,8 @@ Read `HANDOFF.md` first if you are picking the project up after a break.
 
 ## Where the project stands
 
-- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), undo with a first-game guide (Phase 11), and a third kind of resident with a goal after the win (Phase 12).
-- **Proven by machines:** 373 automated tests pass. A bot wins in 28.6 minutes. A script wins through the real UI and ends in exactly the bot's game.
+- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), undo with a first-game guide (Phase 11), a third kind of resident with a goal after the win (Phase 12), and difficulty settings with two touches to the look (Phase 13).
+- **Proven by machines:** 389 automated tests pass. A bot wins in 28.6 minutes. A script wins through the real UI and ends in exactly the bot's game.
 - **Checked by you:** you played for about 40 minutes on 2026-11-12. The game runs smoothly and the figures move well.
 - **Still not known:** whether you won and how long it took, how the sounds are, whether the guide helps someone new, and how any of it works on a Mac.
 
@@ -35,7 +35,8 @@ Each phase so far took one long working session. The sizes compare with that.
 | 10 | **Done, unheard.** Sound (C2) | Medium | Made by code, because you had not chosen. Nobody has listened to it yet. |
 | 11 | **Done.** Undo and a guided first game (B3, B4) | Medium | The guide is my best guess at what a new player needs. Nobody new has tried it. |
 | 12 | **Done.** A third kind of resident and a goal after the win (D1) | Large | It turned out smaller than feared, because the data files already allowed it. |
-| 13 onward | More game: workforce, real carriers, trade (the rest of Stage D) | Large each | Each changes how the game plays, not just how long it lasts. They need your say first. |
+| 13 | **Done.** Small polish: difficulty, house variety, a sharp ground up close (D5, part of C3, the rest of A2) | Small | You chose it. |
+| 14 onward | More game: workforce, real carriers, trade (the rest of Stage D) | Large each | Each changes how the game plays, not just how long it lasts. They need your say first. |
 | Any time | Put it online (E1) | Small | Independent of the rest. Read the privacy note there first. |
 
 ---
@@ -53,7 +54,8 @@ Each phase so far took one long working session. The sizes compare with that.
 ### A2. Check drawing speed on your screen (partly done in Phase 8)
 - **Done:** the slow zoom levels were traced to a smoothing setting and fixed. Frame time there halved in my test browser and is now even across all zoom levels. The middle-sized ground picture I proposed here was measured first, made no difference, and was not built.
 - **Confirmed by you on 2026-11-13:** the game runs smoothly on your screen.
-- **Still open:** zoomed far in, the ground looks a little soft. If speed is a problem on your screen, the next places to look are the roads (drawn shape by shape every frame, about 3.5 ms) and the trees beside buildings (about 3 ms).
+- **Done in Phase 13:** the ground is redrawn sharp when zoomed far in, once the view stops.
+- **If speed is ever a problem on your screen, the next places to look are the roads (drawn shape by shape every frame, about 3.5 ms) and the trees beside buildings (about 3 ms).
 - **Size:** small.
 
 ### A3. Try it on a Mac
@@ -114,7 +116,9 @@ Each phase so far took one long working session. The sizes compare with that.
 - **Also needs:** a mute button and a volume setting that are remembered.
 - **Size:** medium.
 
-### C3. A second art pass
+### C3. A second art pass (partly done in Phase 13)
+- **Done:** three looks for each kind of house.
+- **Left over:** a building-site look, smoke from house chimneys, a day and night tint.
 - Ideas, none of them urgent: two or three variants of each house so a town looks less uniform, a building-site look for the first seconds after placing, smoke from house chimneys, a day and night tint.
 - **Bigger decision:** whether to keep code-drawn art or bring in painted pictures. The drawings are swappable one building at a time (decision D78).
 - **Size:** small to medium for the ideas. Painted art depends on who makes it.
@@ -149,7 +153,9 @@ Every item here changes the rules. Each one needs new data, new tests, a new bot
 - **Depends on:** D3 in spirit, and save and load in practice, because games get long.
 - **Size:** large.
 
-### D5. Difficulty settings and scenarios
+### D5. Difficulty settings and scenarios (difficulty done in Phase 13)
+- **Done:** Easy, Normal and Hard.
+- **Left over:** scenarios with their own goals.
 - **What you get:** Easy, Normal and Hard as different starting coins and tax rates, or scenarios with their own goals.
 - **Why it is cheap:** it is almost all data. The bot can check that each setting is winnable.
 - **Size:** small for difficulty, medium for scenarios.
@@ -193,10 +199,10 @@ These are not features. They are debts and loose ends, smallest first.
 
 One line is enough. For example:
 
-> Phase 13: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
+> Phase 14: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
 
 or
 
-> Phase 13: build D5 from the roadmap. Show me the plan first.
+> Phase 14: build D2 from the roadmap. Show me the plan first.
 
 The helper should then follow the working rules in `HANDOFF.md` section 6: plan first, one feature at a time, test everything itself, stop at the gate with the five-part report, and commit only after you approve.

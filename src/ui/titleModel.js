@@ -1,9 +1,10 @@
 // What the title screen says and offers. No page code here, so it is tested in Node.
 //
-// titleModel({ saved, canSave }) where
+// titleModel({ saved, canSave, rules }) where
 //   saved    null when there is no saved game, otherwise what loading it gave:
 //            { ok: true, game } or { ok: false, reason }
 //   canSave  whether this browser lets the game save at all
+//   rules    any game's rules, for the difficulties to offer (optional)
 
 import { getSummary } from '../sim/index.js';
 import { clock } from './text.js';
@@ -25,10 +26,13 @@ export function savedGameLine(game) {
     summary.win.won ? `won with ${summary.win.current} ${tierName}s` : `${summary.win.current} of ${summary.win.target} ${tierName}s`,
     `${summary.coins} coins`,
   ];
+  // The difficulty is only worth saying when it is not the usual one.
+  const { difficulty, defaultDifficulty, difficulties } = game.rules;
+  if (difficulty && difficulty !== defaultDifficulty) parts.push(difficulties.find((d) => d.id === difficulty)?.name ?? difficulty);
   return parts.join(', ');
 }
 
-export function titleModel({ saved, canSave }) {
+export function titleModel({ saved, canSave, rules = null }) {
   const usable = Boolean(saved?.ok);
   // Anything in the save slot, readable or not, is lost when a new game begins.
   const confirm = saved ? REPLACE_WARNING : null;
@@ -46,6 +50,10 @@ export function titleModel({ saved, canSave }) {
     notices,
     buttons,
     primary: buttons[0].id,
+    // The difficulties a new game can be started on, and the one picked to begin with.
+    // With only one there is nothing to choose, so none are listed.
+    difficulties: rules && rules.difficulties.length > 1 ? rules.difficulties.map((d) => ({ id: d.id, name: d.name, about: d.about })) : [],
+    difficulty: rules?.defaultDifficulty ?? null,
     footnote: canSave ? 'Your game saves itself in this browser as you play.' : null,
   };
 }

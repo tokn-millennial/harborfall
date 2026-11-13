@@ -234,6 +234,7 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 **Starting and saving**
 - The game opens on a title screen, with the island behind it. It offers Continue (if there is a saved game), New game on the standard island, and New game on a random island. A link shows a finished town built by the bot.
 - Continue shows the time played, the Workers so far and the coins. It puts you back where you were, looking at the same spot.
+- A new game can be Easy, Normal or Hard, picked on the title screen. Normal is what it starts on. See section 14.
 - The game saves itself. It saves about every 10 seconds, whenever the page is hidden or closed, and when you go back to the title screen. There is no save button and nothing to remember.
 - There is one saved game, kept in the browser you played in. It is not shared with other browsers or computers, and clearing the browser's stored data removes it.
 - Starting a new game replaces the saved one, so the button must be pressed twice.
@@ -345,3 +346,35 @@ One weaver keeps two sheep farms busy and clothes about 60 Artisans.
 **How long it takes.** The bot wins at 28.6 minutes and reaches 100 Artisans at 49.8, which is 21 minutes later. On two other islands it took 20 minutes. It builds a second sawmill first, because the second act needs about 140 planks.
 
 **Saved games.** A game saved before Phase 12 can still be continued. It has no wool or cloth and has not reached the new goal, and the new buildings are there to build.
+
+## 14. Difficulty, and two changes to the look
+
+Added in Phase 13. On Normal the game is exactly as it was.
+
+**Difficulty** (`config.json` → `difficulties`)
+
+| | Easy | Normal | Hard |
+|---|---|---|---|
+| Starting coins | 800 | 500 | 350 |
+| Income with no residents, a minute | 30 | 20 | 20 |
+| Tax | 15% more | as balanced | 10% less |
+
+- It is chosen on the title screen for a new game and cannot be changed during one. Continue and the ? panel say which a game is on when it is not Normal.
+- A difficulty can change three things: starting coins, the income the island earns with no residents, and every resident's tax. Nothing else. Costs, speeds and needs are the same on all three.
+- **Hard keeps the 20 a minute with no residents.** That income is what stops a new town from sinking, and lowering it made one bad opening impossible to recover from.
+
+What the bot found, in minutes to the win:
+
+| Build order | Easy | Normal | Hard |
+|---|---|---|---|
+| Standard | 28.6 | 28.6 | 36.9 |
+| Careless | 30.4 | 30.4 | 30.8 |
+| Reckless (bread first) | 33.4 | 52.9 | does not recover by itself |
+| Standard, then on to 100 Artisans | 48.8 | 49.8 | 69.6 |
+
+- **Easy does not make a good player faster.** With a sensible order, planks and people set the pace, not coins. What Easy does is forgive a bad start: the reckless opening wins in 33 minutes, not 53.
+- **Hard punishes a bad start.** The reckless opening builds farms and a bakery before any house, runs out of coins, and then loses 7 coins a minute with nothing coming in. It does not recover unless something is demolished. The game says "You are losing money. Build houses, or demolish something", and a test shows that demolishing the farms and bakery and then building a market and houses leads to a win.
+
+**Houses come in three looks.** Each cottage, townhouse and Artisan house has a roof a shade darker or lighter, a chimney on one side or the other, and for some a flower bed, flower boxes or a banner. Which look a house has follows from when it was built, so it is the same every time the game is opened. It changes nothing about the house.
+
+**The ground is sharp when zoomed in.** Zoomed past about 1.4 times the ground picture's own size, the ground on screen is redrawn at exactly the size shown, a fifth of a second after the view stops moving. While the view moves, the stretched picture is used as before.

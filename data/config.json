@@ -4,6 +4,14 @@
   "ticksPerSecond": 10,
   "speeds": [1, 2, 4],
 
+  "_difficulties": "How hard a new game is. The player picks one on the title screen. Each may change the starting coins (startCoins), the income the island earns with no residents (baseIncomePerMinute), and every resident's tax (taxMultiplier: 1 is unchanged, 1.1 is a tenth more). Anything left out stays as it is below. 'normal' changes nothing, so it is the game as balanced.",
+  "difficulties": {
+    "easy":   { "name": "Easy",   "about": "More coins to start, and more income. A bad start is forgiven.", "startCoins": 800, "baseIncomePerMinute": 30, "taxMultiplier": 1.15 },
+    "normal": { "name": "Normal", "about": "The game as it was balanced." },
+    "hard":   { "name": "Hard",   "about": "Fewer coins to start, and less tax. Mistakes cost more.", "startCoins": 350, "taxMultiplier": 0.9 }
+  },
+  "defaultDifficulty": "normal",
+
   "_undoSeconds": "How long, in game seconds, your last action can be taken back with Undo. 0 switches Undo off.",
   "undoSeconds": 30,
 

@@ -72,16 +72,16 @@ async function chooseGame({ data, standard, store, renderer, audio }) {
   requestAnimationFrame(paint);
 
   document.body.classList.add('title-open');
-  const choice = await showTitle(byId('title'), titleModel({ saved, canSave: store.working }), { demoHref: './?demo' });
+  const { choice, difficulty } = await showTitle(byId('title'), titleModel({ saved, canSave: store.working, rules: standard.rules }), { demoHref: './?demo' });
   document.body.classList.remove('title-open');
   showing = false;
   audio.play('pick');
 
   if (choice === 'continue') return { game: preview, view: found.view };
-  if (choice === 'new') return { game: standard, view: null };
+  if (choice === 'new') return { game: difficulty === standard.rules.difficulty ? standard : createGame(data, { difficulty }), view: null };
   let seed = data.map.seed;
   while (seed === data.map.seed) seed = 1 + Math.floor(Math.random() * LARGEST_RANDOM_SEED);
-  return { game: createGame(data, { seed }), view: null };
+  return { game: createGame(data, { seed, difficulty }), view: null };
 }
 
 async function start() {
@@ -181,7 +181,8 @@ async function start() {
     byId('legend').append(item);
   }
   const islandSeed = game.state.map.seed;
-  byId('island-note').textContent = islandSeed === standard.state.map.seed ? `Island ${islandSeed}, the standard island.` : `Island ${islandSeed}.`;
+  const level = game.rules.difficulties.length > 1 ? game.rules.difficulties.find((d) => d.id === game.rules.difficulty) : null;
+  byId('island-note').textContent = (islandSeed === standard.state.map.seed ? `Island ${islandSeed}, the standard island.` : `Island ${islandSeed}.`) + (level ? ` ${level.name}.` : '');
   const toTitle = byId('to-title');
   toTitle.textContent = titled ? 'Save and go to the title screen' : 'Go to the title screen';
   toTitle.addEventListener('click', () => {

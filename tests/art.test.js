@@ -358,3 +358,73 @@ test('walkers, carts and boats draw with valid colors, close to where they stand
   paintActors(odd.ctx, [{ kind: 'dragon', x: 1, y: 1 }], goods, 0);
   assert.equal(odd.points.length, 0);
 });
+
+// ---- three looks for each house --------------------------------------------------
+
+test('each kind of house has three looks, and nothing else changes with the look', () => {
+  const info = (variant) => ({ h: 30, color: '#b9553a', working: false, progress: 0, residents: 4, time: 0, variant });
+  for (const id of ['cottage', 'townhouse', 'guildhouse']) {
+    const drawn = [0, 1, 2].map((variant) => {
+      const { ctx, points, colors } = recorder();
+      BUILDING_ART[id](createKit(ctx, 0, 0), info(variant));
+      for (const c of colors) assert.ok(validColor(c), `${id} look ${variant} used a broken color: ${c}`);
+      return JSON.stringify([points, colors]);
+    });
+    assert.equal(new Set(drawn).size, 3, `${id} does not have three different looks`);
+    assert.equal(new Set([0, 1, 2].map((variant) => artStateKey(id, info(variant)))).size, 3, `${id}: the stored pictures would be mixed up`);
+    assert.ok(ART_USES[id].includes('variant'));
+    // With no look given, it draws the first one.
+    const { ctx, points, colors } = recorder();
+    BUILDING_ART[id](createKit(ctx, 0, 0), { ...info(0), variant: undefined });
+    assert.equal(JSON.stringify([points, colors]), drawn[0]);
+  }
+  // A building that is not a house looks the same whatever look is asked for.
+  for (const id of ['warehouse', 'bakery', 'market', 'weaver']) {
+    assert.equal(artStateKey(id, info(0)), artStateKey(id, info(2)), id);
+  }
+});
+
+// ---- painting part of the ground, for the close-up -------------------------------
+
+test('a ground painter given a range of tiles works out only that part, in the same place', () => {
+  const game = richGame();
+  const { map } = game.state;
+  const colors = {};
+  for (const [id, t] of Object.entries(game.rules.map.terrain)) colors[id] = t.color;
+  const pointsOf = (painter) => {
+    const { ctx, shapes, colors: used } = recorder();
+    painter.paint(ctx, 2);
+    for (const c of used) assert.ok(validColor(c), `broken color: ${c}`);
+    return shapes.flatMap((shape) => shape.points ?? []);
+  };
+
+  const whole = pointsOf(createTerrainPainter(map, colors));
+  const same = pointsOf(createTerrainPainter(map, colors, { x0: 0, y0: 0, x1: map.width - 1, y1: map.height - 1 }));
+  assert.equal(same.length, whole.length, 'the whole map as a range should be the whole map');
+  // A range that hangs off the map is cut to the map, not an error.
+  assert.equal(pointsOf(createTerrainPainter(map, colors, { x0: -50, y0: -50, x1: 500, y1: 500 })).length, whole.length);
+
+  const range = { x0: 8, y0: 6, x1: 13, y1: 10 };
+  const part = pointsOf(createTerrainPainter(map, colors, range));
+  assert.ok(part.length > 50, 'the part drew almost nothing');
+  assert.ok(part.length < whole.length / 4, `the part has ${part.length} points against ${whole.length} for the whole map`);
+  // Every point lies on or just around the tiles asked for.
+  const corners = [tileToWorld(range.x0, range.y0), tileToWorld(range.x1 + 1, range.y0), tileToWorld(range.x1 + 1, range.y1 + 1), tileToWorld(range.x0, range.y1 + 1)];
+  const left = Math.min(...corners.map((p) => p.x));
+  const right = Math.max(...corners.map((p) => p.x));
+  const top = Math.min(...corners.map((p) => p.y));
+  const bottom = Math.max(...corners.map((p) => p.y));
+  for (const [x, y] of part) {
+    assert.ok(x >= left - 4 && x <= right + 4 && y >= top - 6 && y <= bottom + 10, `a point at ${x.toFixed(0)}, ${y.toFixed(0)} is outside the tiles asked for`);
+  }
+  // The part is drawn exactly where the whole map draws it: its points are all among the whole map's.
+  const all = new Set(whole.map(([x, y]) => `${x.toFixed(3)},${y.toFixed(3)}`));
+  for (const [x, y] of part) assert.ok(all.has(`${x.toFixed(3)},${y.toFixed(3)}`), 'the part drew something the whole map does not');
+
+  // Forest the same way.
+  const forest = createForestPainter(map);
+  const someForest = createForestPainter(map, { x0: 4, y0: 3, x1: 5, y1: 4 });
+  assert.equal(someForest.count, 4);
+  assert.ok(forest.count > someForest.count);
+  assert.equal(createForestPainter(map, { x0: 14, y0: 3, x1: 17, y1: 6 }).count, 0, 'fertile land has no trees');
+});

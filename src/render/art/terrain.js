@@ -51,10 +51,27 @@ export function shallowsOf(map) {
   return near;
 }
 
+// The shallows are the same every time for a given island, so they are worked out once.
+const shallowsMemo = new WeakMap();
+function shallowsFor(map) {
+  if (!shallowsMemo.has(map)) shallowsMemo.set(map, shallowsOf(map));
+  return shallowsMemo.get(map);
+}
+
+// The part of the map a painter covers: the given range of tiles kept on the
+// map, or the whole map. { x0, y0, x1, y1 }, both ends included.
+function tilesToPaint(map, range) {
+  if (!range) return { x0: 0, y0: 0, x1: map.width - 1, y1: map.height - 1 };
+  return { x0: Math.max(0, range.x0), y0: Math.max(0, range.y0), x1: Math.min(map.width - 1, range.x1), y1: Math.min(map.height - 1, range.y1) };
+}
+
 // Works out every shape of the ground once. paint(ctx, scale) then fills them;
 // `scale` is the zoom of the context, so thin lines stay thin.
-export function createTerrainPainter(map, colors) {
-  const shallows = shallowsOf(map);
+// With a `range` of tiles, only that part of the map is worked out, which is
+// quick enough to do afresh for a close-up view.
+export function createTerrainPainter(map, colors, range = null) {
+  const shallows = shallowsFor(map);
+  const area = tilesToPaint(map, range);
 
   // 1. Shallows: paler water close to the shore.
   const shallowPaths = [new Path2D(), new Path2D()];
@@ -73,8 +90,8 @@ export function createTerrainPainter(map, colors) {
   const sand = new Path2D();
   const flowers = new Path2D();
 
-  for (let y = 0; y < map.height; y++) {
-    for (let x = 0; x < map.width; x++) {
+  for (let y = area.y0; y <= area.y1; y++) {
+    for (let x = area.x0; x <= area.x1; x++) {
       const terrain = map.terrain[y * map.width + x];
       if (terrain === 'water') {
         const level = shallows[y * map.width + x];
@@ -250,10 +267,11 @@ export function paintTree(ctx, x, y) {
 
 // The whole forest, worked out once. Trees are added far to near, so nearer
 // ones overlap farther ones.
-export function createForestPainter(map) {
+export function createForestPainter(map, range = null) {
+  const area = tilesToPaint(map, range);
   const tiles = [];
-  for (let y = 0; y < map.height; y++) {
-    for (let x = 0; x < map.width; x++) {
+  for (let y = area.y0; y <= area.y1; y++) {
+    for (let x = area.x0; x <= area.x1; x++) {
       if (map.terrain[y * map.width + x] === 'forest') tiles.push([x, y]);
     }
   }
