@@ -656,3 +656,63 @@ Milliseconds to draw one frame of the demo town (32 buildings) in my test browse
 
 **What I would change**
 - I would have measured the slow zoom before writing a cause into the Phase 7 documents and the roadmap. The guess read as a finding.
+
+**After the gate:** committed as `2e549a8` and pushed at your request.
+
+## Phase 9: Life on the map
+
+Date: 2026-11-12. Status: approved by Colin with no changes.
+
+**Turns used:** 1 (your message "keep going"). No plan was shown first, as in Phase 8 (D114).
+
+**What was built**
+- **Walkers** on the roads, one for every five residents up to 40, dressed by the kind of house they came from.
+- **Carts** that set out for the nearest warehouse when a producer finishes a batch, carrying a load in the color of the good.
+- **A boat for every fisherman** that rows out, fishes and rows home in step with his work, and sits empty at home when he is not working.
+- All of it is decoration. No rule changed, and the bot's result is identical.
+
+**Automated tests: 290 pass, 0 fail.** That is 271 from before plus 19: 18 for where the figures are and how they behave, and 1 for how they are drawn. The whole suite now takes about 3 seconds, up from 1.5, because these tests play long stretches of real games.
+
+**Browser checks**
+
+| Check | How | Result |
+|---|---|---|
+| People, carts and boats appear in a town | Demo town, counted and seen | Pass. 21 walkers, 5 carts and 6 boats after 30 game seconds. |
+| A person behind a house is hidden by it, and one in front is not | Screenshots at two zoom levels | Pass by my eye |
+| Boats sit on the water, off the shore by their huts | Screenshot | Pass |
+| A full game through the UI still matches the headless bot | UI playthrough on `?fresh` | Pass. Won at 28.58 minutes, identical final state. |
+| Random input | 5,000 actions over 2 runs, on `?fresh` and `?demo` | Pass. No errors. After the run every walker and cart was still on a road. |
+| The error console | Read it | Empty. |
+
+**Drawing speed.** Milliseconds a frame for the demo town with 32 figures, with and without them, drawn in turns 25 times each, measuring cost (2.1 ms) taken away.
+
+| Zoom | Without figures | With figures |
+|---|---|---|
+| 0.5 | 18.4 | 20.1 |
+| 0.7 | 21.3 | 22.3 |
+| 1 | 22.7 | 24.0 |
+| 1.5 | 25.4 | 26.7 |
+| 2 | 19.2 | 19.5 |
+
+The figures cost about 1 ms a frame, around 5 percent. The frame as a whole is still 20 to 27 ms in my test browser, which is not smooth there, as reported in Phase 8.
+
+**Bugs found: 3, all by the new tests, all fixed.**
+1. **A town was filled with one walker too few.** A walker placed on a lone road tile with nowhere to go was dropped and not replaced.
+2. **A large town never reached its full number of walkers.** New ones arrived no faster than old ones left, so it hovered around 37 of 40. New walkers now arrive faster while the town is short.
+3. **Some new walkers appeared in the middle of nowhere.** A walker meant to step out of a house with no road at its door was put on a random road. It now looks for a house that has a road.
+
+**Decisions made:** 12 (D114 to D125). No game rule changed.
+
+**Weak or unfinished**
+- **I have still only seen it in stills.** I checked positions over thousands of ticks by test, but I have not watched anyone walk. Whether the movement looks natural is yours to judge. I would look first at walkers turning corners and at carts overtaking.
+- **Walkers wander with no purpose.** Watch one for a minute and it shows.
+- **The figures are very simple**: a few rectangles, no faces, legs that swap. They read as people at normal zoom and as blocks when zoomed far in.
+- **Carts are a picture of a delivery that has already happened.** The goods are in the stockpile before the cart sets out. If you sell or use them at once, the cart still drives.
+- **A cart shows only where goods go, never where inputs come from.** Nothing carries wood to the sawmill.
+- **Figures pass through each other**, and a cart can drive through a walker.
+- **On the title screen the figures stand still**, because the game behind it is not running.
+- **They vanish when zoomed out past 0.5.**
+- **Not done:** your hand-played game and a Mac test.
+
+**What I would change**
+- I would write the tests for a piece like this before looking at it in the browser. All three bugs were invisible in screenshots and obvious to a test that counted.

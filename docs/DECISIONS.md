@@ -183,3 +183,20 @@ You asked for "real art and style" and gave no direction, so every choice below 
 | D111 | Pictures are shown with the browser's cheapest smoothing, and building pictures gained a fifth, smaller size for far-out zoom. | This is the real fix. It halved the frame time at the slow zoom levels in my test browser. The smaller size keeps far-out buildings from looking grainy. | `imageSmoothingQuality` in `src/render/renderer.js`, `sharpnessFor` in `src/render/art/sprites.js`. |
 | D112 | Speed is now measured by drawing the old way and the new way in turns, many times, and taking away the cost of the measuring itself. | My Phase 7 numbers were taken one after another, with the measuring cost left in. That cost drifts between 2 and 13 milliseconds, enough to hide or invent a difference. | The method is in `TESTLOG.md`, Phase 8. |
 | D113 | `.obsidian/` was added to `.gitignore`. | A folder of that name appeared in the project during this phase. It looks as if the project was opened in Obsidian. It holds that app's settings, not project files. I did not touch the folder itself. | Remove the line from `.gitignore`. |
+
+### Phase 9: Life on the map
+
+| # | Decision | Why | How to change |
+|---|---|---|---|
+| D114 | "Keep going" was taken as before (D98): the next roadmap item I can do without you, which is C1, life on the map. Playing by hand and the Mac test are still yours. | You asked me not to stop. | Name a roadmap item if you want a different one. |
+| D115 | Walkers, carts and boats are decoration only. Goods still arrive the instant they are made. | The roadmap item says so, and making carriers real is a much larger change to the rules (roadmap D3). | Roadmap item D3. |
+| D116 | The figures show what the game already knows. Walkers follow the number of residents, a cart leaves when a producer delivers, and a boat's trip follows the fisherman's work timer. | So what you see is never at odds with what is happening. A boat sitting at home means that fisherman is not working. | `src/render/life.js`. |
+| D117 | One walker for every 5 residents, at most 40. At most 14 carts, and one producer sends a cart no more than once in 10 seconds. | Enough to feel busy, few enough to stay cheap and not crowd the roads. A lumberjack delivers every 5 seconds, so every delivery would be a traffic jam. | The named numbers at the top of `src/render/life.js`. |
+| D118 | These numbers live in the code, not in the data files. | They are looks, not rules. Putting them in the data files would also make saved games refuse to load whenever you changed one. | Could be moved into a data file that is left out of the rules stamp. |
+| D119 | Walkers wander. They step out beside a house, take roads at random, and after 30 to 110 seconds go indoors at the next building they pass. They are not going anywhere in particular. | A walker with a real errand needs path-finding and a reason, for no gain you would notice at this size. | `moveWalker` in `src/render/life.js`. |
+| D120 | Carts take the shortest way by road to a warehouse. Trips under 3 road tiles are not shown. | The route is the one thing about a cart that should look purposeful. | `routeToStorage` and `CART_MIN_TILES`. |
+| D121 | Any producer that must stand by the coast gets a boat. Today that is only the fisherman. | Tied to the data, not to the name "fisherman". | `hasBoat` in `src/render/life.js`. |
+| D122 | The figures are a few small rectangles each, drawn fresh every frame. They are hidden when zoomed out past 0.5. | They are about 10 pixels tall. Rectangles are the cheapest thing a canvas draws, and smaller than that they are specks. | `src/render/art/actors.js`, `ACTOR_MIN_ZOOM` in the renderer. |
+| D123 | Life moves with game time, not real time. | It stops when you pause and hurries at 4x, like everything else. | `update` in `src/render/life.js`. |
+| D124 | The figures cannot be clicked and have no panel. | They are not things in the game. | Would come with real carriers. |
+| D125 | No switch to turn the figures off. | You did not ask for one, and the cost measured at about 1 ms a frame. | Set `MAX_WALKERS` and `MAX_CARTS` to 0, or ask for a setting. |

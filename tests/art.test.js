@@ -13,6 +13,8 @@ import { sharpnessFor } from '../src/render/art/sprites.js';
 import { paintBox } from '../src/render/art/box.js';
 import { createForestPainter, createRoadPainter, createTerrainPainter, paintTree, paintWater, shallowsOf, waterBackground } from '../src/render/art/terrain.js';
 import { buildingVisual } from '../src/render/visuals.js';
+import { paintActors } from '../src/render/art/actors.js';
+import { tileToWorld } from '../src/render/iso.js';
 import { boxSilhouette } from '../src/render/iso.js';
 import { execute } from '../src/sim/index.js';
 import { richGame, place, road, line, snapshot } from './helpers.js';
@@ -316,4 +318,43 @@ test('drawing never changes the game', () => {
   createForestPainter(game.state.map).paint(ctx);
   createRoadPainter('#cdbb93').paint(ctx, game.state);
   assert.equal(snapshot(game), before);
+});
+
+// ---- walkers, carts and boats -----------------------------------------------------
+
+test('walkers, carts and boats draw with valid colors, close to where they stand', () => {
+  const goods = { fish: { color: '#5aa7d6' } };
+  const actors = [
+    { kind: 'walker', id: 1, tier: 'farmer', look: 3, x: 10.4, y: 12.5, dx: 1, dy: 0, stride: 2.3 },
+    { kind: 'walker', id: 2, tier: 'worker', look: 8, x: 11.5, y: 12.6, dx: 0, dy: -1, stride: 0.7 },
+    { kind: 'walker', id: 3, tier: null, look: 0, x: 12.5, y: 12.5, dx: -1, dy: 0, stride: 0 },
+    { kind: 'cart', id: 4, good: 'fish', look: 5, x: 13.5, y: 12.5, dx: 0, dy: 1, stride: 4.1 },
+    { kind: 'cart', id: 5, good: 'a good with no color', look: 5, x: 14.5, y: 12.5, dx: 1, dy: 0, stride: 1 },
+    { kind: 'boat', id: 6, look: 6, x: 20.5, y: 3.5, dx: 2, dy: -1, fishing: true, manned: true },
+    { kind: 'boat', id: 7, look: 7, x: 21.5, y: 3.5, dx: -1, dy: 0, fishing: false, manned: false },
+  ];
+  for (const actor of actors) {
+    const { ctx, points, colors } = recorder();
+    paintActors(ctx, [actor], goods, 12.3);
+    assert.ok(points.length >= 8, `a ${actor.kind} drew almost nothing`);
+    for (const c of colors) assert.ok(validColor(c), `a ${actor.kind} used a broken color: ${c}`);
+    const at = tileToWorld(actor.x, actor.y);
+    for (const [x, y] of points) {
+      assert.ok(Math.abs(x - at.x) <= 14 && y >= at.y - 16 && y <= at.y + 12, `a ${actor.kind} drew ${(x - at.x).toFixed(1)}, ${(y - at.y).toFixed(1)} from where it stands`);
+    }
+  }
+  // A cart shows the color of what it carries.
+  const loaded = recorder();
+  paintActors(loaded.ctx, [actors[3]], goods, 0);
+  assert.ok(loaded.colors.includes('#5aa7d6'));
+  // An empty boat has no fisherman and no rod: it draws less.
+  const manned = recorder();
+  const empty = recorder();
+  paintActors(manned.ctx, [actors[5]], goods, 0);
+  paintActors(empty.ctx, [actors[6]], goods, 0);
+  assert.ok(manned.points.length > empty.points.length);
+  // Something that is not a walker, cart or boat is skipped, not an error.
+  const odd = recorder();
+  paintActors(odd.ctx, [{ kind: 'dragon', x: 1, y: 1 }], goods, 0);
+  assert.equal(odd.points.length, 0);
 });

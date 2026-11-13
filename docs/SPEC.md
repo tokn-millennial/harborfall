@@ -244,6 +244,7 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 **View**
 - Isometric view in a warm storybook style. All of the art is drawn by the game's own code. There are no image files.
 - Each building has its own look: a long timber warehouse with crates outside, a log cabin with a log pile for the lumberjack, an open-sided sawmill with a stack of planks, a fishing hut with a boat and a net rack, a farm with a barn and crop rows, a brick bakery with a tall chimney, a thatched cottage for Farmers, a taller timber-framed townhouse with a tiled roof for Workers, and a paved market square with three striped stalls.
+- The town is lived in. People walk the roads, more of them as the town grows, in straw hats for Farmers and dark caps for Workers. A cart sets out for the warehouse when a producer finishes a batch, loaded in the color of what it made. Every fisherman has a boat that rows out, fishes and rows home in step with his work. All of this is decoration: goods still arrive the instant they are made, and nothing in the game depends on a walker, a cart or a boat. They stop when the game is paused.
 - Some looks follow the game: a farm's crop grows through each cycle, a bakery smokes while it bakes, a sawmill throws sawdust while it saws, and a house's windows are lit once someone lives in it.
 - The ground has a raised shoreline with shallows around it, grass in several shades, ploughed fertile land, sand, and trees. Roads join up with each other and with the buildings beside them. The water has drifting glints.
 - Houses show their number of residents on a small plate above the roof.
@@ -289,4 +290,4 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 
 ## 12. Not in Version 1
 
-More than one saved game, save files to download or share, undo, sound, more islands, ships and trade, combat, visible carriers, workforce requirements for buildings, building rotation, a tutorial, touch controls, people or boats moving on the map, and painted art from image files.
+More than one saved game, save files to download or share, undo, sound, more islands, ships and trade, combat, carriers that really carry goods (the carts are for show), workforce requirements for buildings, building rotation, a tutorial, touch controls, and painted art from image files.

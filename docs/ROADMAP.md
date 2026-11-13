@@ -1,6 +1,6 @@
 # Harborfall: Roadmap
 
-Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 8, by Fable 5.2.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 9, by Fable 5.2.
 
 This is a list of what could come next, in the order I would do it. **Nothing here is decided.** Every item is a proposal, and you choose. The working rule from the brief still stands: nothing gets built that you did not ask for.
 
@@ -8,8 +8,8 @@ Read `HANDOFF.md` first if you are picking the project up after a break.
 
 ## Where the project stands
 
-- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), and saving, a title screen and a choice of island (Phase 8).
-- **Proven by machines:** 271 automated tests pass. A bot wins in 28.6 minutes. A script wins through the real UI and ends in exactly the bot's game.
+- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), and people, carts and boats on the map (Phase 9).
+- **Proven by machines:** 290 automated tests pass. A bot wins in 28.6 minutes. A script wins through the real UI and ends in exactly the bot's game.
 - **Not proven by a person:** nobody has told me how a hand-played game went, how smooth it is on a real screen, or how it works on a Mac.
 
 That last line shapes the order below. The cheapest and most useful next step is an hour of your own play.
@@ -29,8 +29,8 @@ Each phase so far took one long working session. The sizes compare with that.
 | Phase | What | Size | Why here |
 |---|---|---|---|
 | 8 | **Done.** Save and load, title screen, island choice (B1, B2), and the drawing speed fix from A2 | Medium | A 30 minute game that was lost on a refresh was hard to enjoy or to test. |
-| 9 | Play it and fix what you find (A1, the rest of A2, A3) | Small to medium | Still the most useful next step. Everything else builds on a game nobody has played by hand. Now that the game saves, it no longer has to be one sitting. |
-| 10 | Life on the map (C1) | Medium | The biggest gain in feel for no change in rules. |
+| Next | Play it and fix what you find (A1, the rest of A2, A3) | Small to medium | Still the most useful next step. Everything else builds on a game nobody has played by hand. Now that the game saves, it no longer has to be one sitting. |
+| 9 | **Done.** Life on the map (C1) | Medium | The biggest gain in feel for no change in rules. |
 | 11 | Sound (C2) | Medium | Same reason. Needs a decision from you first. |
 | 12 | A guided first game and undo (B3, B4) | Medium | Best done after you have watched someone new play. |
 | 13 onward | More game: a third tier, then workforce or carriers (Stage D) | Large each | Only worth doing once the small game feels good. |
@@ -91,7 +91,8 @@ Each phase so far took one long working session. The sizes compare with that.
 
 ## Stage C: Make it feel alive
 
-### C1. People, carts and boats on the map
+### C1. People, carts and boats on the map (done in Phase 9)
+- **Left over:** walkers with real errands, carts that bring inputs as well as take goods away, figures that avoid each other, and better-drawn figures. None is planned.
 - **What you get:** small figures walking the roads, carts between producers and the warehouse, a fishing boat off each fisherman's hut.
 - **Important:** this is decoration only. Goods would still move instantly, as they do now. The figures would be drawn by the renderer from what the simulation already reports, and the rules, the bot and the balance would not change.
 - **Do not confuse with D3**, which makes carriers real and changes the game.
@@ -182,10 +183,10 @@ These are not features. They are debts and loose ends, smallest first.
 
 One line is enough. For example:
 
-> Phase 9: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
+> Phase 10: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
 
 or
 
-> Phase 10: build C1 from the roadmap. Show me the plan first.
+> Phase 10: build C2 from the roadmap. Show me the plan first.
 
 The helper should then follow the working rules in `HANDOFF.md` section 6: plan first, one feature at a time, test everything itself, stop at the gate with the five-part report, and commit only after you approve.

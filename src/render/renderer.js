@@ -24,6 +24,8 @@ import { createKit } from './art/kit.js';
 import { BUILDING_ART, LIVE_ART, artIdFor, artStateKey } from './art/buildings.js';
 import { paintBox } from './art/box.js';
 import { createSpriteCache, sharpnessFor } from './art/sprites.js';
+import { paintActors } from './art/actors.js';
+import { createLife } from './life.js';
 import { createForestPainter, createRoadPainter, createTerrainPainter, paintTrees, paintWater, waterBackground } from './art/terrain.js';
 import { buildingIssue, canUpgrade } from '../sim/index.js';
 
@@ -48,6 +50,7 @@ const SMALL_PICTURE_DETAIL = 0.5;
 const SMALL_PICTURE_BELOW_SCALE = 0.62;
 const CACHE_PAD = 48; // room around the map for tree tops and the shoreline
 const TREE_REACH = 2; // trees this close to a building are drawn in order with it
+const ACTOR_MIN_ZOOM = 0.5; // walkers, carts and boats are too small to see below this
 
 export function createRenderer(canvas, rules) {
   const ctx = canvas.getContext('2d');
@@ -57,6 +60,7 @@ export function createRenderer(canvas, rules) {
   let smallPicture = null;  // the same, smaller, for when zoomed far out
   let pictureMap = null;    // the island those pictures show
   const sprites = createSpriteCache();
+  const life = createLife(rules); // walkers, carts and boats: decoration that follows the game
 
   const terrainColor = {};
   for (const [id, t] of Object.entries(rules.map.terrain)) terrainColor[id] = t.color;
@@ -256,24 +260,43 @@ export function createRenderer(canvas, rules) {
     ctx.fillStyle = 'rgba(20, 35, 25, 0.2)';
     ctx.fill(shadows);
 
-    // Buildings and the trees beside them, in order. Trees that fall between
+    // Buildings, the trees beside them, and the people, carts and boats, all
+    // in one order from far to near. Where two are level, a building goes
+    // first, then a tree, then a person. Trees and people that fall between
     // the same two buildings are drawn together.
     const alpha = overlay.fadeBuildings ? 0.5 : 1;
-    let next = 0;
-    let batch = [];
-    for (const tree of treesNear(map, buildings)) {
-      if (next < buildings.length && buildings[next].depth <= tree.depth) {
-        paintTrees(ctx, batch);
-        batch = [];
-        while (next < buildings.length && buildings[next].depth <= tree.depth) {
-          drawBuilding(buildings[next].building, zoom, time, sharpness, alpha);
-          next++;
-        }
+    const actors = life.update(game); // always brought up to date, so nothing jumps after zooming out and in
+    const things = [];
+    for (const b of buildings) things.push({ depth: b.depth, kind: 0, x: b.building.x, building: b.building });
+    for (const tree of treesNear(map, buildings)) things.push({ depth: tree.depth, kind: 1, x: tree.x, tree });
+    if (zoom >= ACTOR_MIN_ZOOM) {
+      for (const a of actors) {
+        if (a.x < range.x0 - 1 || a.x > range.x1 + 2 || a.y < range.y0 - 1 || a.y > range.y1 + 2) continue;
+        things.push({ depth: a.x + a.y + 1, kind: 2, x: a.x, actor: a });
       }
-      batch.push(tree);
     }
-    paintTrees(ctx, batch);
-    for (; next < buildings.length; next++) drawBuilding(buildings[next].building, zoom, time, sharpness, alpha);
+    things.sort((a, b) => a.depth - b.depth || a.kind - b.kind || a.x - b.x);
+    let trees = [];
+    let people = [];
+    const drawWaiting = () => {
+      if (trees.length) paintTrees(ctx, trees);
+      if (people.length) paintActors(ctx, people, rules.goods, time);
+      trees = [];
+      people = [];
+    };
+    for (const thing of things) {
+      if (thing.building) {
+        drawWaiting();
+        drawBuilding(thing.building, zoom, time, sharpness, alpha);
+      } else if (thing.tree) {
+        if (people.length) drawWaiting();
+        trees.push(thing.tree);
+      } else {
+        if (trees.length) drawWaiting();
+        people.push(thing.actor);
+      }
+    }
+    drawWaiting();
 
     if (zoom >= LABEL_MIN_ZOOM && !overlay.fadeBuildings) {
       for (const { building } of buildings) if (building.house) residentsPlate(building);
@@ -334,5 +357,5 @@ export function createRenderer(canvas, rules) {
   }
 
   resize();
-  return { draw, resize, view, tileHeight: TILE_H, sprites };
+  return { draw, resize, view, tileHeight: TILE_H, sprites, life };
 }

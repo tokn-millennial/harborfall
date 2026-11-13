@@ -9,7 +9,7 @@
 import { tileToWorld } from '../iso.js';
 import { hash2, tone } from './kit.js';
 
-const CLIFF = 6;                 // pixels the island stands above the water
+export const CLIFF = 6;          // pixels the island stands above the water
 const CLIFF_LIT = '#cdb58a';
 const CLIFF_SHADE = '#a8906a';
 const SHALLOW = ['rgba(150, 215, 225, 0.42)', 'rgba(130, 200, 220, 0.2)'];

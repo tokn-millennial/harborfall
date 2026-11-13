@@ -76,7 +76,8 @@ Harborfall/
       camera.js           Pan, zoom, world to screen and back, what is visible. Pure math.
       pick.js             What is under a screen point: ground tile and building. Pure math.
       visuals.js          Each building's color, height and label, from the data files.
-      renderer.js         Puts a frame together: water, ground, roads, buildings, outlines, marks.
+      renderer.js         Puts a frame together: water, ground, roads, buildings, people, outlines, marks.
+      life.js             Where the walkers, carts and boats are. Decoration that follows the game. Pure.
       art/                The drawings. Every one is code. There are no image files.
         kit.js            Drawing tools in "building space": walls, pitched roofs, posts, color mixing.
         buildings.js      One drawing per building look, picked by the `art` name in the data.
@@ -84,6 +85,7 @@ Harborfall/
         box.js            The plain box used when a building has no drawing.
         icon.js           The small building pictures on the build menu.
         sprites.js        Keeps each building look as a ready-made picture.
+        actors.js         Draws the walkers, carts and boats.
 
     ui/                   Input and panels.
       gameUi.js           The controller: active tool, selection, clicks into commands.
@@ -266,6 +268,7 @@ Adding a new producer, such as a second kind of farm, needs only a new entry in 
   - The water's color is the page background behind the canvas. Only the glints are drawn each frame.
   - Smoke and sawdust are the only building parts drawn fresh each frame.
   - Pictures are shown with the browser's cheapest smoothing. The next level up was measured at over twenty times the cost whenever a building's picture is shown smaller than it was drawn. Building pictures come in five sizes, so one is never shown at less than half its size.
+- Walkers, carts and boats are worked out by `life.js` from the game's state and clock, and drawn in the same far-to-near order as the buildings and trees, so a person behind a house is hidden by it. `life.js` has no canvas code and imports nothing. It reads the game and never changes it. It has its own repeatable random source, so the same game always shows the same life. A test runs a game with it and a game without and requires them to end identical.
 - Buildings are drawn far to near. Trees within two tiles of a building are drawn in order with the buildings, so a tree in front of a house covers it. All other trees are part of the ground picture.
 - While a building or road is being placed, buildings are drawn see-through.
 - `http://localhost:5173/?demo` shows a finished town built by the bot, so the building shapes can be checked before the build menu exists.
@@ -295,6 +298,7 @@ All tests run with `node --test` and need no browser.
 | `loop.test.js` | Real time becomes whole ticks. Speeds 2x and 4x, pause, and a stalled tab all behave. |
 | `save.test.js` | A game that is saved, turned into text, read back and played on ends exactly where it would have without saving. Tested on real bot games at several moments, on a won game, on another island and on a hand-made one. Twenty kinds of damaged save, a changed rule and a newer version are each refused. Changes to looks and names are not. |
 | `title.test.js` | The save slot, with a stand-in for the browser's storage: reading, writing, failing storage, unreadable text. What the title screen offers in each case, and that a new game never replaces a saved one without a second press. |
+| `life.test.js` | Walkers and carts only ever stand on roads, and boats only on water. A cart carries what its producer made and ends beside a warehouse. A boat goes out and comes home with the fisherman's work. Nothing moves while paused. A game with life ends identical to one without. Removing roads, loading another game and a jump in time cause no error. |
 | `art.test.js` | Every building and house tier has a drawing. Every drawing runs in every state, uses only valid colors and stays inside its own plot. A building with no drawing falls back to a box. Stored pictures change only when the look changes. Drawing never changes the game. |
 
 Later phases add:

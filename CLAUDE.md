@@ -20,11 +20,12 @@ Harborfall is a small Anno-style city builder for desktop browsers. The owner is
 - The simulation changes only through commands and ticks. It must stay deterministic: the same commands give the same state.
 - All game rules and numbers live in `data/*.json`, never in code. Keys starting with `_` are notes.
 - Keep pure logic separate from page code so it can be tested in Node (see `src/ui/text.js`, `tools.js`, `panelModel.js`, `advice.js`).
+- The walkers, carts and boats (`src/render/life.js`) are decoration. They read the game and must never change it or be read by it. `tests/life.test.js` checks that a game with them ends identical to one without.
 - Art is code in `src/render/art/`. A stored building picture must look the same for the same inputs. Anything that moves every frame goes in `LIVE_ART`.
 
 ## Commands
 
-- `node --test` runs all tests (271 at the end of Phase 8). They must all pass before a gate.
+- `node --test` runs all tests (290 at the end of Phase 9). They must all pass before a gate.
 - `node tools/bot.mjs` plays a full headless game (also `careless`, `bread-first`, `--seed N`, `--pace typical`, `--steps`, `--map`). The standard order must still win inside 25 to 40 minutes. It is the balance gate, and `tests/bot.test.js` checks it.
 - `node tools/tune.mjs` compares balance variants. `node tools/pace.mjs` estimates a person's time. `node tools/print-map.mjs` prints the island.
 - `node serve.mjs` serves the game at `http://localhost:5173`, which opens on the title screen and saves the game in the browser. `?demo` shows a finished town. `?fresh` opens a new game with no title screen. Neither of those two ever saves.

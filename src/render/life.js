@@ -1,0 +1,380 @@
+// Life on the map: people walking the roads, carts taking goods to a
+// warehouse, and a boat for every fisherman.
+//
+// This is decoration. It reads the game and never changes it, and nothing in
+// the game depends on it: goods still move the instant they are made. The
+// little figures only show what the game already knows.
+//   - Walkers: more of them the more residents there are.
+//   - Carts:   one sets out when a producer finishes a batch.
+//   - Boats:   out at sea while the fisherman is working, home when he is not.
+//
+// It moves with game time, so it stops when the game is paused and hurries
+// at 4x. There is no canvas code here, so it is tested in Node. Positions are
+// in tiles: tile (3, 5) covers x 3 to 4 and y 5 to 6, and its middle is (3.5, 5.5).
+
+const RESIDENTS_PER_WALKER = 5;
+const MAX_WALKERS = 40;
+const WALK_SPEED = 0.07;           // tiles per tick, so 0.7 tiles a second at 1x
+const WALKER_LIFE_TICKS = [300, 1100];
+const WALKER_SIDE_STEP = 0.2;      // how far from the middle of the road a walker keeps, in tiles
+const SPAWN_CHANCE_PER_TICK = 0.25; // while there are fewer walkers than the town calls for
+
+const MAX_CARTS = 14;
+const CART_SPEED = 0.11;
+const CART_REST_TICKS = 100;       // one producer sends at most one cart in this time
+const CART_MIN_TILES = 3;          // shorter trips are not worth showing
+
+const BOAT_REACH = 6;              // how far from the hut a boat goes, in tiles
+const BOAT_OUT_UNTIL = 0.4;        // share of the work cycle spent rowing out
+const BOAT_BACK_FROM = 0.6;        // and the share after which it rows home
+
+// If the game jumps by more than this (a test stepping it directly), start afresh.
+const MAX_CATCH_UP_TICKS = 600;
+
+const NEAR = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+// A small repeatable random source. The game's own is not used: this must not
+// be able to disturb it.
+function randomSource(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function createLife(rules, seed = 7) {
+  let random = randomSource(seed);
+  let watching = null;   // the game state this belongs to
+  let lastTick = 0;
+  let nextId = 1;
+  let walkers = [];
+  let carts = [];
+  let seen = new Map();          // producer id -> its work timer last time
+  let cartSentAt = new Map();    // producer id -> tick its last cart left
+  let boatWaters = new Map();    // fisherman id -> { home, out } or null
+  let actors = [];
+  let fresh = true;              // nothing has been shown yet for this game
+
+  const isStorage = (type) => rules.buildings[type].category === 'storage';
+  const hasBoat = (def) => Boolean(def.production) && def.placement?.adjacentTerrain !== undefined;
+
+  function reset(state) {
+    random = randomSource(seed);
+    watching = state;
+    lastTick = state.tick;
+    nextId = 1;
+    walkers = [];
+    carts = [];
+    seen = new Map();
+    cartSentAt = new Map();
+    boatWaters = new Map();
+    fresh = true;
+  }
+
+  // ---- reading the map -----------------------------------------------------------
+  const inside = (map, x, y) => x >= 0 && y >= 0 && x < map.width && y < map.height;
+  const isRoad = (state, x, y) => inside(state.map, x, y) && state.roads[y * state.map.width + x] === 1;
+  const buildingIdAt = (state, x, y) => (inside(state.map, x, y) ? state.occupancy[y * state.map.width + x] : 0);
+  const isWater = (map, x, y) => inside(map, x, y) && map.terrain[y * map.width + x] === 'water';
+  const nextToBuilding = (state, x, y) => NEAR.some(([dx, dy]) => buildingIdAt(state, x + dx, y + dy) !== 0);
+
+  // Road tiles touching a building's plot.
+  function roadsBeside(state, building) {
+    const def = rules.buildings[building.type];
+    const tiles = [];
+    for (let y = building.y; y < building.y + def.h; y++) {
+      for (let x = building.x; x < building.x + def.w; x++) {
+        for (const [dx, dy] of NEAR) {
+          const tx = x + dx;
+          const ty = y + dy;
+          if (isRoad(state, tx, ty) && !tiles.some((t) => t[0] === tx && t[1] === ty)) tiles.push([tx, ty]);
+        }
+      }
+    }
+    return tiles;
+  }
+
+  function anyRoad(state) {
+    const all = [];
+    for (let i = 0; i < state.roads.length; i++) if (state.roads[i] === 1) all.push(i);
+    if (all.length === 0) return null;
+    const i = all[Math.floor(random() * all.length)];
+    return [i % state.map.width, Math.floor(i / state.map.width)];
+  }
+
+  // ---- walkers -------------------------------------------------------------------
+  // Where a walker standing on (x, y) and coming from (px, py) goes next: any
+  // road onward, and back the way it came only at a dead end.
+  function nextStep(state, x, y, px, py) {
+    const onward = [];
+    for (const [dx, dy] of NEAR) {
+      const tx = x + dx;
+      const ty = y + dy;
+      if ((tx !== px || ty !== py) && isRoad(state, tx, ty)) onward.push([tx, ty]);
+    }
+    if (onward.length) return onward[Math.floor(random() * onward.length)];
+    return isRoad(state, px, py) && (px !== x || py !== y) ? [px, py] : null;
+  }
+
+  // Adds one walker. Returns whether it could.
+  function addWalker(state, houses, anywhere) {
+    let start = null;
+    let tier = null;
+    if (houses.length) {
+      // A walker normally steps out of a house that has a road at its door.
+      // Starting from a random house, the first one with a road is used.
+      const first = Math.floor(random() * houses.length);
+      tier = houses[first].house.tier;
+      // To fill an existing town at once, walkers are scattered over the roads instead.
+      for (let i = 0; i < houses.length && !anywhere && !start; i++) {
+        const house = houses[(first + i) % houses.length];
+        const beside = roadsBeside(state, house);
+        if (beside.length === 0) continue;
+        start = beside[Math.floor(random() * beside.length)];
+        tier = house.house.tier;
+      }
+    }
+    start ??= anyRoad(state);
+    if (!start) return false;
+    const to = nextStep(state, start[0], start[1], start[0], start[1]);
+    if (!to) return false; // a single road tile with nowhere to go
+    const [lo, hi] = WALKER_LIFE_TICKS;
+    walkers.push({
+      id: nextId++,
+      tier,
+      fromX: start[0], fromY: start[1], toX: to[0], toY: to[1],
+      t: anywhere ? random() : 0,
+      sideX: (random() * 2 - 1) * WALKER_SIDE_STEP,
+      sideY: (random() * 2 - 1) * WALKER_SIDE_STEP,
+      life: Math.round(lo + random() * (hi - lo)) * (anywhere ? random() : 1),
+      steps: 0,
+      look: Math.floor(random() * 1000),
+    });
+    return true;
+  }
+
+  // Moves one walker. Returns false when it has left the map.
+  function moveWalker(state, w, ticks) {
+    if (!isRoad(state, w.fromX, w.fromY) || !isRoad(state, w.toX, w.toY)) return false; // its road was removed
+    w.life -= ticks;
+    let left = ticks * WALK_SPEED;
+    while (left > 0) {
+      const toGo = 1 - w.t;
+      if (left < toGo) {
+        w.t += left;
+        break;
+      }
+      left -= toGo;
+      w.steps++;
+      // Arrived at the next tile. A walker whose time is up goes indoors at the first building it passes.
+      if (w.life <= 0 && (nextToBuilding(state, w.toX, w.toY) || w.life < -MAX_CATCH_UP_TICKS)) return false;
+      const next = nextStep(state, w.toX, w.toY, w.fromX, w.fromY);
+      if (!next) return false;
+      w.fromX = w.toX;
+      w.fromY = w.toY;
+      w.toX = next[0];
+      w.toY = next[1];
+      w.t = 0;
+    }
+    return true;
+  }
+
+  // ---- carts ---------------------------------------------------------------------
+  // The shortest way by road from a producer to a warehouse, as a list of tiles.
+  function routeToStorage(state, building, storageIds) {
+    const { width, height } = state.map;
+    const cameFrom = new Int32Array(width * height).fill(-2);
+    const queue = [];
+    for (const [x, y] of roadsBeside(state, building)) {
+      cameFrom[y * width + x] = -1;
+      queue.push(y * width + x);
+    }
+    for (let head = 0; head < queue.length; head++) {
+      const at = queue[head];
+      const x = at % width;
+      const y = Math.floor(at / width);
+      if (NEAR.some(([dx, dy]) => storageIds.has(buildingIdAt(state, x + dx, y + dy)))) {
+        const route = [];
+        for (let i = at; i !== -1; i = cameFrom[i]) route.push([i % width, Math.floor(i / width)]);
+        return route.reverse();
+      }
+      for (const [dx, dy] of NEAR) {
+        const tx = x + dx;
+        const ty = y + dy;
+        if (!isRoad(state, tx, ty) || cameFrom[ty * width + tx] !== -2) continue;
+        cameFrom[ty * width + tx] = at;
+        queue.push(ty * width + tx);
+      }
+    }
+    return null;
+  }
+
+  function moveCart(state, cart, ticks) {
+    let left = ticks * CART_SPEED;
+    while (left > 0) {
+      const next = cart.route[cart.at + 1];
+      if (!next || !isRoad(state, next[0], next[1]) || !isRoad(state, cart.route[cart.at][0], cart.route[cart.at][1])) return false;
+      const toGo = 1 - cart.t;
+      if (left < toGo) {
+        cart.t += left;
+        break;
+      }
+      left -= toGo;
+      cart.at++;
+      cart.t = 0;
+      if (cart.at >= cart.route.length - 1) return false; // delivered
+    }
+    return true;
+  }
+
+  // ---- boats ---------------------------------------------------------------------
+  // Where a fisherman's boat is kept and where it fishes: the nearest water,
+  // and the farthest open water it can row to in a straight line.
+  function findWaters(map, building) {
+    const def = rules.buildings[building.type];
+    const cx = building.x + def.w / 2;
+    const cy = building.y + def.h / 2;
+    const waters = [];
+    for (let y = Math.floor(cy) - BOAT_REACH; y <= Math.floor(cy) + BOAT_REACH; y++) {
+      for (let x = Math.floor(cx) - BOAT_REACH; x <= Math.floor(cx) + BOAT_REACH; x++) {
+        if (!isWater(map, x, y)) continue;
+        const distance = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
+        if (distance <= BOAT_REACH) waters.push({ x: x + 0.5, y: y + 0.5, distance });
+      }
+    }
+    if (waters.length === 0) return null;
+    waters.sort((a, b) => a.distance - b.distance || a.x - b.x || a.y - b.y);
+    const home = waters[0];
+    const clearRun = (to) => {
+      const steps = Math.ceil(Math.hypot(to.x - home.x, to.y - home.y) * 3);
+      for (let i = 1; i <= steps; i++) {
+        const x = home.x + ((to.x - home.x) * i) / steps;
+        const y = home.y + ((to.y - home.y) * i) / steps;
+        if (!isWater(map, Math.floor(x), Math.floor(y))) return false;
+      }
+      return true;
+    };
+    let out = home;
+    for (let i = waters.length - 1; i > 0; i--) {
+      if (clearRun(waters[i])) {
+        out = waters[i];
+        break;
+      }
+    }
+    return { home: { x: home.x, y: home.y }, out: { x: out.x, y: out.y } };
+  }
+
+  const ease = (t) => t * t * (3 - 2 * t);
+
+  // ---- one update ----------------------------------------------------------------
+  // Brings everything up to the game's current time and returns what to draw.
+  function update(game) {
+    const state = game.state;
+    if (state !== watching || state.tick < lastTick || state.tick - lastTick > MAX_CATCH_UP_TICKS) reset(state);
+    const ticks = state.tick - lastTick;
+    lastTick = state.tick;
+
+    let residents = 0;
+    const houses = [];
+    const producers = [];
+    const storageIds = new Set();
+    for (const b of state.buildings) {
+      if (b.house && b.house.residents > 0) {
+        residents += b.house.residents;
+        houses.push(b);
+      }
+      if (b.production) producers.push(b);
+      if (isStorage(b.type)) storageIds.add(b.id);
+    }
+
+    // Walkers.
+    if (ticks > 0) walkers = walkers.filter((w) => moveWalker(state, w, ticks));
+    else walkers = walkers.filter((w) => isRoad(state, w.fromX, w.fromY) && isRoad(state, w.toX, w.toY));
+    const wanted = Math.min(MAX_WALKERS, Math.floor(residents / RESIDENTS_PER_WALKER));
+    if (fresh) {
+      // A town that already has people (a loaded game) is filled at once.
+      for (let tries = wanted * 4; tries > 0 && walkers.length < wanted; tries--) addWalker(state, houses, true);
+      fresh = false;
+    } else if (walkers.length < wanted && ticks > 0 && random() < SPAWN_CHANCE_PER_TICK * ticks) {
+      addWalker(state, houses, false);
+    }
+    // Too many (people moved out): the extra ones head indoors.
+    for (let i = wanted; i < walkers.length; i++) walkers[i].life = Math.min(walkers[i].life, 0);
+
+    // Carts: a producer whose work timer has dropped back has just delivered.
+    const nowSeen = new Map();
+    for (const b of producers) {
+      const progress = b.production.progress;
+      const before = seen.get(b.id);
+      nowSeen.set(b.id, progress);
+      if (before === undefined || progress >= before || !b.connected || carts.length >= MAX_CARTS) continue;
+      if (state.tick - (cartSentAt.get(b.id) ?? -Infinity) < CART_REST_TICKS) continue;
+      const route = routeToStorage(state, b, storageIds);
+      if (!route || route.length < CART_MIN_TILES) continue;
+      cartSentAt.set(b.id, state.tick);
+      const good = Object.keys(rules.buildings[b.type].production.outputs)[0];
+      carts.push({ id: nextId++, route, at: 0, t: 0, good, look: Math.floor(random() * 1000) });
+    }
+    seen = nowSeen;
+    if (ticks > 0) carts = carts.filter((c) => moveCart(state, c, ticks));
+    else carts = carts.filter((c) => c.route.slice(c.at, c.at + 2).every(([x, y]) => isRoad(state, x, y)));
+
+    // What to draw.
+    actors = [];
+    for (const w of walkers) {
+      actors.push({
+        kind: 'walker', id: w.id, tier: w.tier, look: w.look,
+        x: w.fromX + (w.toX - w.fromX) * w.t + 0.5 + w.sideX,
+        y: w.fromY + (w.toY - w.fromY) * w.t + 0.5 + w.sideY,
+        dx: w.toX - w.fromX, dy: w.toY - w.fromY,
+        stride: w.steps + w.t,
+      });
+    }
+    for (const c of carts) {
+      const [ax, ay] = c.route[c.at];
+      const [bx, by] = c.route[c.at + 1];
+      actors.push({
+        kind: 'cart', id: c.id, good: c.good, look: c.look,
+        x: ax + (bx - ax) * c.t + 0.5, y: ay + (by - ay) * c.t + 0.5,
+        dx: bx - ax, dy: by - ay,
+        stride: c.at + c.t,
+      });
+    }
+    const boatsNow = new Map();
+    for (const b of producers) {
+      const def = rules.buildings[b.type];
+      if (!hasBoat(def)) continue;
+      const waters = boatWaters.has(b.id) ? boatWaters.get(b.id) : findWaters(state.map, b);
+      boatsNow.set(b.id, waters);
+      if (!waters) continue;
+      const p = b.production;
+      const share = b.connected && p.active && p.status === 'working' ? p.progress / def.production.cycleTicks : 0;
+      let out = 0; // 0 at home, 1 at the fishing spot
+      if (share > 0 && share < BOAT_OUT_UNTIL) out = ease(share / BOAT_OUT_UNTIL);
+      else if (share >= BOAT_OUT_UNTIL && share <= BOAT_BACK_FROM) out = 1;
+      else if (share > BOAT_BACK_FROM) out = ease((1 - share) / (1 - BOAT_BACK_FROM));
+      actors.push({
+        kind: 'boat', id: b.id, look: b.id,
+        x: waters.home.x + (waters.out.x - waters.home.x) * out,
+        y: waters.home.y + (waters.out.y - waters.home.y) * out,
+        dx: (waters.out.x - waters.home.x) * (share > BOAT_BACK_FROM ? -1 : 1),
+        dy: (waters.out.y - waters.home.y) * (share > BOAT_BACK_FROM ? -1 : 1),
+        fishing: out === 1,
+        manned: share > 0,
+      });
+    }
+    boatWaters = boatsNow;
+    return actors;
+  }
+
+  return {
+    update,
+    get actors() {
+      return actors;
+    },
+  };
+}
