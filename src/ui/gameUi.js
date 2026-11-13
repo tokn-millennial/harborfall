@@ -30,7 +30,10 @@ const SELECT = { mode: 'select', building: null };
 const MESSAGE_SECONDS = 3;
 const CONFIRM_SECONDS = 4; // how long a first demolish click waits for the second
 
-export function createGameUi({ game, camera, renderer, loop, canvas, elements }) {
+// onSound(name) is told when something worth a sound happens: 'pick', 'place',
+// 'road', 'demolish', 'upgrade', 'refuse' or 'win'. The UI does not know or
+// care whether anything is listening.
+export function createGameUi({ game, camera, renderer, loop, canvas, elements, onSound = () => {} }) {
   const { rules, state } = game;
   const map = state.map;
   const view = renderer.view;
@@ -81,6 +84,7 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
       return false;
     }
     armed = { id: building.id, seconds: CONFIRM_SECONDS };
+    onSound('pick');
     return false;
   }
 
@@ -90,6 +94,7 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
     armed = null;
     if (tool.mode !== 'select') deselect();
     canvas.style.cursor = tool.mode === 'select' ? '' : 'crosshair';
+    onSound('pick');
   }
 
   function say(text, level = 'bad') {
@@ -97,12 +102,14 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
     elements.message.className = `message ${level}`;
     elements.message.hidden = false;
     messageTimer = MESSAGE_SECONDS;
+    if (level === 'bad') onSound('refuse');
   }
 
   // Sends a command. On failure, tells the player why. Returns whether it worked.
   function act(command, context = {}) {
     const result = execute(game, command);
-    if (!result.ok) say(reasonText(game, result.reason, context));
+    if (result.ok) onSound(command.action);
+    else say(reasonText(game, result.reason, context));
     return result.ok;
   }
 
@@ -152,6 +159,7 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
         roadDrag = null;
         if (button !== 0) return;
         const result = execute(game, { action: 'road', tiles });
+        if (result.ok || result.placed > 0) onSound('road');
         if (!result.ok) {
           const why = reasonText(game, result.reason, { cost: rules.buildings.road.cost });
           say(result.placed > 0 ? `Built ${result.placed} of ${result.placed + result.failed} road tiles. ${why}` : why, result.placed > 0 ? 'warn' : 'bad');
@@ -320,6 +328,7 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements })
 
     if (state.won && !winShown) {
       winShown = true;
+      onSound('win');
       speed.setSpeed(0);
       setTool(SELECT);
       win.show({

@@ -13,6 +13,8 @@ const SVG = {
   person: '<circle cx="8" cy="4.6" r="2.6"/><path d="M3 14c0-3.2 2.2-5 5-5s5 1.8 5 5z"/>',
   select: '<path d="M4 2l8.5 6.2-3.8 0.6 2.2 4.3-1.7 0.9-2.2-4.3L4 12.4z" fill="#f6eed6" stroke="#1c2a31" stroke-width="1" stroke-linejoin="round"/>',
   upgrade: '<path d="M8 1.8l5.5 6h-3.3v6.2H5.8V7.8H2.5z" fill="#4fae62" stroke="#1f5a2c" stroke-width="1" stroke-linejoin="round"/>',
+  sound: '<path d="M2 6h2.8L8.5 2.8v10.4L4.8 10H2z" fill="#f1ead8" stroke="#1c2a31" stroke-width="0.8" stroke-linejoin="round"/><path d="M10.6 5.6c1.2 1.2 1.2 3.6 0 4.8M12.4 3.8c2.2 2.2 2.2 6.2 0 8.4" fill="none" stroke="#f1ead8" stroke-width="1.3" stroke-linecap="round"/>',
+  muted: '<path d="M2 6h2.8L8.5 2.8v10.4L4.8 10H2z" fill="#8fa1a8" stroke="#1c2a31" stroke-width="0.8" stroke-linejoin="round"/><path d="M10.6 5.8l4 4.4M14.6 5.8l-4 4.4" fill="none" stroke="#ff9488" stroke-width="1.5" stroke-linecap="round"/>',
   demolish: '<path d="M9 2.2l4.8 4.8-2 2-1.2-1.2-5.8 5.8-1.6-1.6 5.8-5.8L7.8 5z" fill="#b7b0a2" stroke="#3c3a36" stroke-width="1" stroke-linejoin="round"/><path d="M2.8 13.2l2-2" stroke="#7a5a3a" stroke-width="2.2" stroke-linecap="round"/>',
 };
 

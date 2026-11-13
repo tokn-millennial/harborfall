@@ -200,3 +200,20 @@ You asked for "real art and style" and gave no direction, so every choice below 
 | D123 | Life moves with game time, not real time. | It stops when you pause and hurries at 4x, like everything else. | `update` in `src/render/life.js`. |
 | D124 | The figures cannot be clicked and have no panel. | They are not things in the game. | Would come with real carriers. |
 | D125 | No switch to turn the figures off. | You did not ask for one, and the cost measured at about 1 ms a frame. | Set `MAX_WALKERS` and `MAX_CARTS` to 0, or ask for a setting. |
+
+### Phase 10: Sound
+
+| # | Decision | Why | How to change |
+|---|---|---|---|
+| D126 | "Keep going" was taken as before: the next roadmap item I can do alone, which is sound (C2). | You asked me not to stop. | Name a roadmap item. |
+| D127 | The sounds are made by code. There are no sound files. | The roadmap asked you to choose, and I asked twice. With no answer, your own rule is that I make a reasonable choice and record it. Code-made sound adds no files and no downloads, matches the rest of the project, and is the easier choice to undo. Its cost is that the sounds are simple. | Replace a recipe in `src/audio/sounds.js`, or have `src/platform/audio.js` load files instead. |
+| D128 | **I cannot hear.** Every sound was designed from numbers and has never been listened to. | An honest limit, not a choice. The tests prove the sounds exist, are short, are not too loud and cannot click. They cannot prove they are pleasant. | Listen, and tell me which ones are wrong. |
+| D129 | Because of D128 the sounds are few, short and soft, and the starting volume is half. | The safest design when nobody has heard it. | `DEFAULT_VOLUME` and the recipes in `src/audio/sounds.js`. |
+| D130 | Sound is on to begin with, with a speaker button always in view. | A sound you have to find and switch on is one you may never hear. One click turns it off, and that is remembered. | `createSoundSettings` in `src/platform/soundSettings.js`. |
+| D131 | Seven sounds: pick, place, road, demolish, upgrade, refuse, win. Nothing for income, deliveries, residents arriving or the clock. | Those happen every few seconds for half an hour. Sounds on them would wear on the ear fast. | Add a recipe and one `onSound` call. |
+| D132 | The sea is the only background sound. No music, no birds, no town noise. | Muffled noise that swells is the one background sound I can make with confidence from numbers. Music and birdsong made the same way are far more likely to sound bad. | `SEA` and `SEA_SHARE` in `src/audio/sounds.js`. Set the share to 0 for none. |
+| D133 | The sounds are worked out as lists of numbers by the game's own code, not by the browser's built-in tone makers. | So they can be measured in tests and are the same everywhere. | `src/audio/synth.js`. |
+| D134 | The recipes live in code, not in the data files. | They are not rules. A file in `data/` would also make saved games refuse to load whenever a sound was changed. | Could move to a file outside the rules stamp. |
+| D135 | The same sound cannot start twice within 60 milliseconds, and at most six play together. | A dragged road or a fast run of clicks would otherwise stack into a roar. | `MIN_GAP_SECONDS` and `MAX_AT_ONCE` in `src/platform/audio.js`. |
+| D136 | The test page `?fresh` is silent. | The test tools send thousands of actions in a few seconds. | `silent` in `src/main.js`. |
+| D137 | No key for sound, only the button. | The letter keys are nearly used up, and M is Market. | Add one in `src/ui/soundControls.js`. |

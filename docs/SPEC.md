@@ -282,6 +282,13 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 - Game time, Pause, 1x, 2x, 4x, and a ? button for the controls. The ? panel also shows when the game was last saved and has the button back to the title screen.
 - A tip line appears when something has been short for 30 game seconds, for example "Fish keeps running out. Build another fisherman." It names the root of the shortage: if bread is out because the bakery has no grain, it talks about grain.
 
+**Sound**
+- The game makes its own sounds. There are no sound files.
+- Seven short sounds: a tick when you pick a tool, a thud when a building goes up, a scrape when road is laid, a tumble when something is demolished, two rising notes for an upgrade, two low falling notes when the game says no, and a short fanfare for the win.
+- A quiet sea plays in the background.
+- A speaker button in the top bar turns sound off and on. The ? panel has a volume slider. Both are remembered in the browser.
+- Sound starts with your first click or key press, because browsers allow none before that. A hidden tab is silent.
+
 **Keys**
 - Space pauses and resumes. 1, 2 and 3 set speed 1x, 2x and 4x.
 
@@ -290,4 +297,4 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 
 ## 12. Not in Version 1
 
-More than one saved game, save files to download or share, undo, sound, more islands, ships and trade, combat, carriers that really carry goods (the carts are for show), workforce requirements for buildings, building rotation, a tutorial, touch controls, and painted art from image files.
+More than one saved game, save files to download or share, undo, music, more islands, ships and trade, combat, carriers that really carry goods (the carts are for show), workforce requirements for buildings, building rotation, a tutorial, touch controls, and painted art from image files.

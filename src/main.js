@@ -12,6 +12,10 @@
 import { loadData } from './platform/loadData.browser.js';
 import { createLoop } from './platform/loop.js';
 import { createSaveStore } from './platform/saveStore.js';
+import { createAudio } from './platform/audio.js';
+import { createSoundSettings } from './platform/soundSettings.js';
+import { DEFAULT_VOLUME, SEA, SEA_SHARE, SOUNDS } from './audio/sounds.js';
+import { createSoundControls } from './ui/soundControls.js';
 import { createGame, loadGame, saveGame, step } from './sim/index.js';
 import { createCamera, MAX_ZOOM, MIN_ZOOM } from './render/camera.js';
 import { createRenderer } from './render/renderer.js';
@@ -47,7 +51,7 @@ function browserStorage() {
 
 // Shows the title screen over the island. Returns the game to play, and for a
 // continued game where the player was looking when it was saved.
-async function chooseGame({ data, standard, store, renderer }) {
+async function chooseGame({ data, standard, store, renderer, audio }) {
   const found = store.read();
   const saved = found.found ? loadGame(data, found.save) : null;
   if (saved && !saved.ok) console.warn(`The saved game was not loaded: ${saved.reason}. ${saved.detail}`);
@@ -68,6 +72,7 @@ async function chooseGame({ data, standard, store, renderer }) {
   const choice = await showTitle(byId('title'), titleModel({ saved, canSave: store.working }), { demoHref: './?demo' });
   document.body.classList.remove('title-open');
   showing = false;
+  audio.play('pick');
 
   if (choice === 'continue') return { game: preview, view: found.view };
   if (choice === 'new') return { game: standard, view: null };
@@ -89,6 +94,20 @@ async function start() {
   window.addEventListener('resize', () => renderer.resize());
   byId('loading').hidden = true;
 
+  // Sound. A browser allows none until the player has clicked or pressed a key,
+  // so it is switched on at the first of either. The test page stays silent.
+  const audio = createAudio({
+    Context: window.AudioContext ?? window.webkitAudioContext ?? null,
+    sounds: SOUNDS, sea: SEA, seaShare: SEA_SHARE,
+    settings: createSoundSettings(browserStorage(), DEFAULT_VOLUME),
+    silent: fresh,
+  });
+  window.addEventListener('pointerdown', () => audio.unlock(), true);
+  window.addEventListener('keydown', () => audio.unlock(), true);
+  document.addEventListener('visibilitychange', () => audio.setHidden(document.visibilityState === 'hidden'));
+  createSoundControls({ button: byId('sound-toggle'), slider: byId('sound-volume'), readout: byId('sound-readout'), audio });
+  if (fresh) byId('sound-toggle').title = 'The test page is silent';
+
   // Only a game begun from the title screen is saved.
   const store = createSaveStore(titled ? browserStorage() : null);
 
@@ -103,7 +122,7 @@ async function start() {
     runBot(game, order, { maxMinutes: 40 });
     byId('loading').hidden = true;
   } else if (titled) {
-    ({ game, view: savedView } = await chooseGame({ data, standard, store, renderer }));
+    ({ game, view: savedView } = await chooseGame({ data, standard, store, renderer, audio }));
   }
 
   const camera = createCamera(game.state.map);
@@ -116,6 +135,7 @@ async function start() {
   const loop = createLoop({ ticksPerSecond: game.rules.ticksPerSecond, onTick: () => step(game) });
   const ui = createGameUi({
     game, camera, renderer, loop, canvas,
+    onSound: (name) => audio.play(name),
     elements: {
       hud: byId('hud-main'), speed: byId('hud-speed'), menu: byId('menu'), hint: byId('hint'),
       info: byId('info'), win: byId('win'), tip: byId('tip'), message: byId('message'),
@@ -177,7 +197,7 @@ async function start() {
   requestAnimationFrame(frame);
 
   // For checking things from the browser's console.
-  window.harborfall = { game, camera, renderer, loop, ui, save: { now: saveNow, store } };
+  window.harborfall = { game, camera, renderer, loop, ui, audio, save: { now: saveNow, store } };
 }
 
 start().catch((error) => {

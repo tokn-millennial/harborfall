@@ -716,3 +716,73 @@ The figures cost about 1 ms a frame, around 5 percent. The frame as a whole is s
 
 **What I would change**
 - I would write the tests for a piece like this before looking at it in the browser. All three bugs were invisible in screenshots and obvious to a test that counted.
+
+**After the gate:** committed as `41be6f2` and pushed at your request.
+
+## Phase 10: Sound
+
+Date: 2026-11-12. Status: approved by Colin with no changes. He has not yet said how it sounds.
+
+**Turns used:** 1 (your message "keep going"). No plan was shown first (D126). You had not chosen where the sounds should come from, so I chose (D127).
+
+**What was built**
+- **Seven sounds made by code:** pick, place, road, demolish, upgrade, refuse and win.
+- **A quiet sea** in the background, looping with no join.
+- **A speaker button** in the top bar and **a volume slider** in the ? panel, both remembered.
+- No rule changed. The bot's result is identical.
+
+**The limit that matters most: I cannot hear.** Nobody has listened to these sounds. Everything below is measurement.
+
+**Automated tests: 317 pass, 0 fail.** That is 290 from before plus 27 for sound.
+
+**What the sounds measure as**
+
+| Sound | Length | Peak (1.0 is the most a speaker can take) | What it is made of |
+|---|---|---|---|
+| pick | 0.05 s | 0.28 | One falling tone, 880 to 660 hertz |
+| place | 0.20 s | 0.67 | A low thud falling from 150 to 70 hertz, a knock, a puff of noise |
+| road | 0.11 s | 0.52 | A scrape of noise and a short low tone |
+| demolish | 0.40 s | 0.70 | Noise that grows more muffled, over a falling low tone |
+| upgrade | 0.44 s | 0.33 | Two notes, C then the G above |
+| refuse | 0.25 s | 0.28 | Two low notes going down |
+| win | 1.17 s | 0.51 | C, E, G, then the C above, held as a chord |
+| sea | 14 s loop | 0.50, played at three tenths | Muffled noise in two swells |
+
+Every sound starts at exactly zero and has died away by its end, so none can click. None peaks above 0.9. The loudest is under six times the quietest.
+
+**Browser checks**
+
+| Check | How | Result |
+|---|---|---|
+| Nothing plays before the first click | Asked for a sound on a freshly loaded page | Pass |
+| The very first click makes its sound | A real click on a tool button | Failed at first, then fixed. See bug 1. |
+| Each action asks for the right sound | Picked tools, placed on water and on grass, laid and removed road, demolished a house in two clicks, upgraded nothing | Pass. In order: pick, refuse, place, pick, road, pick, demolish, pick, demolish, pick, refuse, pick. |
+| Actions spaced like a person's all sound | Six actions, 0.4 seconds apart | Pass. All six started. |
+| A burst cannot pile up | The same tool picked 20 times in one instant | Pass. One sound started. |
+| The speaker button mutes, unmutes and is remembered | Real clicks, then read the stored setting | Pass |
+| The slider sets the volume, and zero shows as off | Moved it to 80, 0 and 50 | Pass |
+| The test page is silent | Loaded `?fresh` | Pass |
+| A full game through the UI still matches the headless bot | UI playthrough on `?fresh` | Pass. Won at 28.55 minutes, identical final state. |
+| Random input | 5,000 actions over 2 runs, one with sound on | Pass. No errors. |
+| The error console | Read it | Empty. |
+
+I checked that the browser was asked to play each sound. I could not check that sound came out of a speaker.
+
+**Bugs found: 1, fixed. 1 test of mine corrected.**
+1. **The very first click was silent.** A browser's sound system takes a moment to start after the first click, and I refused to play until it reported ready. A sound asked for in that moment is now started anyway and is heard as soon as the system is ready. At most two may wait, so they cannot all go off together.
+2. **One of my tests measured the wrong stretch of a sound.** It compared the first and second half of the upgrade sound, where the two notes overlap. It now compares the first moments with the last. The sound was right. The test was wrong.
+
+**Decisions made:** 12 (D126 to D137).
+
+**Weak or unfinished**
+- **Nobody has heard any of it.** This is the weakest gate so far. A sound can pass every test here and still be ugly.
+- **The low sounds may be faint on small speakers.** The thud of a building and the tumble of a demolish sit between 50 and 150 hertz, which laptop speakers barely play. Each has a higher part on top for that reason, but I could not check that it is enough.
+- **The sea is a guess.** Muffled noise with a swell is the usual way to suggest waves. It could as easily sound like wind or a hiss.
+- **No music.**
+- **Most of the game is silent.** Half an hour of play has sounds only when you act. The town itself makes none.
+- **The sounds are simple tones.** They will sound like an old computer game, not like a recording.
+- **Safari and Firefox are untested.** The sound code uses the common, long-standing parts of the browser's sound system, but I ran it only in a Chromium browser.
+- **Not done:** your hand-played game and a Mac test.
+
+**What I would change**
+- I would have said at the start of this phase, not at the end, that I would be building something I cannot check. You may have preferred to pick the sound source yourself.

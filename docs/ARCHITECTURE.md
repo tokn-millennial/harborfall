@@ -96,6 +96,7 @@ Harborfall/
       advice.js           The tip line: what is short, traced to its root. Pure.
       titleModel.js       What the title screen says and offers. Pure.
       titleScreen.js      Shows the title screen and reports the choice.
+      soundControls.js    The speaker button and the volume slider.
       hud.js              Coins and income, goods, population, clock.
       buildMenu.js        The tool buttons and the hint strip above them.
       infoPanel.js        Shows a panel model, reports button presses.
@@ -104,11 +105,17 @@ Harborfall/
       dom.js              Two small helpers for making page elements.
       icons.js            The small icons for goods, people, coins and tools.
 
+    audio/                The sounds, made from numbers. No browser code.
+      synth.js            Turns a recipe into a list of samples. Also makes the looping sea.
+      sounds.js           The recipes: which tones and noise make up each sound.
+
     platform/             The only place that touches the outside world.
       loadData.browser.js Loads the JSON files in the browser.
       loadData.node.js    Loads the JSON files in Node.
       loop.js             Fixed-tick loop and speed control.
       saveStore.js        Keeps one saved game in a storage box that is handed to it.
+      audio.js            Plays sounds through a sound system that is handed to it.
+      soundSettings.js    Remembers the volume and whether sound is off.
 
     main.js               Browser start-up: load data, title screen, pick the game, wire layers, autosave.
 
@@ -298,6 +305,7 @@ All tests run with `node --test` and need no browser.
 | `loop.test.js` | Real time becomes whole ticks. Speeds 2x and 4x, pause, and a stalled tab all behave. |
 | `save.test.js` | A game that is saved, turned into text, read back and played on ends exactly where it would have without saving. Tested on real bot games at several moments, on a won game, on another island and on a hand-made one. Twenty kinds of damaged save, a changed rule and a newer version are each refused. Changes to looks and names are not. |
 | `title.test.js` | The save slot, with a stand-in for the browser's storage: reading, writing, failing storage, unreadable text. What the title screen offers in each case, and that a new game never replaces a saved one without a second press. |
+| `sound.test.js` | Every sound is short, not too loud, and starts and ends in silence so it cannot click. Good news rises and bad news falls. The sea loops with no join. With a stand-in for the browser: nothing plays before the first click, the same sound cannot pile up, muting silences everything, and a browser with no sound causes no error. |
 | `life.test.js` | Walkers and carts only ever stand on roads, and boats only on water. A cart carries what its producer made and ends beside a warehouse. A boat goes out and comes home with the fisherman's work. Nothing moves while paused. A game with life ends identical to one without. Removing roads, loading another game and a jump in time cause no error. |
 | `art.test.js` | Every building and house tier has a drawing. Every drawing runs in every state, uses only valid colors and stays inside its own plot. A building with no drawing falls back to a box. Stored pictures change only when the look changes. Drawing never changes the game. |
 
@@ -363,3 +371,15 @@ Saving is split across three places, so that the part that matters would survive
 **The damage check.** A save is checked in about twenty ways: whole numbers where they belong, buildings of known types that sit on the tiles the map says they do, residents within a house's limit. Then everything worked out from what is built where (road connections, storage, market coverage) is calculated afresh and must match what the save says.
 
 **Limits.** One slot, one browser. Two tabs open on the game overwrite each other, and the last to save wins. The speed setting, the picked tool and the tip line's memory of shortages are not saved.
+
+## 13. Sound
+
+Sound follows the same split as saving.
+
+- **`src/audio/`, the what.** A sound is a recipe: a few voices, each a tone or a burst of noise with a pitch, a length and a loudness. `synth.js` works a recipe out sample by sample into a plain list of numbers. Nothing here touches the browser, so every sound is made and measured in the tests, and the same code would feed a game engine's sound system.
+- **`src/platform/audio.js`, the how.** It hands those numbers to the browser's sound system, which is passed in. It sets nothing up until the first click or key press, never starts the same sound twice within 60 milliseconds, plays at most six at once, and does nothing at all if the browser has no sound.
+- **`src/ui/gameUi.js`, the when.** The UI reports seven kinds of moment through one callback, `onSound`. It does not know whether anything is listening. The simulation knows nothing about sound.
+
+Why make sounds from numbers and not use the browser's built-in tone makers: a list of numbers can be checked in a test (how long, how loud, silent at both ends), is the same in every browser, and is not tied to browsers at all.
+
+**Limit.** A test can measure a sound. It cannot hear one. Whether these sounds are pleasant has not been checked by anyone.
