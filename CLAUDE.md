@@ -28,7 +28,7 @@ Harborfall is a small Anno-style city builder for desktop browsers. The owner is
 
 ## Commands
 
-- `node --test` runs all tests (551 at the end of Phase 20). They must all pass before a gate.
+- `node --test` runs all tests (555 at the end of Phase 21). They must all pass before a gate.
 - `node tools/bot.mjs` plays a full headless game (also `careless`, `bread-first`, `--seed N`, `--pace typical`, `--steps`, `--map`). The standard order must still win inside 25 to 40 minutes. It is the balance gate, and `tests/bot.test.js` checks it.
 - `node tools/tune.mjs` compares balance variants. `node tools/pace.mjs` estimates a person's time. `node tools/print-map.mjs` prints the island.
 - `node serve.mjs` serves the game at `http://localhost:5173`, which opens on the title screen and saves the game in the browser. `?demo` shows a finished town. `?fresh` opens a new game with no title screen. Neither of those two ever saves.
@@ -82,4 +82,5 @@ Update these in the same phase as the change, before the gate:
 - After any change to production or carts, run every bot order and scenario with carts on and off (see `SPEC.md` section 20 for the last figures), not just the standard one.
 - The bot builds warehouses on its own where carts struggle, and before placing far from every warehouse (`ARCHITECTURE.md` section 23). `tools/ui-playthrough.js` must make exactly the same choices at the same ticks, or the UI-against-bot check will fail. Change both together.
 - Before tuning anything that affects carts or materials, run the second act (`artisans`, `pastWin`) on islands 42, 7 and 2025 as well as the standard one. In Phase 20 the standard island hid a failure the others showed.
-- The browser pane's screenshots crop the page when the display scales pixels (1.5 in Phase 20). Check words by reading the page; do not trust a screenshot's edges.
+- The browser pane's first screenshot after a change is often an old frame, which can look cropped. Take two in a row and trust the second. Check words by reading the page.
+- When the browser pane is hidden it draws no frames, so frame rates cannot be measured there. Time the drawing functions in the page instead.

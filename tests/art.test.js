@@ -11,7 +11,7 @@ import { createKit, tone, mix, hash2 } from '../src/render/art/kit.js';
 import { ART_USES, BUILDING_ART, LIVE_ART, artFor, artIdFor, artStateKey } from '../src/render/art/buildings.js';
 import { sharpnessFor } from '../src/render/art/sprites.js';
 import { paintBox } from '../src/render/art/box.js';
-import { createForestPainter, createRoadPainter, createTerrainPainter, paintTree, paintWater, shallowsOf, waterBackground } from '../src/render/art/terrain.js';
+import { createForestPainter, createRoadPainter, createTerrainPainter, gridLines, groundShade, paintGrid, paintTree, paintWater, shallowsOf, waterBackground } from '../src/render/art/terrain.js';
 import { buildingVisual } from '../src/render/visuals.js';
 import { paintActors } from '../src/render/art/actors.js';
 import { paintDust } from '../src/render/art/dust.js';
@@ -478,5 +478,123 @@ test('a house smokes from its own chimney, on the side its look puts it, and eac
     for (const [, y] of where(id, {})) assert.ok(y < base.y - 15, `${id}: smoke at the wrong height`);
     assert.notDeepEqual(where(id, { seed: 1 }), where(id, { seed: 2 }), `${id}: every house smokes in step`);
     assert.deepEqual(where(id, { residents: 0 }), [], `${id}: an empty house smokes`);
+  }
+});
+
+// ---- Phase 21: the art pass ------------------------------------------------------
+
+// A stand-in canvas that remembers which color each ready-made shape was drawn in.
+function styledRecorder() {
+  const drawn = [];
+  const target = {
+    fill: (path) => drawn.push({ color: target.fillStyle, path: path ?? null }),
+    stroke: (path) => drawn.push({ color: target.strokeStyle, path: path ?? null }),
+    createLinearGradient: () => ({ stops: [], addColorStop(stop, color) { this.stops.push(color); } }),
+  };
+  const ctx = new Proxy(target, { get: (t, key) => (key in t ? t[key] : () => {}) });
+  return { ctx, drawn, pointsIn: (color) => drawn.filter((d) => d.color === color).reduce((n, d) => n + (d.path?.points?.length ?? 0), 0) };
+}
+const brightness = (rgb) => rgb.match(/\d+/g).slice(0, 3).reduce((sum, n) => sum + Number(n), 0);
+
+test('the ground is shaded in broad soft patches, not a checkerboard of tiles', () => {
+  const map = createGame(loadData()).state.map;
+  const land = (x, y) => x < map.width && y < map.height && map.terrain[y * map.width + x] !== 'water';
+  const checkerboard = (x, y) => 0.955 + Math.floor(hash2(x, y, 1) * 4) * 0.03; // how it was shaded before
+  // Over every pair of neighbouring land tiles: the average difference in
+  // brightness, and the share that differ by a step the eye picks out.
+  const measure = (shade) => {
+    let pairs = 0;
+    let total = 0;
+    let seen = 0;
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let y = 0; y < map.height; y++) {
+      for (let x = 0; x < map.width; x++) {
+        if (!land(x, y)) continue;
+        lo = Math.min(lo, shade(x, y));
+        hi = Math.max(hi, shade(x, y));
+        for (const [nx, ny] of [[x + 1, y], [x, y + 1]]) {
+          if (!land(nx, ny)) continue;
+          pairs++;
+          const d = Math.abs(shade(x, y) - shade(nx, ny));
+          total += d;
+          if (d >= 0.025) seen++;
+        }
+      }
+    }
+    return { average: total / pairs, seen: seen / pairs, range: hi - lo };
+  };
+  const now = measure(groundShade);
+  assert.ok(now.average < 0.01, `neighbours differ by ${(now.average * 100).toFixed(1)}% on average`);
+  assert.ok(now.seen < 0.03, `${(now.seen * 100).toFixed(1)}% of neighbours differ by a step the eye picks out`);
+  assert.ok(now.range >= 0.1, 'across the island the ground still varies, from light patches to dark');
+  // The old way fails the same measure, so the measure means something.
+  const before = measure(checkerboard);
+  assert.ok(before.average >= 0.02 && before.seen >= 0.3, JSON.stringify(before));
+  // The same island always looks the same.
+  assert.equal(groundShade(12, 30), groundShade(12, 30));
+});
+
+test('the grid is not part of the ground picture; it is drawn on its own, over land in view only', () => {
+  const game = createGame(loadData());
+  const map = game.state.map;
+  const colors = {};
+  for (const [id, t] of Object.entries(game.rules.map.terrain)) colors[id] = t.color;
+  const ground = styledRecorder();
+  createTerrainPainter(map, colors).paint(ground.ctx, 1);
+  assert.equal(ground.pointsIn('rgba(0, 0, 0, 0.09)'), 0, 'no grid in the ground picture');
+
+  // Every side of every land tile in view lies on a grid line, and every
+  // stretch of every grid line borders land.
+  const range = { x0: 0, y0: 0, x1: map.width - 1, y1: map.height - 1 };
+  const lines = gridLines(map, range);
+  const isLand = (x, y) => x >= 0 && y >= 0 && x < map.width && y < map.height && map.terrain[y * map.width + x] !== 'water';
+  const covered = new Set();
+  for (const [x0, y0, x1, y1] of lines) {
+    if (y0 === y1) for (let x = x0; x < x1; x++) { covered.add(`h${x},${y0}`); assert.ok(isLand(x, y0 - 1) || isLand(x, y0), 'a grid line over open water'); }
+    else for (let y = y0; y < y1; y++) { covered.add(`v${x0},${y}`); assert.ok(isLand(x0 - 1, y) || isLand(x0, y), 'a grid line over open water'); }
+  }
+  for (let y = 0; y < map.height; y++) {
+    for (let x = 0; x < map.width; x++) {
+      if (!isLand(x, y)) continue;
+      for (const side of [`h${x},${y}`, `h${x},${y + 1}`, `v${x},${y}`, `v${x + 1},${y}`]) assert.ok(covered.has(side), `tile ${x},${y} is missing a side of its grid`);
+    }
+  }
+  // Long lines, not an outline round each tile.
+  const land = map.terrain.filter((t) => t !== 'water').length;
+  assert.ok(lines.length < land / 4, `${lines.length} lines for ${land} tiles`);
+  const grid = styledRecorder();
+  paintGrid(grid.ctx, map, range, 1);
+  assert.equal(grid.pointsIn('rgba(0, 0, 0, 0.09)'), lines.length * 2);
+  // Only the part of the map in view.
+  for (const [x0, y0, x1, y1] of gridLines(map, { x0: 10, y0: 10, x1: 20, y1: 20 })) {
+    assert.ok(x0 >= 10 && y0 >= 10 && x1 <= 21 && y1 <= 21);
+  }
+});
+
+test('foam runs along every side of the shore, the far sides too, with a wash further out', () => {
+  // One tile of sand in open water: four sides meet the sea.
+  const terrain = Array(25).fill('water');
+  terrain[2 * 5 + 2] = 'coast';
+  const map = { width: 5, height: 5, terrain };
+  const colors = { water: '#3f7fae', coast: '#d9c38f', grass: '#7fb26a', forest: '#5d9a58', fertile: '#a58a5a' };
+  const r = styledRecorder();
+  createTerrainPainter(map, colors).paint(r.ctx, 1);
+  assert.equal(r.pointsIn('rgba(255, 255, 255, 0.75)'), 8, 'foam: two ends of a line on each of four sides');
+  assert.equal(r.pointsIn('rgba(235, 250, 252, 0.28)'), 8, 'the wash: the same four sides, further out');
+  // Wet sand inside each side.
+  assert.equal(r.pointsIn(tone(colors.coast, 0.86)), 16, 'a strip of wet sand along each of the four sides');
+});
+
+test('roofs are lit at the ridge and darker toward the eaves, and laid in rows of tiles', () => {
+  for (const axis of ['u', 'v']) {
+    const r = styledRecorder();
+    let strokes = 0;
+    const counting = new Proxy(r.ctx, { get: (t, key) => (key === 'lineTo' ? () => { strokes++; } : t[key]) });
+    createKit(counting, 0, 0).gable(0, 0, 2, 2, 20, 14, '#b5523b', { axis });
+    const fades = r.drawn.filter((d) => typeof d.color === 'object' && d.color.stops?.length === 2);
+    assert.equal(fades.length, 2, `axis ${axis}: both slopes fade`);
+    for (const f of fades) assert.ok(brightness(f.color.stops[0]) > brightness(f.color.stops[1]), `axis ${axis}: lighter at the ridge`);
+    assert.ok(strokes > 25, `axis ${axis}: rows and joints of tiles (${strokes} strokes)`);
   }
 });

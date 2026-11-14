@@ -127,6 +127,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tool-picture { display: block; margin-bottom: 1px; }
 .tool-glyph { height: 38px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px; }
 .tool-name { font-weight: 700; font-size: 13px; }
+/* The first tool of each group stands a little apart, with a faint line before it. */
+.tool.group-start { margin-left: 10px; }
+.tool.group-start::before { content: ''; position: absolute; left: -9px; top: 14%; bottom: 14%; width: 1px; background: rgba(201, 165, 90, 0.45); pointer-events: none; }
+/* The top bar in groups: coins | goods | people and goal | time. */
+.hud-goods, .hud-pop, .hud-time { border-left: 1px solid rgba(201, 165, 90, 0.35); padding-left: 14px; }
 .tool-cost { font-size: 11.5px; line-height: 1.2; color: var(--ink-soft); text-align: center; }
 .tool.unaffordable .tool-cost { color: #b03a2a; font-weight: 600; }
 /* Undo with nothing to take back: still there, but plainly at rest. */
@@ -249,8 +254,9 @@ body.title-open #game { cursor: default; }
 }
 
 /* ---- narrower windows: goods show an icon and a number, with the name on hover ---- */
-/* Seven goods and three kinds of resident must fit one row at 1280 wide. */
-@media (max-width: 1640px) {
+/* Seven goods and three kinds of resident must fit one row at 1280 wide.
+   With staff and cloth on the bar, the names fit only on very wide screens. */
+@media (max-width: 2300px) {
   .hud-goods .hud-label, .hud-pop .hud-good .icon + .hud-label { display: none; }
   .hud-goods { gap: 11px; }
   #hud-main { gap: 6px 16px; }
@@ -277,7 +283,10 @@ body.title-open #game { cursor: default; }
 }
 @media (max-width: 1420px) {
   #menu { gap: 4px; }
-  .tool { min-width: 56px; max-width: 72px; padding: 4px 3px 5px; }
+  .tool { min-width: 56px; max-width: 70px; padding: 4px 3px 5px; }
+  .tool.group-start { margin-left: 7px; }
+  .tool.group-start::before { left: -6px; }
+  .hud-goods, .hud-pop, .hud-time { padding-left: 10px; }
   .tool-name { font-size: 12.5px; }
   .tool-cost { font-size: 11px; }
 }

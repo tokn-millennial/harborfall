@@ -573,3 +573,15 @@ All of it is in `src/sim/carts.js`.
 - `cartsStruggling`: each time it tries a step, and so every second while it waits, if 3 or more producers are waiting on carts (a full yard, or a workshop out of materials the stockpile has), and it can pay for a warehouse now, and it has not built one for this reason in the last 3 minutes, it builds one beside the worst served of them.
 
 Without these the bot's second act stalled on some islands: it kept building beyond reach and never added a warehouse, which a player warned by the red marks and the tip line would not do.
+
+## 24. The art pass
+
+Phase 21 changed only `src/render/`, two files in `src/ui/` and `ui.css`. No rule, no data and nothing in `src/sim/` changed, so the rules stamp is the same and saves are untouched.
+
+- **Ground shade.** `groundShade(x, y)` in `src/render/art/terrain.js` gives each tile a color factor from 0.94 to 1.06, in 13 steps, from `smoothNoise`: a value on a lattice every 9 tiles, blended smoothly, plus a quarter of one every 4 tiles. Still made only from `hash2`, so an island always looks the same.
+- **The grid** is no longer in the ground picture. `paintGrid` draws it each frame, only when the overlay has `grid: true`, which `gameUi.js` sets while the road or a building tool is picked. `gridLines` turns the land tiles in view into one line per stretch of land along each row and column of tile edges (117 lines for the whole island), which costs about 1 ms. The first version outlined every tile and cost about 14 ms a frame.
+- **The shore** in `createTerrainPainter`: foam on all four sides where land meets water, a wash line moved out over the water by `outward`, wet-sand strips on beach tiles, a cliff foot and a light lip.
+- **Shadows** in `renderer.js`: two shapes per building, a wide soft one and a darker core, stretched along the building's x side by its height.
+- **Roofs** in `kit.gable`: each slope filled with a gradient (`fade`), rows and staggered joints drawn in one path each (`strokes`), a dark eave line and a light ridge. `kit.box` fades walls 6 pixels or taller toward the ground. Building pictures are drawn once and kept, so this costs nothing per frame.
+- **Figures** in `src/render/art/actors.js`: still small rectangles, with round shadows (`groundShadow`), arms, a shaded side and round wheels.
+- **Tool groups** in `src/ui/buildMenu.js`: `add()` takes a group, and the first tool of a new group gets the class `group-start`.

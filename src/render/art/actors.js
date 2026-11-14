@@ -10,6 +10,8 @@ import { CLIFF } from './terrain.js';
 const SKIN = '#e8c39e';
 const LEGS = '#3b2f2a';
 const SHADOW = 'rgba(15, 35, 20, 0.26)';
+const SIDE_SHADE = 'rgba(0, 0, 0, 0.18)'; // the right side of a figure, away from the sun
+const WATER_SHADOW = 'rgba(10, 40, 60, 0.25)';
 // Clothes by kind of resident: tunic colors, then the hat.
 const CLOTHES = {
   farmer: { tunics: ['#b08a4a', '#8a9a5b', '#a8683e', '#c9b27a'], hat: '#e0c878' },
@@ -20,26 +22,50 @@ const PLAIN = { tunics: ['#8c7a5c'], hat: '#5a4a3a' };
 const CART = { body: '#8a5f3a', rim: '#6b4729', wheel: '#33271f' };
 const BOAT = { hull: '#7a5236', rim: '#a87a52', ripple: 'rgba(255, 255, 255, 0.5)', line: 'rgba(40, 40, 40, 0.7)' };
 
-// One person standing at (x, y) in world pixels. `stride` moves the legs.
+// A soft oval shadow on the ground, falling a little to the right.
+function groundShadow(ctx, x, y, rx, ry, color = SHADOW) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.ellipse(x + 1, y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// One person standing at (x, y) in world pixels. `stride` moves the legs and arms.
 function person(ctx, x, y, clothes, look, stride) {
   const step = Math.floor(stride * 6) % 2;
+  const tunic = clothes.tunics[look % clothes.tunics.length];
   ctx.fillStyle = LEGS;
   // One foot is always off the ground.
   ctx.fillRect(x - 1.6, y - 2.6, 1.3, 2.6 - step);
   ctx.fillRect(x + 0.3, y - 2.6, 1.3, 1.6 + step);
-  ctx.fillStyle = clothes.tunics[look % clothes.tunics.length];
+  // Arms swing opposite to the legs.
+  ctx.fillStyle = tunic;
+  ctx.fillRect(x - 2.9, y - 6.6 + step * 0.6, 0.9, 3.2);
+  ctx.fillRect(x + 2, y - 6 - step * 0.6, 0.9, 3.2);
   ctx.fillRect(x - 2.1, y - 7, 4.2, 4.4);
   ctx.fillStyle = SKIN;
   ctx.fillRect(x - 1.5, y - 9.6, 3, 2.6);
   ctx.fillStyle = clothes.hat;
   ctx.fillRect(x - 2, y - 10.6, 4, 1.3);
+  ctx.fillStyle = SIDE_SHADE;
+  ctx.fillRect(x + 0.4, y - 9.6, 1.1, 2.6);
+  ctx.fillRect(x + 0.6, y - 7, 1.5, 4.4);
 }
 
 function walker(ctx, a) {
   const p = tileToWorld(a.x, a.y);
-  ctx.fillStyle = SHADOW;
-  ctx.fillRect(p.x - 2.8, p.y - 0.9, 5.6, 1.8);
+  groundShadow(ctx, p.x, p.y, 3, 1.1);
   person(ctx, p.x, p.y, CLOTHES[a.tier] ?? PLAIN, a.look, a.stride);
+}
+
+// A round wheel with a hub.
+function wheel(ctx, x, y) {
+  ctx.fillStyle = CART.wheel;
+  ctx.beginPath();
+  ctx.arc(x, y, 1.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = CART.rim;
+  ctx.fillRect(x - 0.4, y - 0.4, 0.8, 0.8);
 }
 
 function cart(ctx, a, goodColor) {
@@ -49,20 +75,29 @@ function cart(ctx, a, goodColor) {
   const sy = a.dx + a.dy;
   const length = Math.hypot(sx, sy) || 1;
   // The carter walks behind and pushes.
-  person(ctx, p.x - (sx / length) * 7, p.y - (sy / length) * 3.5, PLAIN, a.look, a.stride);
-  ctx.fillStyle = SHADOW;
-  ctx.fillRect(p.x - 5, p.y - 0.8, 10, 2);
-  ctx.fillStyle = CART.wheel;
-  ctx.fillRect(p.x - 4.2, p.y - 2.4, 2.4, 2.4);
-  ctx.fillRect(p.x + 1.8, p.y - 2.4, 2.4, 2.4);
+  const cx = p.x - (sx / length) * 7;
+  const cy = p.y - (sy / length) * 3.5;
+  groundShadow(ctx, cx, cy, 2.8, 1);
+  person(ctx, cx, cy, PLAIN, a.look, a.stride);
+  groundShadow(ctx, p.x, p.y, 6, 1.6);
   ctx.fillStyle = CART.body;
   ctx.fillRect(p.x - 4.6, p.y - 5.6, 9.2, 3.6);
+  ctx.fillStyle = SIDE_SHADE;
+  ctx.fillRect(p.x + 1.5, p.y - 5.6, 3.1, 3.6);
   ctx.fillStyle = CART.rim;
+  ctx.fillRect(p.x - 4.6, p.y - 5.6, 9.2, 0.7);
   ctx.fillRect(p.x - 4.6, p.y - 2.8, 9.2, 0.8);
-  // The load, in the color of the good. An empty cart, on its way out, has none.
+  wheel(ctx, p.x - 3, p.y - 1.4);
+  wheel(ctx, p.x + 3, p.y - 1.4);
+  // The load, in the color of the good, with its top catching the light. An
+  // empty cart, on its way out, has none.
   if (!goodColor) return;
   ctx.fillStyle = goodColor;
-  ctx.fillRect(p.x - 3.6, p.y - 8, 7.2, 2.6);
+  ctx.fillRect(p.x - 3.6, p.y - 8.2, 7.2, 2.8);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+  ctx.fillRect(p.x - 3.6, p.y - 8.2, 7.2, 0.9);
+  ctx.fillStyle = SIDE_SHADE;
+  ctx.fillRect(p.x + 1.2, p.y - 7.3, 2.4, 1.9);
 }
 
 function boat(ctx, a, time) {
@@ -70,6 +105,7 @@ function boat(ctx, a, time) {
   const x = p.x;
   const y = p.y + CLIFF + Math.sin(time * 1.8 + a.look) * 0.7; // on the water, bobbing
   const facing = a.dx - a.dy >= 0 ? 1 : -1;
+  groundShadow(ctx, x, y + 2.6, 10, 2, WATER_SHADOW);
   ctx.fillStyle = BOAT.ripple;
   ctx.fillRect(x - 11, y + 2.6, 6, 0.8);
   ctx.fillRect(x + 5, y + 3.2, 6, 0.8);
@@ -81,6 +117,8 @@ function boat(ctx, a, time) {
   ctx.lineTo(x - 6.5, y + 2.4);
   ctx.closePath();
   ctx.fill();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+  ctx.fillRect(x - 7.5, y + 0.8, 15, 1.6);
   ctx.fillStyle = BOAT.rim;
   ctx.fillRect(x - 9, y - 2.4, 18, 1.1);
   if (!a.manned) return;
@@ -114,7 +152,8 @@ function ship(ctx, a, time) {
   }
   ctx.fillRect(x - 18, y + 5.2, 7, 0.8);
   ctx.fillRect(x + 12, y + 5.6, 7, 0.8);
-  // The hull, its painted band, and the deck.
+  // Its shadow on the water, then the hull, its painted band, and the deck.
+  groundShadow(ctx, x, y + 5, 24, 3.5, WATER_SHADOW);
   ctx.fillStyle = SHIP.hull;
   ctx.beginPath();
   ctx.moveTo(x - 20 * facing, y - 3);
@@ -123,8 +162,13 @@ function ship(ctx, a, time) {
   ctx.lineTo(x - 16 * facing, y + 4.5);
   ctx.closePath();
   ctx.fill();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+  ctx.fillRect(x - 16, y + 2, 32, 2.5);
   ctx.fillStyle = SHIP.band;
   ctx.fillRect(Math.min(x - 19 * facing, x + 22 * facing), y - 1.2, 41, 1.1);
+  // A row of small windows along the band.
+  ctx.fillStyle = 'rgba(40, 25, 15, 0.8)';
+  for (let i = -3; i <= 3; i++) ctx.fillRect(x + i * 4.5 - 0.8, y + 0.6, 1.6, 1.2);
   ctx.fillStyle = SHIP.deck;
   ctx.fillRect(Math.min(x - 20 * facing, x + 23 * facing), y - 4.6, 43, 1.8);
   // Masts and sails. Tied up, the sails are furled.
@@ -149,6 +193,9 @@ function ship(ctx, a, time) {
     ctx.fill();
     ctx.fillStyle = SHIP.stripe;
     ctx.fillRect(mx - width / 2, top + tall * 0.34, width, 2);
+    // The far half of the sail, out of the sun.
+    ctx.fillStyle = 'rgba(120, 100, 70, 0.14)';
+    ctx.fillRect(facing > 0 ? mx : mx - width / 2, top + 2, width / 2, tall * 0.7 - 2);
   }
   // A pennant at the top of the main mast.
   ctx.fillStyle = '#c94f3d';

@@ -648,3 +648,35 @@ Added in Phase 20. This finishes "goods carried along roads".
 **Saved games.** A game saved before this phase loads with every workshop's store empty. The first cart to each fills it. A big town from before carts, especially one with workshops out of reach, will need another warehouse or two: left alone it slowly loses residents, and the tip line says what to do.
 
 **Not in this phase:** carts that serve another warehouse's buildings, a choice of which materials a workshop is sent, and stores of different sizes for different workshops.
+
+## 22. The look
+
+Added in Phase 21, an art and design pass. **No rule, number or balance changed.** A saved game loads exactly as before.
+
+**The ground**
+- The grass, sand and fields are shaded in **broad soft patches**, lighter and darker over several tiles, instead of every tile picking its own shade. The old way read as a checkerboard.
+- The **tile grid shows only while placing** a road or a building. The rest of the time the ground is plain.
+- The meadow has **flowers in drifts** (cream, yellow and pink), light and dark grass tufts, and now and then a low bush or a stone. They are only looks: you can build on them.
+
+**The shore**
+- **Foam on every side** of the island, not only the two sides facing you, and a soft line of white a little further out.
+- **Wet sand**, a darker strip along the water's edge of every beach.
+- The low cliff on the near sides has a darker foot and a light top edge.
+
+**Buildings**
+- **Shadows** fall to the lower right, away from the sun, longer for taller buildings, with a soft edge.
+- **Roofs** are lit at the ridge and darker toward the eaves, laid in rows of tiles, with a dark eave edge.
+- **Walls** darken a little toward the ground.
+- **At night** the light from windows falls on the ground in front of a house, not on its roof.
+- The **number above a house** is smaller and see-through.
+
+**Figures**
+- People swing their arms, have a shaded side and a round shadow.
+- Carts have round wheels, and their load catches the light.
+- Fishing boats and the trade ship cast a shadow on the water. The ship has a row of small windows and its sails are shaded on the far half.
+
+**The screens around the map**
+- The **tools** at the bottom come in groups, with a small gap and a faint line between: Select; Road and Warehouse; the buildings that make things; House and Market; Upgrade, Demolish and Undo.
+- The **top bar** comes in groups with faint lines between: coins; goods; people and the goal; the clock.
+- The names of goods on the top bar ("Wood") show only on screens wider than 2300 pixels. Since staff and cloth joined the bar it no longer fitted one line at 1920 with the names.
+- The title screen, the building panel and the win screen were not redesigned. They pick up the new ground behind them.

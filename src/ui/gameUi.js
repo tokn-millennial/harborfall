@@ -233,7 +233,8 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
     const active = pointer.inside && !controls.panning;
     // While placing things, buildings are drawn see-through so the ground,
     // the roads and any small building behind a tall one stay visible.
-    const overlay = { tints: [], fadeBuildings: tool.mode === 'build' || tool.mode === 'road' };
+    const placing = tool.mode === 'build' || tool.mode === 'road';
+    const overlay = { tints: [], fadeBuildings: placing, grid: placing };
     let tip = null; // { text, level } shown next to the pointer
 
     // A building tied to a kind of ground lights that ground up for as long as

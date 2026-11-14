@@ -22,10 +22,16 @@ export function createBuildMenu(root, hintRoot, game, { onPick, onUndo = () => {
   const byKey = new Map();
   let hovered = null;
 
-  function add(tool, name, cost, blurb, key = null, onClick = null) {
+  // Tools come in groups, shown with a little space between them: select;
+  // roads and warehouses; buildings that make things; houses and markets; and
+  // the tools that change what is built.
+  let lastGroup = null;
+  function add(tool, name, cost, blurb, key = null, onClick = null, group = 'tools') {
     // A key that is taken, or already given to an earlier button, is dropped.
     const usable = key && !TAKEN_KEYS.has(key) && !byKey.has(key) ? key : null;
-    const button = el('button', { class: 'tool', type: 'button' }, [
+    const startsGroup = lastGroup !== null && group !== lastGroup;
+    lastGroup = group;
+    const button = el('button', { class: startsGroup ? 'tool group-start' : 'tool', type: 'button' }, [
       usable ? el('span', 'tool-key', usable.toUpperCase()) : null,
       el('span', 'tool-name', name),
       el('span', 'tool-cost', cost ?? ''),
@@ -40,13 +46,14 @@ export function createBuildMenu(root, hintRoot, game, { onPick, onUndo = () => {
     return entry;
   }
 
-  const select = add({ mode: 'select', building: null }, 'Select', null, ['Click a building to see its details. Drag to move the view.'], TOOL_KEYS.select);
+  const select = add({ mode: 'select', building: null }, 'Select', null, ['Click a building to see its details. Drag to move the view.'], TOOL_KEYS.select, null, 'select');
   select.button.prepend(el('span', 'tool-glyph', [icon('select', { size: 26 })]));
   for (const [id, def] of Object.entries(rules.buildings)) {
     const tool = { mode: def.category === 'road' ? 'road' : 'build', building: id };
     const blurb = buildingBlurb(rules, id);
     if (def.category === 'road') blurb.push('Hold Shift while dragging to flip the corner.');
-    const entry = add(tool, def.name, costText(rules, def.cost), blurb, def.key);
+    const group = def.category === 'road' || def.category === 'storage' ? 'move' : def.category === 'house' || def.category === 'market' ? 'live' : 'make';
+    const entry = add(tool, def.name, costText(rules, def.cost), blurb, def.key, null, group);
     const picture = el('canvas', 'tool-picture');
     drawBuildingIcon(picture, rules, id);
     entry.button.prepend(picture);

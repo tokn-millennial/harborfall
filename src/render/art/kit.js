@@ -57,6 +57,27 @@ export function createKit(ctx, originX, originY) {
     }
   }
 
+  // A fill that runs from one color at point `a` to another at point `b`.
+  function fade(a, b, from, to) {
+    const g = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+    g.addColorStop(0, from);
+    g.addColorStop(1, to);
+    return g;
+  }
+
+  // Many short strokes in one color, drawn as one path.
+  function strokes(segments, stroke, width) {
+    if (segments.length === 0) return;
+    ctx.beginPath();
+    for (const [a, b] of segments) {
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+    }
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = width;
+    ctx.stroke();
+  }
+
   function line(a, b, stroke, width = 0.7) {
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
@@ -81,8 +102,12 @@ export function createKit(ctx, originX, originY) {
     // options.outline: false for small things, where outlines would swamp the shape.
     box(u0, v0, u1, v1, z0, z1, color, options = {}) {
       const stroke = options.outline === false ? null : OUTLINE;
-      poly([P(u0, v1, z0), P(u1, v1, z0), P(u1, v1, z1), P(u0, v1, z1)], tone(color, SHADE.lit), stroke);
-      poly([P(u1, v1, z0), P(u1, v0, z0), P(u1, v0, z1), P(u1, v1, z1)], tone(color, SHADE.shade), stroke);
+      // Walls of any height darken a little toward the ground.
+      const tall = z1 - z0 >= 6 && options.outline !== false;
+      const lit = tall ? fade(P(u0, v1, z1), P(u0, v1, z0), tone(color, SHADE.lit), tone(color, SHADE.lit * 0.88)) : tone(color, SHADE.lit);
+      const shade = tall ? fade(P(u1, v1, z1), P(u1, v1, z0), tone(color, SHADE.shade), tone(color, SHADE.shade * 0.86)) : tone(color, SHADE.shade);
+      poly([P(u0, v1, z0), P(u1, v1, z0), P(u1, v1, z1), P(u0, v1, z1)], lit, stroke);
+      poly([P(u1, v1, z0), P(u1, v0, z0), P(u1, v0, z1), P(u1, v1, z1)], shade, stroke);
       if (options.top !== false) poly([P(u0, v0, z1), P(u1, v0, z1), P(u1, v1, z1), P(u0, v1, z1)], options.top ?? tone(color, SHADE.top), stroke);
     },
 
@@ -99,34 +124,52 @@ export function createKit(ctx, originX, originY) {
     // A pitched roof over the rectangle, starting at height z and rising to a
     // ridge. axis 'u' runs the ridge along u; axis 'v' runs it along v.
     // `wall` is the color of the triangular wall under the visible gable end.
+    // Each slope is lightest at the ridge and darker toward the eaves, laid in
+    // rows (`lines` of them) with the joints of each row offset from the next,
+    // and finished with a dark eave edge.
     gable(u0, v0, u1, v1, z, rise, color, { axis = 'u', wall = null, overhang = 0.08, lines = 3 } = {}) {
       const o = overhang;
+      const rows = lines + 1;
+      const joints = [];
+      const courses = [];
+      // Adds the joints between tiles on one slope. along(a, t) gives the point a
+      // distance `a` along the ridge and a share `t` of the way down the slope.
+      const tiles = (from, to, along) => {
+        for (let r = 0; r < rows; r++) {
+          const t0 = r / rows;
+          const t1 = (r + 1) / rows;
+          if (r > 0) courses.push([along(from, t0), along(to, t0)]);
+          for (let a = from + (r % 2 ? 0.12 : 0.24); a < to - 0.05; a += 0.24) joints.push([along(a, t0 + 0.04), along(a, t1)]);
+        }
+      };
       if (axis === 'u') {
         const vm = (v0 + v1) / 2;
         const drop = (o * rise) / (vm - v0);
+        const ridge = (u) => P(u, vm, z + rise);
         if (wall) poly([P(u1, v0, z), P(u1, v1, z), P(u1, vm, z + rise)], tone(wall, SHADE.shade));
-        poly([P(u0 - o, v0 - o, z - drop), P(u1 + o, v0 - o, z - drop), P(u1 + o, vm, z + rise), P(u0 - o, vm, z + rise)], tone(color, 0.78));
-        poly([P(u0 - o, v1 + o, z - drop), P(u1 + o, v1 + o, z - drop), P(u1 + o, vm, z + rise), P(u0 - o, vm, z + rise)], tone(color, 1));
-        for (let i = 1; i <= lines; i++) {
-          const t = i / (lines + 1);
-          const v = vm + (v1 + o - vm) * t;
-          const h = z + rise - (rise + drop) * t;
-          line(P(u0 - o, v, h), P(u1 + o, v, h), tone(color, 0.8), 0.6);
-        }
-        line(P(u0 - o, vm, z + rise), P(u1 + o, vm, z + rise), tone(color, 1.25), 1);
+        poly([P(u0 - o, v0 - o, z - drop), P(u1 + o, v0 - o, z - drop), P(u1 + o, vm, z + rise), P(u0 - o, vm, z + rise)],
+          fade(ridge(u0), P(u0, v0 - o, z - drop), tone(color, 0.84), tone(color, 0.72)));
+        poly([P(u0 - o, v1 + o, z - drop), P(u1 + o, v1 + o, z - drop), P(u1 + o, vm, z + rise), P(u0 - o, vm, z + rise)],
+          fade(ridge(u0), P(u0, v1 + o, z - drop), tone(color, 1.1), tone(color, 0.9)));
+        tiles(u0 - o, u1 + o, (u, t) => P(u, vm + (v1 + o - vm) * t, z + rise - (rise + drop) * t));
+        strokes(courses, tone(color, 0.76), 0.6);
+        strokes(joints, tone(color, 0.84), 0.4);
+        line(P(u0 - o, v1 + o, z - drop), P(u1 + o, v1 + o, z - drop), tone(color, 0.55), 1.1);
+        line(P(u0 - o, vm, z + rise), P(u1 + o, vm, z + rise), tone(color, 1.3), 1.1);
       } else {
         const um = (u0 + u1) / 2;
         const drop = (o * rise) / (um - u0);
+        const ridge = (v) => P(um, v, z + rise);
         if (wall) poly([P(u0, v1, z), P(u1, v1, z), P(um, v1, z + rise)], tone(wall, SHADE.lit));
-        poly([P(u0 - o, v0 - o, z - drop), P(u0 - o, v1 + o, z - drop), P(um, v1 + o, z + rise), P(um, v0 - o, z + rise)], tone(color, 1.05));
-        poly([P(u1 + o, v0 - o, z - drop), P(u1 + o, v1 + o, z - drop), P(um, v1 + o, z + rise), P(um, v0 - o, z + rise)], tone(color, 0.76));
-        for (let i = 1; i <= lines; i++) {
-          const t = i / (lines + 1);
-          const u = um + (u1 + o - um) * t;
-          const h = z + rise - (rise + drop) * t;
-          line(P(u, v0 - o, h), P(u, v1 + o, h), tone(color, 0.62), 0.6);
-        }
-        line(P(um, v0 - o, z + rise), P(um, v1 + o, z + rise), tone(color, 1.25), 1);
+        poly([P(u0 - o, v0 - o, z - drop), P(u0 - o, v1 + o, z - drop), P(um, v1 + o, z + rise), P(um, v0 - o, z + rise)],
+          fade(ridge(v0), P(u0 - o, v0, z - drop), tone(color, 1.12), tone(color, 0.94)));
+        poly([P(u1 + o, v0 - o, z - drop), P(u1 + o, v1 + o, z - drop), P(um, v1 + o, z + rise), P(um, v0 - o, z + rise)],
+          fade(ridge(v0), P(u1 + o, v0, z - drop), tone(color, 0.84), tone(color, 0.68)));
+        tiles(v0 - o, v1 + o, (v, t) => P(um + (u1 + o - um) * t, v, z + rise - (rise + drop) * t));
+        strokes(courses, tone(color, 0.6), 0.6);
+        strokes(joints, tone(color, 0.66), 0.4);
+        line(P(u1 + o, v0 - o, z - drop), P(u1 + o, v1 + o, z - drop), tone(color, 0.5), 1.1);
+        line(P(um, v0 - o, z + rise), P(um, v1 + o, z + rise), tone(color, 1.3), 1.1);
       }
     },
 

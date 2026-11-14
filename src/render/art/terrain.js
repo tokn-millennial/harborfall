@@ -13,8 +13,11 @@ export const CLIFF = 6;          // pixels the island stands above the water
 const CLIFF_LIT = '#cdb58a';
 const CLIFF_SHADE = '#a8906a';
 const SHALLOW = ['rgba(150, 215, 225, 0.42)', 'rgba(130, 200, 220, 0.2)'];
-const FOAM = 'rgba(255, 255, 255, 0.65)';
-const GRID = 'rgba(0, 0, 0, 0.055)';
+const CLIFF_FOOT = 'rgba(70, 55, 35, 0.35)';
+const FOAM = 'rgba(255, 255, 255, 0.75)';
+const WASH = 'rgba(235, 250, 252, 0.28)';
+const GRID = 'rgba(0, 0, 0, 0.09)';
+const FLOWER_COLORS = ['rgba(255, 250, 225, 0.95)', '#f0d25a', '#e7a2b6'];
 const TREE = { pine: '#2f6b3f', pineShade: '#21502f', leaf: '#4f8f42', leafShade: '#3a7234', trunk: '#6b4a32', shadow: 'rgba(15, 35, 20, 0.22)' };
 
 const isLand = (map, x, y) => x >= 0 && y >= 0 && x < map.width && y < map.height && map.terrain[y * map.width + x] !== 'water';
@@ -28,6 +31,45 @@ function diamond(path, x, y) {
   path.lineTo(e.x, e.y);
   path.lineTo(s.x, s.y);
   path.lineTo(w.x, w.y);
+  path.closePath();
+}
+
+// Smooth noise from 0 to 1: a value on a coarse lattice every `cell` tiles,
+// blended softly between lattice points, so neighbouring tiles get nearly the
+// same value and the ground shows broad patches instead of a checkerboard.
+function smoothNoise(x, y, cell, salt) {
+  const fx = x / cell;
+  const fy = y / cell;
+  const ix = Math.floor(fx);
+  const iy = Math.floor(fy);
+  const tx = fx - ix;
+  const ty = fy - iy;
+  const sx = tx * tx * (3 - 2 * tx);
+  const sy = ty * ty * (3 - 2 * ty);
+  const top = hash2(ix, iy, salt) + (hash2(ix + 1, iy, salt) - hash2(ix, iy, salt)) * sx;
+  const bottom = hash2(ix, iy + 1, salt) + (hash2(ix + 1, iy + 1, salt) - hash2(ix, iy + 1, salt)) * sx;
+  return top + (bottom - top) * sy;
+}
+
+// How light a tile of ground is: a factor for its color, from 0.94 to 1.06,
+// in small steps so the edge between two patches is hard to see.
+const LEVELS = 13;
+export function groundShade(x, y) {
+  const n = 0.75 * smoothNoise(x + 0.5, y + 0.5, 9, 11) + 0.25 * smoothNoise(x + 0.5, y + 0.5, 4, 12);
+  const t = Math.max(0, Math.min(1, (n - 0.22) / 0.56));
+  return 0.94 + (Math.round(t * (LEVELS - 1)) * 0.12) / (LEVELS - 1);
+}
+
+// A thin strip inside a tile, given in tile units (u across x, v across y).
+function strip(path, x, y, u0, v0, u1, v1) {
+  const a = tileToWorld(x + u0, y + v0);
+  const b = tileToWorld(x + u1, y + v0);
+  const c = tileToWorld(x + u1, y + v1);
+  const d = tileToWorld(x + u0, y + v1);
+  path.moveTo(a.x, a.y);
+  path.lineTo(b.x, b.y);
+  path.lineTo(c.x, c.y);
+  path.lineTo(d.x, d.y);
   path.closePath();
 }
 
@@ -76,19 +118,37 @@ export function createTerrainPainter(map, colors, range = null) {
   // 1. Shallows: paler water close to the shore.
   const shallowPaths = [new Path2D(), new Path2D()];
   // 2. The edge of the island: a short cliff on the two sides facing the
-  //    viewer, with a line of foam at its foot.
+  //    viewer, with a line of foam at its foot, and foam where the far sides
+  //    meet the water. A soft wash of white lies a little out from every shore.
   const cliffLit = new Path2D();
   const cliffShade = new Path2D();
+  const cliffFoot = new Path2D();
+  const lip = new Path2D();
   const foam = new Path2D();
-  // 3. The tiles, in a few slightly different shades of each ground color.
-  const LEVELS = 4;
+  const wash = new Path2D();
+  const wetSand = new Path2D();
+  // 3. The tiles, in broad soft patches of lighter and darker ground.
   const fills = new Map();
-  const grid = new Path2D();
   // 4. Small details that say what each ground is.
   const furrows = new Path2D();
   const tufts = new Path2D();
+  const tuftsLight = new Path2D();
   const sand = new Path2D();
-  const flowers = new Path2D();
+  const flowers = FLOWER_COLORS.map(() => new Path2D());
+  const bushes = new Path2D();
+  const bushesLit = new Path2D();
+  const stones = new Path2D();
+  const origin = tileToWorld(0, 0);
+  // Moves a line on an edge out over the water, `by` pixels, toward the tile (dx, dy).
+  const outward = (dx, dy, by) => {
+    const p = tileToWorld(dx, dy);
+    const len = Math.hypot(p.x - origin.x, p.y - origin.y);
+    return { x: ((p.x - origin.x) / len) * by, y: ((p.y - origin.y) / len) * by };
+  };
+  const shoreLine = (path, a, b, shift) => {
+    path.moveTo(a.x + shift.x, a.y + shift.y);
+    path.lineTo(b.x + shift.x, b.y + shift.y);
+  };
 
   for (let y = area.y0; y <= area.y1; y++) {
     for (let x = area.x0; x <= area.x1; x++) {
@@ -99,23 +159,48 @@ export function createTerrainPainter(map, colors, range = null) {
         continue;
       }
 
+      const n = tileToWorld(x, y);
       const e = tileToWorld(x + 1, y);
       const s = tileToWorld(x + 1, y + 1);
       const w = tileToWorld(x, y + 1);
+      const down = { x: 0, y: CLIFF };
       if (!isLand(map, x, y + 1)) {
         cliffLit.moveTo(w.x, w.y); cliffLit.lineTo(s.x, s.y); cliffLit.lineTo(s.x, s.y + CLIFF); cliffLit.lineTo(w.x, w.y + CLIFF); cliffLit.closePath();
-        foam.moveTo(w.x, w.y + CLIFF); foam.lineTo(s.x, s.y + CLIFF);
+        cliffFoot.moveTo(w.x, w.y + CLIFF - 2); cliffFoot.lineTo(s.x, s.y + CLIFF - 2); cliffFoot.lineTo(s.x, s.y + CLIFF); cliffFoot.lineTo(w.x, w.y + CLIFF); cliffFoot.closePath();
+        shoreLine(lip, w, s, { x: 0, y: 0.5 });
+        shoreLine(foam, w, s, down);
+        const o = outward(0, 1, 5);
+        shoreLine(wash, w, s, { x: o.x, y: o.y + CLIFF });
       }
       if (!isLand(map, x + 1, y)) {
         cliffShade.moveTo(s.x, s.y); cliffShade.lineTo(e.x, e.y); cliffShade.lineTo(e.x, e.y + CLIFF); cliffShade.lineTo(s.x, s.y + CLIFF); cliffShade.closePath();
-        foam.moveTo(s.x, s.y + CLIFF); foam.lineTo(e.x, e.y + CLIFF);
+        cliffFoot.moveTo(s.x, s.y + CLIFF - 2); cliffFoot.lineTo(e.x, e.y + CLIFF - 2); cliffFoot.lineTo(e.x, e.y + CLIFF); cliffFoot.lineTo(s.x, s.y + CLIFF); cliffFoot.closePath();
+        shoreLine(lip, s, e, { x: 0, y: 0.5 });
+        shoreLine(foam, s, e, down);
+        const o = outward(1, 0, 5);
+        shoreLine(wash, s, e, { x: o.x, y: o.y + CLIFF });
+      }
+      // The far sides have no cliff to show, only foam where land meets water.
+      if (!isLand(map, x, y - 1)) {
+        shoreLine(foam, n, e, outward(0, -1, 1));
+        shoreLine(wash, n, e, outward(0, -1, 5));
+      }
+      if (!isLand(map, x - 1, y)) {
+        shoreLine(foam, n, w, outward(-1, 0, 1));
+        shoreLine(wash, n, w, outward(-1, 0, 5));
+      }
+      // Sand darkened by the waves, just inside the water's edge.
+      if (terrain === 'coast') {
+        if (!isLand(map, x, y + 1)) strip(wetSand, x, y, 0, 0.84, 1, 1);
+        if (!isLand(map, x + 1, y)) strip(wetSand, x, y, 0.84, 0, 1, 1);
+        if (!isLand(map, x, y - 1)) strip(wetSand, x, y, 0, 0, 1, 0.16);
+        if (!isLand(map, x - 1, y)) strip(wetSand, x, y, 0, 0, 0.16, 1);
       }
 
-      const level = Math.floor(hash2(x, y, 1) * LEVELS);
-      const key = `${terrain}|${level}`;
-      if (!fills.has(key)) fills.set(key, { path: new Path2D(), color: tone(colors[terrain], 0.955 + level * 0.03) });
+      const shade = groundShade(x, y);
+      const key = `${terrain}|${shade}`;
+      if (!fills.has(key)) fills.set(key, { path: new Path2D(), color: tone(colors[terrain], shade) });
       diamond(fills.get(key).path, x, y);
-      diamond(grid, x, y);
 
       if (terrain === 'fertile') {
         for (const v of [0.25, 0.5, 0.75]) {
@@ -125,20 +210,40 @@ export function createTerrainPainter(map, colors, range = null) {
           furrows.lineTo(b.x, b.y);
         }
       } else if (terrain === 'grass') {
-        const count = Math.floor(hash2(x, y, 2) * 3);
+        const count = Math.floor(hash2(x, y, 2) * 4);
         for (let i = 0; i < count; i++) {
-          const p = tileToWorld(x + 0.2 + hash2(x, y, 10 + i) * 0.6, y + 0.2 + hash2(x, y, 20 + i) * 0.6);
-          tufts.moveTo(p.x - 2, p.y);
-          tufts.lineTo(p.x - 1, p.y - 3);
-          tufts.moveTo(p.x, p.y);
-          tufts.lineTo(p.x + 1, p.y - 3.5);
-          tufts.moveTo(p.x + 2, p.y);
-          tufts.lineTo(p.x + 2.5, p.y - 2.5);
+          const p = tileToWorld(x + 0.15 + hash2(x, y, 10 + i) * 0.7, y + 0.15 + hash2(x, y, 20 + i) * 0.7);
+          const into = hash2(x, y, 25 + i) < 0.35 ? tuftsLight : tufts;
+          into.moveTo(p.x - 2, p.y);
+          into.lineTo(p.x - 1, p.y - 3);
+          into.moveTo(p.x, p.y);
+          into.lineTo(p.x + 1, p.y - 3.5);
+          into.moveTo(p.x + 2, p.y);
+          into.lineTo(p.x + 2.5, p.y - 2.5);
         }
-        if (hash2(x, y, 3) < 0.07) {
+        // Flowers grow in drifts: many where the meadow is in flower, few elsewhere.
+        const meadow = smoothNoise(x + 0.5, y + 0.5, 5, 13) > 0.64;
+        const flowerCount = hash2(x, y, 3) < (meadow ? 0.6 : 0.06) ? 1 + Math.floor(hash2(x, y, 6) * (meadow ? 4 : 2)) : 0;
+        const color = Math.floor(hash2(x, y, 7) * FLOWER_COLORS.length);
+        for (let i = 0; i < flowerCount; i++) {
+          const p = tileToWorld(x + 0.15 + hash2(x, y, 80 + i) * 0.7, y + 0.15 + hash2(x, y, 90 + i) * 0.7);
+          flowers[color].moveTo(p.x + 1.2, p.y);
+          flowers[color].arc(p.x, p.y, 1.2, 0, Math.PI * 2);
+        }
+        // Now and then a low bush or a stone.
+        const odd = hash2(x, y, 8);
+        if (odd < 0.03) {
           const p = tileToWorld(x + 0.3 + hash2(x, y, 4) * 0.4, y + 0.3 + hash2(x, y, 5) * 0.4);
-          flowers.moveTo(p.x + 1.3, p.y);
-          flowers.arc(p.x, p.y, 1.3, 0, Math.PI * 2);
+          bushes.moveTo(p.x + 4, p.y - 2);
+          bushes.ellipse(p.x, p.y - 2, 4, 3, 0, 0, Math.PI * 2);
+          bushesLit.moveTo(p.x + 1.5, p.y - 3);
+          bushesLit.ellipse(p.x - 1, p.y - 3, 2.5, 1.8, 0, 0, Math.PI * 2);
+        } else if (odd < 0.045) {
+          const p = tileToWorld(x + 0.3 + hash2(x, y, 4) * 0.4, y + 0.3 + hash2(x, y, 5) * 0.4);
+          stones.moveTo(p.x + 2.4, p.y);
+          stones.ellipse(p.x, p.y, 2.4, 1.5, 0, 0, Math.PI * 2);
+          stones.moveTo(p.x + 4.6, p.y + 1);
+          stones.ellipse(p.x + 3.4, p.y + 1, 1.2, 0.8, 0, 0, Math.PI * 2);
         }
       } else if (terrain === 'coast') {
         for (let i = 0; i < 4; i++) {
@@ -152,7 +257,11 @@ export function createTerrainPainter(map, colors, range = null) {
 
   const furrowColor = tone(colors.fertile, 0.82);
   const tuftColor = tone(colors.grass, 0.78);
+  const tuftLightColor = tone(colors.grass, 1.14);
   const sandColor = tone(colors.coast, 0.84);
+  const wetSandColor = tone(colors.coast, 0.86);
+  const bushColor = tone(colors.forest ?? colors.grass, 0.85);
+  const bushLitColor = tone(colors.grass, 0.95);
 
   return {
     paint(ctx, scale = 1) {
@@ -163,12 +272,18 @@ export function createTerrainPainter(map, colors, range = null) {
       ctx.fillStyle = SHALLOW[0];
       ctx.fill(shallowPaths[0]);
 
+      ctx.strokeStyle = WASH;
+      ctx.lineWidth = 2.6;
+      ctx.stroke(wash);
+
       ctx.fillStyle = CLIFF_LIT;
       ctx.fill(cliffLit);
       ctx.fillStyle = CLIFF_SHADE;
       ctx.fill(cliffShade);
+      ctx.fillStyle = CLIFF_FOOT;
+      ctx.fill(cliffFoot);
       ctx.strokeStyle = FOAM;
-      ctx.lineWidth = 1.6;
+      ctx.lineWidth = 1.8;
       ctx.stroke(foam);
 
       for (const { path, color } of fills.values()) {
@@ -179,23 +294,83 @@ export function createTerrainPainter(map, colors, range = null) {
         ctx.stroke(path);
       }
 
+      ctx.fillStyle = wetSandColor;
+      ctx.fill(wetSand);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.stroke(lip);
+
       ctx.strokeStyle = furrowColor;
       ctx.lineWidth = 1.3;
       ctx.stroke(furrows);
       ctx.strokeStyle = tuftColor;
       ctx.lineWidth = 0.9;
       ctx.stroke(tufts);
+      ctx.strokeStyle = tuftLightColor;
+      ctx.stroke(tuftsLight);
       ctx.fillStyle = sandColor;
       ctx.fill(sand);
-      ctx.fillStyle = 'rgba(255, 250, 225, 0.9)';
-      ctx.fill(flowers);
-
-      // A faint grid, so tiles can still be counted when placing things.
-      ctx.strokeStyle = GRID;
-      ctx.lineWidth = 1 / scale;
-      ctx.stroke(grid);
+      FLOWER_COLORS.forEach((color, i) => {
+        ctx.fillStyle = color;
+        ctx.fill(flowers[i]);
+      });
+      ctx.fillStyle = 'rgba(15, 35, 20, 0.2)';
+      ctx.fill(bushes);
+      ctx.fillStyle = bushColor;
+      ctx.fill(bushes);
+      ctx.fillStyle = bushLitColor;
+      ctx.fill(bushesLit);
+      ctx.fillStyle = '#a7a39a';
+      ctx.fill(stones);
     },
   };
+}
+
+// The grid, shown only while placing something, so tiles can be counted.
+// Drawn each frame over the land tiles in view (`range`), as one long line
+// for each stretch of land along a row or column of tile edges: far quicker
+// than an outline round every tile.
+export function gridLines(map, range) {
+  const area = tilesToPaint(map, range);
+  const lines = [];
+  // Edges running along x, at y = b: between the rows b - 1 and b.
+  for (let b = area.y0; b <= area.y1 + 1; b++) {
+    let start = null;
+    for (let x = area.x0; x <= area.x1 + 1; x++) {
+      const on = x <= area.x1 && (isLand(map, x, b - 1) || isLand(map, x, b));
+      if (on && start === null) start = x;
+      if (!on && start !== null) {
+        lines.push([start, b, x, b]);
+        start = null;
+      }
+    }
+  }
+  // Edges running along y, at x = b.
+  for (let b = area.x0; b <= area.x1 + 1; b++) {
+    let start = null;
+    for (let y = area.y0; y <= area.y1 + 1; y++) {
+      const on = y <= area.y1 && (isLand(map, b - 1, y) || isLand(map, b, y));
+      if (on && start === null) start = y;
+      if (!on && start !== null) {
+        lines.push([b, start, b, y]);
+        start = null;
+      }
+    }
+  }
+  return lines; // [x0, y0, x1, y1] in tiles
+}
+
+export function paintGrid(ctx, map, range, zoom) {
+  const grid = new Path2D();
+  for (const [x0, y0, x1, y1] of gridLines(map, range)) {
+    const a = tileToWorld(x0, y0);
+    const b = tileToWorld(x1, y1);
+    grid.moveTo(a.x, a.y);
+    grid.lineTo(b.x, b.y);
+  }
+  ctx.strokeStyle = GRID;
+  ctx.lineWidth = 1 / zoom;
+  ctx.stroke(grid);
 }
 
 // Where a tree stands and how it looks, worked out from its tile alone.

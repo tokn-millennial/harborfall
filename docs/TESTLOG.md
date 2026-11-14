@@ -1518,3 +1518,71 @@ Date: 2026-11-14. Status: approved by Colin with no changes (he asked to push it
 - I would have run every build order on several islands at the very start of the phase, not just the standard one on the shipped island. The second-act failure was there from the first change, and the standard game hid it.
 
 **After the gate:** committed and pushed to GitHub, with Phases 17 to 19, on your "Push to GitHub".
+
+## Phase 21: The art and design pass
+
+Date: 2026-11-14. Status: approved by Colin with no changes ("Approve and proceed").
+
+**Turns used:** 1 (your "Let's keep going. Before we start with the second island let's make all the art and design better"). Built by Claude Opus 5.5.
+
+**What was built** (all in `SPEC.md` section 22)
+- **The ground:** soft patches of shade instead of a checkerboard; the grid only while placing; a meadow with flowers in drifts, bushes and stones.
+- **The shore:** foam on every side, a wash further out, wet sand, a shaded cliff foot.
+- **Buildings:** real shadows; roofs lit at the ridge with rows of tiles; walls darker at the foot; night light on the ground; smaller house numbers.
+- **Figures:** arms, shading and round shadows on people; round wheels on carts; shadows under boats and the ship.
+- **Screens:** tools and top bar in groups; the top bar fits one line at 1920 again.
+
+**Nothing in the rules changed.** No data file and nothing in `src/sim/` was touched, so the rules stamp is the same and every save loads as before.
+
+**Automated tests: 555 pass, 0 fail.** That is 551 from before plus 4 new ones in `tests/art.test.js`: the ground is in soft patches (measured as the brightness difference between neighbouring tiles, which the old checkerboard fails), the grid covers every side of every land tile and never runs over water, foam and wash run along all four sides of a lone island tile, and both roof directions are lit at the ridge and laid in rows. No older test was changed.
+
+**Did the tests mean anything?** I broke the art on purpose in five ways.
+
+| Break | Tests that failed |
+|---|---|
+| The ground back to a checkerboard | 1 |
+| No foam on the far sides | 1 |
+| The grid back in the ground picture | 1 |
+| Flat roofs | 1 |
+| No joints between roof tiles | 1 |
+
+**Speed** (timed in the page; the pane was hidden, so frame rates could not be read)
+
+| What | When | Time |
+|---|---|---|
+| Painting the whole island's ground | Once, when the game opens | 4.3 ms |
+| A close-up of the ground | When the view settles, zoomed in | 0.7 ms |
+| The grid over the whole island | Every frame while placing | 1.1 ms. My first version took 13.9 ms; I redrew it as long lines. |
+
+Roofs and walls are drawn once into kept pictures, so their extra detail costs nothing per frame.
+
+**Browser checks** (on the test page and the demo, which never save)
+
+| Check | How | Result |
+|---|---|---|
+| Sixteen tools in one row | Measured at 1280, 1366, 1440 and 1920 wide | Pass at all four. |
+| The top bar on one line | Measured at the same widths | Pass at all four, after the fix (D296). At 1920 it had wrapped onto two lines. |
+| The grid only while placing | Picked the road tool, then Select | Pass by my eye: grid with the road tool, none with Select. |
+| A whole game through the real buttons | UI playthrough of the standard order | Pass. Won at 28.92 minutes, as in Phase 20, with 37 menu clicks, 52 map clicks and 14 road drags. |
+| The error console, on a clean load | Read the list of failed requests | Empty. (One 404 earlier was my own probe for a file that does not exist.) |
+
+**Before and after.** `docs/screenshots/phase21-before-town.jpg` and `phase21-after-town.jpg` (the demo town), `phase21-before-close.jpg` and `phase21-after-close.jpg` (zoomed in), `phase21-before-panel.jpg` and `phase21-after-panel.jpg` (a house's panel, in the evening). Also `phase21-before-night.jpg` and `phase21-before-title.jpg`.
+
+**About the screenshots.** I wrote in Phase 20 that the pane's screenshots crop the page when the display scales. That was wrong: the first screenshot after a change is often an old frame. Taking two in a row gives the true picture.
+
+**Bugs found:** the top bar wrapping at 1920 (since Phase 15 or 18), and my first grid being too slow. My first ground shading showed blocky patch edges close up; I measured six settings and took the calmest that still varies.
+
+**Decisions made:** 14 (D284 to D297).
+
+**Weak or unfinished**
+- **Judged only by my eye**, in small screenshots. Whether it looks better to you is the real test.
+- **The coast is still a staircase** of tile edges, softened by foam but not rounded.
+- **The title screen, panels and win screen are as they were** (D297).
+- **Figures are still tiny rectangles**, by choice (D292).
+- **Frame rate not measured** in a visible window; only the drawing work was timed.
+- **Not done:** your notes from playing, and a Mac test.
+
+**What I would change**
+- I would have measured the ground shading with numbers before looking at it, not after; the first version looked fine zoomed out and blocky zoomed in.
+
+**After the gate:** committed on your "Approve and proceed". Not pushed.

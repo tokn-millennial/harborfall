@@ -1,6 +1,6 @@
 # Harborfall: Roadmap
 
-Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 20. Phases 0 to 17 by Claude Fable 5.2; Phases 18 to 20 by Claude Opus 5.5.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 21. Phases 0 to 17 by Claude Fable 5.2; Phases 18 to 21 by Claude Opus 5.5.
 
 This is a list of what could come next, in the order I would do it. **Nothing here is decided.** Every item is a proposal, and you choose. The working rule from the brief still stands: nothing gets built that you did not ask for.
 
@@ -8,8 +8,8 @@ Read `HANDOFF.md` first if you are picking the project up after a break.
 
 ## Where the project stands
 
-- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), undo with a first-game guide (Phase 11), a third kind of resident with a goal after the win (Phase 12), difficulty settings with two touches to the look (Phase 13), dust, chimney smoke and day and night (Phase 14), staff for buildings (Phase 15), closing a building for now (Phase 16), three scenarios with medals (Phase 17), a harbour with a trade ship (Phase 18), carts that carry goods by road (Phase 19), and materials carried to workshops (Phase 20).
-- **Proven by machines:** 551 automated tests pass. A bot wins in 28.9 minutes. A script wins through the real UI and ends in exactly the bot's game.
+- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), undo with a first-game guide (Phase 11), a third kind of resident with a goal after the win (Phase 12), difficulty settings with two touches to the look (Phase 13), dust, chimney smoke and day and night (Phase 14), staff for buildings (Phase 15), closing a building for now (Phase 16), three scenarios with medals (Phase 17), a harbour with a trade ship (Phase 18), carts that carry goods by road (Phase 19), materials carried to workshops (Phase 20), and an art and design pass (Phase 21).
+- **Proven by machines:** 555 automated tests pass. A bot wins in 28.9 minutes. A script wins through the real UI and ends in exactly the bot's game.
 - **Checked by you:** you played for about 40 minutes on 2026-11-12. The game runs smoothly and the figures move well.
 - **Still not known:** whether you won and how long it took, how the sounds are, whether the guide helps someone new, and how any of it works on a Mac.
 
@@ -214,10 +214,10 @@ These are not features. They are debts and loose ends, smallest first.
 
 One line is enough. For example:
 
-> Phase 21: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
+> Phase 22: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
 
 or
 
-> Phase 21: build a second island (D4). Show me the plan first.
+> Phase 22: build a second island (D4). Show me the plan first.
 
 The helper should then follow the working rules in `HANDOFF.md` section 6: plan first, one feature at a time, test everything itself, stop at the gate with the five-part report, and commit only after you approve.

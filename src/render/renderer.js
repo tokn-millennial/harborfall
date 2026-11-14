@@ -29,7 +29,7 @@ import { paintDust } from './art/dust.js';
 import { createBuildEffects, popScale } from './effects.js';
 import { nightAmount } from './daylight.js';
 import { createLife } from './life.js';
-import { createForestPainter, createRoadPainter, createTerrainPainter, paintTrees, paintWater, waterBackground } from './art/terrain.js';
+import { createForestPainter, createRoadPainter, createTerrainPainter, paintGrid, paintTrees, paintWater, waterBackground } from './art/terrain.js';
 import { buildingIssue, canUpgrade } from '../sim/index.js';
 
 const LABEL_MIN_ZOOM = 0.55;
@@ -211,14 +211,15 @@ export function createRenderer(canvas, rules) {
     const visual = buildingVisual(rules, building);
     const centre = tileToWorld(building.x + def.w / 2, building.y + def.h / 2);
     const text = String(building.house.residents);
-    const y = centre.y - visual.topPx - 7;
-    const w = 9 + text.length * 5;
-    ctx.fillStyle = 'rgba(22, 40, 50, 0.82)';
+    // Small and see-through, so a street of houses is not a street of labels.
+    const y = centre.y - visual.topPx - 6;
+    const w = 7 + text.length * 4.4;
+    ctx.fillStyle = 'rgba(22, 40, 50, 0.55)';
     ctx.beginPath();
-    ctx.roundRect(centre.x - w / 2, y - 6, w, 12, 4);
+    ctx.roundRect(centre.x - w / 2, y - 5, w, 10, 4);
     ctx.fill();
-    ctx.fillStyle = '#f6eed6';
-    ctx.font = '700 9px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(246, 238, 214, 0.95)';
+    ctx.font = '700 8px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, centre.x, y + 0.5);
@@ -254,6 +255,7 @@ export function createRenderer(canvas, rules) {
   //   ghost              { building, ok } a building not yet placed: a stand-in
   //                      with type, x, y (and house for a house), and whether the spot is good
   //   fadeBuildings      draw buildings see-through, so the ground behind them shows
+  //   grid               draw the tile grid (while placing something)
   function draw(game, camera, overlay = {}) {
     const state = game.state;
     const map = state.map;
@@ -310,6 +312,7 @@ export function createRenderer(canvas, rules) {
 
     // 3. Roads, then ground markers.
     roads.paint(ctx, state);
+    if (overlay.grid) paintGrid(ctx, map, range, zoom);
 
     if (overlay.tints?.length) {
       const byColor = {};
@@ -338,14 +341,20 @@ export function createRenderer(canvas, rules) {
     }
     buildings.sort((a, b) => a.depth - b.depth || a.building.x - b.building.x);
 
+    // The sun is to the upper left, so a shadow falls toward the lower right,
+    // longer for a taller building, with a soft edge around a darker middle.
     const shadows = new Path2D();
+    const shadowCores = new Path2D();
     for (const { building } of buildings) {
       const def = rules.buildings[building.type];
-      const reach = buildingVisual(rules, building).risePx * 0.014;
-      diamond(shadows, building.x + 0.12 + reach, building.y + 0.12, def.w - 0.24, def.h - 0.24);
+      const reach = buildingVisual(rules, building).risePx * 0.02;
+      diamond(shadows, building.x + 0.02, building.y + 0.06, def.w - 0.02 + reach, def.h - 0.04);
+      diamond(shadowCores, building.x + 0.08, building.y + 0.12, def.w - 0.12 + reach * 0.7, def.h - 0.18);
     }
-    ctx.fillStyle = 'rgba(20, 35, 25, 0.2)';
+    ctx.fillStyle = 'rgba(20, 35, 25, 0.13)';
     ctx.fill(shadows);
+    ctx.fillStyle = 'rgba(20, 35, 25, 0.14)';
+    ctx.fill(shadowCores);
 
     // Buildings, the trees beside them, and the people, carts and boats, all
     // in one order from far to near. Where two are level, a building goes
@@ -410,7 +419,9 @@ export function createRenderer(canvas, rules) {
         const def = rules.buildings[building.type];
         const at = tileToWorld(building.x + def.w / 2, building.y + def.h / 2);
         const rise = buildingVisual(rules, building).risePx;
-        ctx.drawImage(light, at.x - 46, at.y - rise * 0.3 - 28, 80, 60); // toward the windows on the near wall
+        // Light spilling from the windows and door of the near walls onto the
+        // ground in front, not a glow on the roof.
+        ctx.drawImage(light, at.x - 34, at.y - rise * 0.12 - 12, 68, 34);
       }
       ctx.restore();
     }
