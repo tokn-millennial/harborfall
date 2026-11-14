@@ -1291,3 +1291,85 @@ The standard game: the bot still wins at 28.6 minutes.
 
 **What I would change**
 - When Phase 12 let a build order name its upgrade, I taught the bot and not the test tool that mirrors it. The two should have been changed together. A tool that silently does something else is worse than one that refuses.
+
+**After the gate:** committed as `67cdc4e` on your "Proceed, do an amazing job!". Not pushed.
+
+## Phase 18: The harbour and the trade ship
+
+Date: 2026-11-14. Status: approved by Colin with no changes (he chose the next phase: "Let's do goods carried along roads by workers").
+
+**Turns used:** 2. Your "Proceed, do an amazing job!", and a second "Proceed" partway through. No plan approval was asked for (D235).
+
+**Who built it.** Phases 0 to 17 and the first half of this phase were built by Claude Fable 5.2. Partway through this phase the session switched to Claude Opus 5.5, which finished it: the price tuning, the tests, the browser checks and these documents. The commit is credited accordingly.
+
+**What was built**
+- **The harbour**, a coast building, and **a trade ship** that calls every two minutes while there is one (`SPEC.md` section 19).
+- **Standing orders** in the harbour's panel: per good, sell above a level or buy up to one, at fixed prices.
+- **The ship on the map**, sailing in, tying up and sailing away, and a green line saying what each call did.
+- **The bot and the click-through test tool** both understand trade orders. A new build order, merchant.
+- **Older saved games still load**, now from three generations back.
+
+**Automated tests: 508 pass, 0 fail.** That is 480 from before plus 28: 27 in `tests/trade.test.js`, and 1 because the check that simulation files use no browser code runs once per file. 5 older tests were edited: the named older stamps (now three), the "data as it was" helper (it now understands a setting added to every good, and keeps the scenarios for data from Phase 17), and one comparison that now checks content rather than the order of entries.
+
+**Did the tests mean anything?** I broke trade on purpose in six ways.
+
+| Break | Tests that failed |
+|---|---|
+| Buying ignores how many coins there are | 2 |
+| It sells below the level | 3 |
+| Purchases get a ship of their own | 2 |
+| Undo of an order does nothing | 1 |
+| A harbour cut off by road still brings the ship | 2 |
+| Loading accepts a timer past the call | 1 |
+
+**Choosing the numbers, by the bot.** Six build orders, under four sets of numbers, on Normal and Hard (48 games).
+
+| Build order, Normal | First try | Chosen |
+|---|---|---|
+| Standard, no harbour | 28.6 | 28.6 |
+| Merchant: harbour after the first sawmill, selling wood and fish | 38.1 | 31.0 |
+| Harbour after the first bakery | 37.2 | 31.2 |
+| Buys planks instead of waiting for them | 45.2 | 39.7 |
+| Six extra lumberjacks to sell wood | never won | 54.8 |
+| Buys bread, never bakes | 34.6 | never won |
+
+No way of trading beat the standard order, so trade is not a money machine. A check on paper says the same for every building: none earns more by selling than its staff would pay in taxes. That check failed for the lumberjack on my first prices, so wood now sells for 0.4.
+
+**Browser checks** (on the test page, which never saves)
+
+| Check | How | Result |
+|---|---|---|
+| A whole game through the real buttons matches the bot | UI playthrough of the merchant order: it builds the harbour from the menu and sets both orders by clicking the panel | Pass. Won at tick 18621 (31.0 minutes), identical to the bot. 4 clicks on the trade buttons. |
+| The harbour and the ship look right | Ran a town to the ship's call and looked | Pass by my eye. See `docs/screenshots/phase18-ship-sailing-in.jpg` and `phase18-harbour-panel.jpg`. |
+| The panel, with the real pointer | Clicked Off on Planks, then + | Pass. "Sell above 50", then "Sell above 60". The Undo button read "Trade order". |
+| The panel fits | 1280 by 800 | Pass after a fix (bug 2). |
+| Sixteen tools on one row | 1280, 1366, 1440, 1600, 1700 and 1920 wide | Pass after a fix (bug 1). |
+| The green line after a call | Watched a call | Pass. "The trade ship sold 30 wood for 12 coins." |
+| Random input, which also presses the trade buttons | 20,000 actions on a town with a harbour | Pass. No errors. It built a second harbour and changed an order. |
+| The error console | Read it | Empty, apart from Phase 17's deliberate test of a scenario that does not exist. |
+
+**Bugs found: 2 on screen, 1 in the prices, and a dozen mistakes in my own new tests.**
+1. **Undo fell to a second row** in the bottom bar once the harbour made sixteen tools. Fixed with slimmer tools.
+2. **The harbour's panel ran off the bottom** at 800 high: the price lines wrapped. Fixed with shorter wording.
+3. **Wood was priced so a lumberjack earned more by selling than its staff would pay in taxes.** Found by the check on paper. Wood now sells for 0.4.
+4. My own test mistakes: I forgot that taxes and upkeep go on while waiting for a ship, built harbours with no wood to build them, compared a saved game against data with income switched off, and wrote one test whose clicks undid each other so it could never reach "Off".
+
+**Two mistakes of mine in the checking, and what they cost.**
+- An edit script stopped halfway on a quote mark, leaving the price change in and the test fixes out. I caught it from the test results and redid it from a file, as my own notes say to.
+- A loop I wrote to wait for the ship could never end, and hung the test page for about five minutes. I closed the tab and opened a fresh one. That page never saves, so nothing was lost.
+
+**Decisions made:** 19 (D235 to D253).
+
+**Weak or unfinished**
+- **Nobody has played it.** Whether a player finds the harbour worth its cost, and the orders easy to set, I cannot tell.
+- **Before the win, a harbour costs more than it earns** for a sensible town. That is by design, but a player may feel it is not worth building. It pays off in a large town with surpluses, which I measured less.
+- **Prices never change.** Selling a thousand cloth pays the same as selling one.
+- **Only the order of the goods** decides what is sold first when the ship is full.
+- **The ship is decoration.** It is not a real boat with a route: it slides in a straight line from open water.
+- **The panel is long** with seven goods. An eighth would need it to scroll.
+- **The bottom row is full again.** A seventeenth tool will need a different layout.
+- **Phase 17 is committed but not pushed.**
+- **Not done:** your notes from playing, and a Mac test.
+
+**What I would change**
+- Write the check on paper first. It found the wood price in a second, where the bot runs took minutes and did not.

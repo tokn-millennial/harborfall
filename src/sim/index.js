@@ -12,12 +12,19 @@ import { stepHouses, upgradeReason, countResidents, isSatisfied, inMarketRange, 
 import { saveGame, loadGame, SAVE_FORMAT } from './save.js';
 import { undoStatus } from './undo.js';
 import { staffing } from './staff.js';
+import { stepTrade, tradeSummary, tradeOrderReason } from './trade.js';
 
 export {
   createGame, execute, canPlace, siteReason, buildingAt, buildingById,
   countResidents, isSatisfied, getSummary, buildingIssue, inMarketRange, housesInRangeOf,
-  saveGame, loadGame, SAVE_FORMAT, undoStatus, staffing, medalFor,
+  saveGame, loadGame, SAVE_FORMAT, undoStatus, staffing, medalFor, tradeSummary,
 };
+
+// Checks a trade order without giving it. Never changes the game.
+export function canTrade(game, good, mode, level) {
+  const reason = tradeOrderReason(game, good, mode, level);
+  return reason ? { ok: false, reason } : { ok: true };
+}
 
 // Checks an upgrade without doing it. Never changes the game.
 export function canUpgrade(game, id) {
@@ -30,6 +37,7 @@ export function step(game) {
   game.state.tick++;       // 1. the clock
   stepProduction(game);    // 2. producers work and deliver
   stepHouses(game);        // 3. houses buy goods, residents move in or out
-  settleIncome(game);      // 4. taxes, base income and upkeep (on its interval)
-  checkWin(game);          // 5. the win check
+  stepTrade(game);         // 4. the trade ship, when it is due
+  settleIncome(game);      // 5. taxes, base income and upkeep (on its interval)
+  checkWin(game);          // 6. the win check
 }

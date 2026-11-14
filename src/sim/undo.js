@@ -9,6 +9,7 @@
 //     gave back is taken away again
 //   - a house just upgraded goes back to what it was, and the cost is returned
 //   - a producer just closed is open again, and one just reopened is closed
+//   - a trade order just changed is what it was
 // An undo cannot itself be undone.
 //
 // What is needed to undo is kept in the state (state.undo), so it is saved
@@ -17,6 +18,7 @@
 import { footprint, inBounds, tileIndex } from './grid.js';
 import { buildingById, countCategory, removeBuilding } from './buildings.js';
 import { refresh } from './refresh.js';
+import { MAX_TRADE_LEVEL, setTradeOrder } from './trade.js';
 
 const copy = (value) => JSON.parse(JSON.stringify(value));
 const fail = (reason) => ({ ok: false, reason });
@@ -31,7 +33,7 @@ export function remember(game, record) {
 
 // What an undo would do right now, without doing it. Never changes the game.
 // { ok: true, kind, type, count, ticksLeft } or { ok: false, reason }.
-//   kind   'place', 'road', 'demolish', 'unroad', 'upgrade', 'close' or 'reopen'
+//   kind   'place', 'road', 'demolish', 'unroad', 'upgrade', 'close', 'reopen' or 'trade'
 //   type   the building involved, for everything but roads
 //   count  the number of road tiles, for road
 export function undoStatus(game) {
@@ -122,6 +124,8 @@ export function undoLast(game) {
     if (u.kind === 'close') delete building.production.closed;
     else building.production.closed = true;
     building.production.status = u.status; // the word it had before, exactly
+  } else if (u.kind === 'trade') {
+    setTradeOrder(game, u.good, u.before);
   } else {
     return fail('nothing_to_undo');
   }
@@ -167,6 +171,12 @@ export function undoProblem(rules, state) {
   const statuses = (s) => s !== null && typeof s === 'object' && Object.values(s).every((word) => STATUS.includes(word));
 
   if (u.kind === 'place') return Number.isInteger(u.id) ? null : 'the undo record names no building';
+  if (u.kind === 'trade') {
+    if (typeof u.good !== 'string' || !Object.hasOwn(rules.prices, u.good)) return 'the undo record is for a good that cannot be traded';
+    const b = u.before;
+    if (b === null) return null;
+    return typeof b === 'object' && ['sell', 'buy'].includes(b.mode) && isCount(b.level) && b.level <= MAX_TRADE_LEVEL ? null : 'the undo record for a trade order is wrong';
+  }
   if (u.kind === 'close' || u.kind === 'reopen') {
     const building = state.buildings.find((b) => b?.id === u.id);
     if (!building?.production) return 'the undo record closes something that is not a producer';

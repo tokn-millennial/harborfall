@@ -4,7 +4,8 @@
 
 import { buildingIssue, canUpgrade, housesInRangeOf, staffing } from '../sim/index.js';
 import { MILLI } from '../sim/rules.js';
-import { amountText, costText, issueLevel, reasonText, refundText } from './text.js';
+import { amountText, clock, costText, issueLevel, reasonText, refundText, tradeCallText, tradeOrderText } from './text.js';
+import { MAX_TRADE_LEVEL } from '../sim/trade.js';
 import { previewDemolish } from './tools.js';
 
 // options.confirmDemolish: the Demolish button has been pressed once and is waiting for a second press.
@@ -49,7 +50,7 @@ export function panelModel(game, building, options = {}) {
     const closed = Boolean(building.production?.closed) && !issue;
     lines.push({
       label: 'Status',
-      value: closed ? 'Closed. It makes nothing.' : issue ? reasonText(game, issue, { building: building.type }) : building.production ? 'Working.' : 'Fine.',
+      value: closed ? 'Closed. It makes nothing.' : issue ? reasonText(game, issue, { building: building.type }) : building.production ? 'Working.' : def.harbor ? 'Open to ships.' : 'Fine.',
       level: closed ? 'warn' : issueLevel(issue),
     });
   }
@@ -73,6 +74,17 @@ export function panelModel(game, building, options = {}) {
   if (def.marketRadius > 0) {
     lines.push({ label: 'Range', value: `${def.marketRadius} tiles` });
     lines.push({ label: 'Houses in range', value: String(housesInRangeOf(game, building)) });
+  }
+
+  let trade = null;
+  if (def.harbor && rules.trade) {
+    const t = state.trade;
+    const due = (rules.trade.shipTicks - t.timer) / rules.ticksPerSecond;
+    lines.push({ label: 'Next ship', value: building.connected ? `in ${clock(due)}` : 'Not while cut off by road', level: building.connected ? undefined : 'warn' });
+    lines.push({ label: 'It carries', value: `${rules.trade.unitsPerHarbor} goods a call` });
+    const call = tradeCallText(rules, t.last);
+    lines.push({ label: 'Last call', value: t.last ? (call ? call.replace(/^The trade ship /, '').replace(/^./, (c) => c.toUpperCase()) : 'Nothing to trade.') : 'None yet.' });
+    trade = tradeRows(game);
   }
 
   if (def.storagePerGood > 0) {
@@ -113,5 +125,39 @@ export function panelModel(game, building, options = {}) {
     reason: demolish.ok ? null : reasonText(game, demolish.reason),
   });
 
-  return { title, issue, level: issueLevel(issue), lines, actions };
+  return { title, issue, level: issueLevel(issue), lines, actions, trade };
+}
+
+// The harbour's standing orders, one row per good that can be traded. Each
+// button carries the whole command it gives, as "trade:good:mode:level".
+const TRADE_STEP = 10;
+const FIRST_SELL_LEVEL = 50;
+const FIRST_BUY_LEVEL = 20;
+function tradeRows(game) {
+  const { rules, state } = game;
+  const top = Math.min(MAX_TRADE_LEVEL, Math.max(state.storageCap, TRADE_STEP));
+  const command = (good, mode, level) => `trade:${good}:${mode}:${level}`;
+  return rules.goodIds.filter((good) => rules.prices[good]).map((good) => {
+    const order = state.trade.orders[good] ?? null;
+    const price = rules.prices[good];
+    // The order button goes round: off, sell, buy, off.
+    const next = !order ? command(good, 'sell', Math.min(FIRST_SELL_LEVEL, top))
+      : order.mode === 'sell' ? command(good, 'buy', Math.min(FIRST_BUY_LEVEL, top))
+      : command(good, 'off', 0);
+    const level = order?.level ?? 0;
+    const down = Math.max(0, Math.ceil(level / TRADE_STEP) * TRADE_STEP - TRADE_STEP);
+    const up = Math.min(top, Math.floor(level / TRADE_STEP) * TRADE_STEP + TRADE_STEP);
+    return {
+      good,
+      name: rules.goods[good].name,
+      stock: state.goods[good],
+      // Short, so a row stays two lines: "sells 0.4 · buys 2" (coins).
+      prices: `sells ${price.sellMilli / 1000} · buys ${price.buyMilli / 1000}`,
+      order: tradeOrderText(order),
+      mode: order?.mode ?? 'off',
+      next,
+      down: order && level > 0 ? command(good, order.mode, down) : null,
+      up: order && level < top ? command(good, order.mode, up) : null,
+    };
+  });
 }

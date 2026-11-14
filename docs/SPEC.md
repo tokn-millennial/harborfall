@@ -505,3 +505,51 @@ Added in Phase 17. A scenario is a new game with its own island, its own start a
 **Making your own.** A scenario is an entry under `scenarios` in `data/config.json`. It may set the island (`seed`), `startCoins`, `startGoods`, `baseIncomePerMinute`, the goal (`win`), goals after the win (`milestones`), the staff numbers (`workforce`) and the medal times (`medals`, in game minutes). Anything left out stays as in the standard game. A name, a description or a medal time can be changed without affecting a saved game of that scenario. Changing anything else makes saved games of that scenario, and only that scenario, refuse to load.
 
 **Not in this phase:** losing, a scenario on a random island or a chosen difficulty, a best time for the standard game, more than one saved game, and scenarios with rules of their own beyond the settings listed.
+
+## 19. The harbour and the trade ship
+
+Added in Phase 18. A way to sell what the island has too much of and to buy what it lacks, at a price.
+
+**The harbour**
+- A new building, key **T**. 120 coins, 20 wood and 10 planks. Upkeep 5 coins a minute. 2 by 2.
+- It must touch a coast tile, like a fisherman, and needs a road to a warehouse.
+- It needs no staff.
+
+**The ship**
+- While the island has a harbour linked to a warehouse, a trade ship calls every 2 game minutes.
+- On each call it carries at most 30 goods for each such harbour, sold and bought together.
+- It sells first, then buys with whatever coins there are by then, including the coins from the sales.
+- Goods are taken in the order the top bar lists them: wood, planks, fish, grain, bread, wool, cloth.
+- A harbour cut off by road brings no ship. The two-minute wait starts again when it is joined.
+- You can see it: it sails in over the last 20 seconds before it calls, ties up at the harbour with its sails furled, and sails away.
+- When it has traded, a green line under the map says what it did: "The trade ship sold 30 wood for 12 coins."
+
+**Standing orders.** Select the harbour. Its panel lists every good with its prices and an order:
+- **Off**: the ship leaves it alone.
+- **Sell above 60**: it sells everything above 60 in stock.
+- **Buy up to 20**: it buys until there are 20 in stock, as far as the coins and the storage room allow. The coins never go below zero.
+- Click the order to go round Off, Sell, Buy. The − and + buttons move the level by 10.
+- Orders belong to the island, not to one harbour. They stay if the harbour is demolished, and work again with a new one.
+- An order change can be taken back with Undo.
+
+**Prices**, in coins for one. Buying always costs more than selling earns, three to five times as much.
+
+| Good | The ship pays | The ship charges |
+|---|---|---|
+| Wood | 0.4 | 2 |
+| Planks | 2 | 6 |
+| Fish | 1.2 | 4 |
+| Grain | 2 | 6 |
+| Bread | 4 | 12 |
+| Wool | 1.5 | 5 |
+| Cloth | 6 | 18 |
+
+**What it is for, measured by the bot**
+- It is a help, not a way to get rich. No building, selling all it makes, earns more than the residents who staff it would pay in taxes. A test checks this for every building.
+- The standard build order with a harbour after the first sawmill, selling wood and fish above 60, wins in 31.0 minutes. Without it: 28.6. The harbour costs more than it earns before the win.
+- A town that buys its bread instead of baking it wins later, or not at all on the bot's fixed build order.
+- Where it helps: wood that would otherwise be thrown away when the store is full, a good you are short of right now, and spare goods in a large town after the win.
+
+**Saved games.** A game saved before this phase still loads, with no orders and no ship on its way, and plays on exactly as before until you build a harbour.
+
+**Not in this phase:** prices that change with supply, more than one ship, buying goods the island cannot make, ships you send yourself, and a second island.

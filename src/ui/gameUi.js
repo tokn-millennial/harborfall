@@ -13,7 +13,7 @@ import { createSpeedControls } from './speedControls.js';
 import { createWinScreen } from './winScreen.js';
 import { panelModel } from './panelModel.js';
 import { anchorFor, previewBuild, previewDemolish, previewRoad, previewUpgrade, rangeTiles, requiredTerrain, roadLine, terrainTiles } from './tools.js';
-import { clock, costText, milestoneMessage, reasonText, refundText, winMessage } from './text.js';
+import { clock, costText, milestoneMessage, reasonText, refundText, winMessage, tradeCallText } from './text.js';
 import { setText } from './dom.js';
 import { createAdvisor } from './advice.js';
 
@@ -28,7 +28,7 @@ const TINT = {
 };
 const SELECT = { mode: 'select', building: null };
 const MESSAGE_SECONDS = 3;
-const QUIET_ACTIONS = ['undo', 'close', 'reopen'];
+const QUIET_ACTIONS = ['undo', 'close', 'reopen', 'trade'];
 const CONFIRM_SECONDS = 4; // how long a first demolish click waits for the second
 
 // onSound(name) is told when something worth a sound happens: 'pick', 'place',
@@ -45,6 +45,7 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
   let messageTimer = 0;
   let winShown = state.won; // a game loaded already won (the demo town) does not announce it
   const milestonesShown = state.milestones.map((tick) => tick !== null); // nor goals already reached
+  let shipNewsTick = state.trade?.last?.tick ?? null; // a call made before this game was opened is old news
   const terrainCache = {};  // terrain name -> its tiles, for highlighting where a building may go
   let armed = null;         // { id, seconds }: a building clicked once with Demolish, waiting for the second click
   let flipCorner = false;   // Shift is held: put a dragged road's corner on the other side
@@ -66,6 +67,10 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
       if (!building) return;
       if (id === 'upgrade') act({ action: 'upgrade', id: building.id }, { cost: rules.tiers[building.house.tier].upgrade?.cost });
       if (id === 'demolish' && demolishBuilding(building)) deselect();
+      if (id.startsWith('trade:')) {
+        const [, good, mode, level] = id.split(':');
+        act({ action: 'trade', good, mode, level: Number(level) });
+      }
       if (id === 'closeBuilding') act({ action: 'close', id: building.id });
       if (id === 'reopenBuilding') act({ action: 'reopen', id: building.id });
     },
@@ -336,6 +341,13 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
     if (messageTimer > 0) {
       messageTimer -= dt;
       if (messageTimer <= 0) elements.message.hidden = true;
+    }
+
+    // The trade ship has called: say what it did, in green.
+    if (state.trade?.last && state.trade.last.tick !== shipNewsTick) {
+      shipNewsTick = state.trade.last.tick;
+      const news = tradeCallText(rules, state.trade.last);
+      if (news) say(news, 'ok');
     }
 
     if (state.won && !winShown) {

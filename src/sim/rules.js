@@ -109,7 +109,7 @@ function withoutLooks(value) {
 // and names, colors and shortcut keys are left out.
 //
 // `without` names things to leave out as well: goods, buildings, tiers, the
-// upgrade out of a tier, config entries, and a setting on every building. That
+// upgrade out of a tier, config entries, and a setting on every building or good. That
 // gives the stamp these data files would have had before those things were
 // added, which is how a game saved back then is recognised. It may be one
 // such list or several.
@@ -124,6 +124,9 @@ export function rulesStamp(rawData, without = null) {
     for (const key of step.config ?? []) delete data.config?.[key];
     for (const key of step.buildingSettings ?? []) {
       for (const b of Object.values(data.buildings ?? {})) if (b !== null && typeof b === 'object') delete b[key];
+    }
+    for (const key of step.goodSettings ?? []) {
+      for (const g of Object.values(data.goods ?? {})) if (g !== null && typeof g === 'object') delete g[key];
     }
   }
   const text = stableText(data);
@@ -188,6 +191,7 @@ export function compileRules(rawData) {
       upkeepMilliPerMinute: toMilli(b.upkeepPerMinute),
       requiresRoad: b.requiresRoad === true,
       staff: b.staff ?? 0, // people needed to run it (see staff.js)
+      harbor: b.category === 'harbor', // a trade ship calls here (see trade.js)
       placement: b.placement ?? null,
       production: b.production
         ? {
@@ -256,6 +260,12 @@ export function compileRules(rawData) {
       freeBuilding: (config.start.freeBuildings ?? [])[0] ?? null,
     },
     win: { tier: config.win.tier, residents: config.win.residents },
+    // Trade: how often the ship calls and how much it carries per harbour.
+    // null switches trade off. Prices are per good, for the goods that have them.
+    trade: config.trade
+      ? { shipTicks: toTicks(config.trade.shipEverySeconds), unitsPerHarbor: config.trade.unitsPerHarbor }
+      : null,
+    prices: Object.fromEntries(Object.entries(goods).filter(([, g]) => g.trade).map(([id, g]) => [id, { sellMilli: toMilli(g.trade.sell), buyMilli: toMilli(g.trade.buy) }])),
     // Staff for the producing buildings. null switches the rule off.
     workforce: config.workforce
       ? { base: config.workforce.base, perResidentMilli: Math.round(config.workforce.perResident * MILLI) }

@@ -28,7 +28,7 @@ Harborfall is a small Anno-style city builder for desktop browsers. The owner is
 
 ## Commands
 
-- `node --test` runs all tests (480 at the end of Phase 17). They must all pass before a gate.
+- `node --test` runs all tests (508 at the end of Phase 18). They must all pass before a gate.
 - `node tools/bot.mjs` plays a full headless game (also `careless`, `bread-first`, `--seed N`, `--pace typical`, `--steps`, `--map`). The standard order must still win inside 25 to 40 minutes. It is the balance gate, and `tests/bot.test.js` checks it.
 - `node tools/tune.mjs` compares balance variants. `node tools/pace.mjs` estimates a person's time. `node tools/print-map.mjs` prints the island.
 - `node serve.mjs` serves the game at `http://localhost:5173`, which opens on the title screen and saves the game in the browser. `?demo` shows a finished town. `?fresh` opens a new game with no title screen. Neither of those two ever saves.
@@ -55,7 +55,7 @@ Update these in the same phase as the change, before the gate:
 - An embedded or hidden test browser may draw about one frame a second. Do not judge smoothness there, and do not trust timings unless you force the browser to finish drawing (draw the game canvas into a tiny canvas and read a pixel back). Unforced timings measure almost nothing.
 - Compare drawing speeds by running the old way and the new way in turns, many times, and subtracting the cost of the measuring itself. Runs taken one after another drift by more than most differences.
 - Never show a stored picture with `imageSmoothingQuality` above `'low'`. Shrinking with `'medium'` was measured at over twenty times the cost.
-- When you add a good, a building, a tier or a new setting, add a round naming it at the end of `addedLater` in `data/config.json`, so games saved before it can still be continued (`ARCHITECTURE.md` sections 15 and 18). `tests/staff.test.js` names the stamps that real saved games carry; if it fails, you have changed a rule those games were played under. Do not change an existing number in the same phase unless the owner asks: that makes every older save refuse to load.
+- When you add a good, a building, a tier or a new setting, add a round naming it at the end of `addedLater` in `data/config.json`, so games saved before it can still be continued (`ARCHITECTURE.md` sections 15, 18 and 21). A setting added to every building is `buildingSettings`, to every good `goodSettings`. `tests/staff.test.js` names the stamps that real saved games carry; if it fails, you have changed a rule those games were played under. Do not change an existing number in the same phase unless the owner asks: that makes every older save refuse to load.
 - Normal difficulty must change no number, so it stays the game that was balanced and that existing saved games were played under. `tests/difficulty.test.js` checks it. Before choosing numbers for a harder or easier mode, decide what it must never do (for example, trap a player), and test that with every build order.
 - `node tools/bot.mjs artisans` plays past the win. The goal after the win must come 15 to 30 minutes later, and `tests/artisans.test.js` checks it.
 - A new or renamed key in a `data/` file changes the rules stamp, and every saved game then refuses to load. Before and after any change to the data files, print the stamp (`rulesStamp(loadData())` from `src/sim/rules.js`) and compare. A key that cannot make a saved game impossible goes in `LOOKS_ONLY` there, with a test.
@@ -74,3 +74,6 @@ Update these in the same phase as the change, before the gate:
 - Before setting a scenario's numbers or medal times, let the bot play it at an instant, a typical and a slow pace (`--pace`). A set-up that wins at one pace and sticks at another is too fragile to ship.
 - `?fresh&scenario=<id>` opens a scenario on the test page. A bot build order may carry `"scenario": "<id>"`.
 - When you teach the bot something new about build orders, teach `tools/ui-playthrough.js` the same thing in the same change. In Phases 12 to 16 it ignored `"to"` on an upgrade step and nobody noticed, because no order depended on it.
+- Trade must stay a help, not a money machine. `tests/trade.test.js` checks on paper that no building earns more by selling all it makes than its staff would pay in taxes. Run it after changing any price, staff number or production time.
+- A game with no harbour must play exactly as it did before trade existed. Keep `stepTrade` returning early when there is none.
+- When you wait in the browser for something in the game, give the loop a limit. A loop waiting for a moment that never comes hangs the page, and the only way out is to close the tab.

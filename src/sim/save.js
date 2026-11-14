@@ -10,6 +10,7 @@ import { compileRules, stableText, withDifficulty, withScenario, withSeed } from
 import { refresh } from './refresh.js';
 import { footprint, inBounds, tileIndex } from './grid.js';
 import { undoProblem } from './undo.js';
+import { createTradeState, tradeProblem } from './trade.js';
 
 export const SAVE_FORMAT = 1;
 const APP = 'harborfall';
@@ -68,6 +69,8 @@ export function loadGame(rawData, save) {
   }
   // A save from before undo existed has no undo record. That is fine: there is nothing to undo.
   if (state !== null && typeof state === 'object' && state.undo === undefined) state.undo = null;
+  // A save from before trade existed has no orders and no ship on its way.
+  if (state !== null && typeof state === 'object' && state.trade === undefined) state.trade = createTradeState();
   // A save from before staff existed has saved up no work. It starts from nothing.
   if (state !== null && typeof state === 'object' && state.staffClock === undefined) state.staffClock = 0;
   if (older && state !== null && typeof state === 'object') {
@@ -75,7 +78,7 @@ export function loadGame(rawData, save) {
     if (state.goods !== null && typeof state.goods === 'object') for (const good of rules.goodIds) state.goods[good] ??= 0;
     if (older.configAdded.includes('milestones')) state.milestones = rules.milestones.map(() => null);
   }
-  const problem = stateProblem(rules, state) ?? undoProblem(rules, state);
+  const problem = stateProblem(rules, state) ?? tradeProblem(rules, state) ?? undoProblem(rules, state);
   if (problem) return fail('damaged', problem);
 
   // Everything worked out from what is built where (road connections, storage,

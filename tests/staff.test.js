@@ -228,14 +228,17 @@ test('the stamps that saved games out in the world carry are still recognised', 
   // Phases 12 to 14. If this fails, a rule those games were played under has
   // changed, and every game saved back then will be refused. Be sure you mean it.
   const rules = compileRules(loadData());
-  assert.deepEqual(rules.olderStamps.map((o) => o.stamp), ['6fe08f1bee9bb754', 'b16fd0a9142282c9']);
-  assert.deepEqual(rules.olderStamps.map((o) => o.configAdded), [['milestones', 'workforce'], ['workforce']]);
+  // Phase 18 added a third: games saved in Phases 15 to 17, before trade.
+  assert.deepEqual(rules.olderStamps.map((o) => o.stamp), ['6fe08f1bee9bb754', 'b16fd0a9142282c9', '10d0dc80671f7e66']);
+  assert.deepEqual(rules.olderStamps.map((o) => o.configAdded), [['milestones', 'workforce', 'trade'], ['workforce', 'trade'], ['trade']]);
+  assert.equal(createGame(dataBefore(2)).rules.stamp, '10d0dc80671f7e66');
   assert.equal(createGame(dataBefore(1)).rules.stamp, 'b16fd0a9142282c9');
   assert.equal(createGame(dataBefore(0)).rules.stamp, '6fe08f1bee9bb754');
   // A Hard game of Phases 12 to 14.
   assert.equal(createGame(dataBefore(1), { difficulty: 'hard' }).rules.stamp, 'd002f8878cb41b57');
   assert.equal(createGame(loadData(), { difficulty: 'hard' }).rules.olderStamps[1].stamp, 'd002f8878cb41b57');
   assert.notEqual(rules.stamp, 'b16fd0a9142282c9', 'adding staff is a change of rules');
+  assert.notEqual(rules.stamp, '10d0dc80671f7e66', 'adding trade is a change of rules');
 });
 
 test('the list of later additions may be one round or several', () => {
@@ -247,6 +250,7 @@ test('the list of later additions may be one round or several', () => {
   assert.equal(rulesStamp(data, steps[1]), rulesStamp(data, [steps[1]]));
   assert.equal(rulesStamp(data, steps), '6fe08f1bee9bb754');
   assert.equal(rulesStamp(data, steps.slice(1)), 'b16fd0a9142282c9');
+  assert.equal(rulesStamp(data, steps.slice(2)), '10d0dc80671f7e66');
 });
 
 test('a game saved before staff existed can be continued, with everything it had', () => {

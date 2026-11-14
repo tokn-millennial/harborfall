@@ -2,7 +2,7 @@
 // Returns a list of plain-English problems. An empty list means the data is fine.
 // Expects data with the "_note" keys already removed (see rules.js).
 
-export const CATEGORIES = ['road', 'storage', 'producer', 'house', 'market'];
+export const CATEGORIES = ['road', 'storage', 'producer', 'house', 'market', 'harbor'];
 
 // The island generator knows these five terrain types by name.
 export const REQUIRED_TERRAIN = ['water', 'coast', 'grass', 'fertile', 'forest'];
@@ -291,6 +291,22 @@ export function validateData(data) {
       }
     }
   }
+  if (config.trade !== undefined) {
+    if (!isObject(config.trade)) err('config.trade must be an object');
+    else {
+      number(config.trade.shipEverySeconds, 'config.trade.shipEverySeconds', { min: 0, minExclusive: true });
+      number(config.trade.unitsPerHarbor, 'config.trade.unitsPerHarbor', { min: 1, integer: true });
+    }
+  }
+  // Prices: a good may be traded if it has both. Buying must cost more than
+  // selling earns, or the ship would be a machine that prints coins.
+  for (const [id, g] of Object.entries(goods)) {
+    if (!isObject(g) || g.trade === undefined) continue;
+    if (!isObject(g.trade)) { err(`goods.${id}.trade must be an object`); continue; }
+    number(g.trade.sell, `goods.${id}.trade.sell`, { min: 0, minExclusive: true });
+    number(g.trade.buy, `goods.${id}.trade.buy`, { min: 0, minExclusive: true });
+    if (isNumber(g.trade.sell) && isNumber(g.trade.buy) && g.trade.buy <= g.trade.sell) err(`goods.${id}.trade.buy must be more than its sell price`);
+  }
   if (config.workforce !== undefined) {
     if (!isObject(config.workforce)) err('config.workforce must be an object');
     else {
@@ -305,7 +321,7 @@ export function validateData(data) {
       const where = Array.isArray(config.addedLater) ? `config.addedLater[${i}]` : 'config.addedLater';
       if (!isObject(step)) { err(`${where} must be an object`); return; }
       for (const [key, list] of Object.entries(step)) {
-        if (!['goods', 'buildings', 'tiers', 'upgradesFrom', 'config', 'buildingSettings'].includes(key)) err(`${where} has an unknown entry "${key}"`);
+        if (!['goods', 'buildings', 'tiers', 'upgradesFrom', 'config', 'buildingSettings', 'goodSettings'].includes(key)) err(`${where} has an unknown entry "${key}"`);
         else if (!Array.isArray(list) || !list.every((id) => typeof id === 'string')) err(`${where}.${key} must be a list of names`);
       }
     });

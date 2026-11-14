@@ -296,6 +296,41 @@ export const BUILDING_ART = {
     g.ground(0.88, 1.72, 1.12, 1.95, '#c9b68e');
   },
 
+  // A stone quay with a harbourmaster's house, a loading crane, a flag, and
+  // goods stacked ready for the ship.
+  harbor(g, { h, color }) {
+    g.ground(0.04, 0.04, 1.96, 1.96, STONE, 'rgba(70, 70, 60, 0.45)');
+    // Paving lines on the quay.
+    for (let i = 1; i < 4; i++) g.line(g.P(0.04, 0.04 + i * 0.48), g.P(1.96, 0.04 + i * 0.48), tone(STONE, 0.85), 0.5);
+    // The harbourmaster's house at the back.
+    const wall = h * 0.5;
+    g.box(0.12, 0.12, 1.0, 0.8, 0, wall, PLASTER, { top: false });
+    door(g, 0.46, 0.64, wall * 0.75, 0.8);
+    windowLit(g, 0.18, 0.36, wall * 0.42, wall * 0.78, 0.8, false);
+    windowLit(g, 0.74, 0.92, wall * 0.42, wall * 0.78, 0.8, false);
+    windowShade(g, 0.3, 0.6, wall * 0.42, wall * 0.78, 1.0, false);
+    g.gable(0.12, 0.12, 1.0, 0.8, wall, h * 0.42, color, { axis: 'u', wall: PLASTER, lines: 3 });
+    // A flag on a pole beside the house.
+    g.post(1.12, 0.22, 0, h * 1.15, DARK_WOOD, 1);
+    g.poly([g.P(1.12, 0.22, h * 1.15), g.P(1.12, 0.62, h * 1.06), g.P(1.12, 0.22, h * 0.97)], '#c94f3d', 'rgba(60, 20, 15, 0.5)', 0.4);
+    // The loading crane: a post, an arm reaching out, and a hook on its rope.
+    g.post(1.62, 0.36, 0, h * 1.25, DARK_WOOD, 1.8);
+    g.line(g.P(1.62, 0.36, h * 1.2), g.P(1.62, 1.3, h * 1.05), DARK_WOOD, 1.4);
+    g.line(g.P(1.62, 1.3, h * 1.05), g.P(1.62, 1.3, h * 0.55), 'rgba(60, 45, 30, 0.8)', 0.5);
+    crate(g, 1.54, 1.22, 0.16, '#c29a66');
+    // Goods waiting for the ship: crates, barrels and sacks along the front.
+    crate(g, 0.16, 1.2, 0.24);
+    crate(g, 0.44, 1.26, 0.18, '#c29a66');
+    crate(g, 0.2, 1.5, 0.18, '#a97f50');
+    barrel(g, 0.78, 1.32);
+    barrel(g, 0.96, 1.34);
+    barrel(g, 0.86, 1.56);
+    g.oval(1.18, 1.62, 2, 2.6, 2, '#d8c79e');
+    g.oval(1.32, 1.66, 2, 2.6, 2, '#cdbb8f');
+    // Bollards along the edge of the quay.
+    for (const v of [0.3, 0.9, 1.5]) g.post(1.9, v, 0, 3.5, '#4a4a46', 2);
+  },
+
   // A paved square with three striped stalls.
   market(g, { h, color }) {
     g.ground(0.06, 0.06, 1.94, 1.94, PAVING, 'rgba(90, 75, 50, 0.4)');

@@ -65,6 +65,12 @@
     "perResident": 0.5
   },
 
+  "_trade": "The trade ship. While the island has a Harbour linked to a warehouse, a ship calls every 'shipEverySeconds' of game time. On each call it carries at most 'unitsPerHarbor' units for each such Harbour, sold and bought together. What it sells and buys is set by the player in the Harbour's panel. Prices are in goods.json. Remove this whole entry to switch trade off.",
+  "trade": {
+    "shipEverySeconds": 120,
+    "unitsPerHarbor": 30
+  },
+
   "_win": "The win: this many residents of this tier, or of any tier above it.",
   "win": {
     "tier": "worker",
@@ -76,7 +82,7 @@
     { "tier": "artisan", "residents": 100, "title": "A city of Artisans" }
   ],
 
-  "_addedLater": "What has been added to the game since saved games first existed, one entry per round of additions, oldest first. A game saved before any of them can still be continued: it simply has none of what came after. If you add a good, a building or a tier of your own, add an entry at the end and older saved games keep working. 'buildingSettings' names a setting added to buildings, such as 'staff'.",
+  "_addedLater": "What has been added to the game since saved games first existed, one entry per round of additions, oldest first. A game saved before any of them can still be continued: it simply has none of what came after. If you add a good, a building or a tier of your own, add an entry at the end and older saved games keep working. 'buildingSettings' names a setting added to buildings, such as 'staff', and 'goodSettings' one added to goods, such as 'trade'.",
   "addedLater": [
     {
       "goods": ["wool", "cloth"],
@@ -88,6 +94,11 @@
     {
       "buildingSettings": ["staff"],
       "config": ["workforce"]
+    },
+    {
+      "buildings": ["harbor"],
+      "goodSettings": ["trade"],
+      "config": ["trade"]
     }
   ]
 }

@@ -30,7 +30,7 @@ export async function playThroughUi({ game, camera, renderer, ui }, orderName = 
   const planner = createPlanner(game);
   const canvas = document.getElementById('game');
   const maxTicks = maxMinutes * rules.ticksPerMinute;
-  const counts = { menuClicks: 0, mapClicks: 0, roadDrags: 0, upgradeClicks: 0, marketsAdded: 0 };
+  const counts = { menuClicks: 0, mapClicks: 0, roadDrags: 0, upgradeClicks: 0, tradeClicks: 0, marketsAdded: 0 };
   const roadPrice = rules.buildings.road.cost.coinsMilli;
 
   // ---- acting like a player --------------------------------------------------
@@ -149,6 +149,35 @@ export async function playThroughUi({ game, camera, renderer, ui }, orderName = 
     ui.frame(0);
   }
 
+  // A trade order, given the way a player would: select the harbour, then
+  // click its order button round to the right mode and its + and − to the level.
+  function tradeOrder({ good, mode, level }) {
+    let harbor = null;
+    if (!wait(() => (harbor = state.buildings.find((b) => rules.buildings[b.type].harbor)), 'a harbour')) return;
+    const def = rules.buildings[harbor.type];
+    pickTool('Select');
+    lookAt(harbor.x + def.w / 2, harbor.y + def.h / 2);
+    const roof = screenOf(harbor.x + def.w / 2, harbor.y + def.h / 2, buildingVisual(rules, harbor).risePx);
+    clickMap(roof.x, roof.y);
+    ui.frame(0);
+    if (ui.selectedId !== harbor.id) throw new Error(`Clicking the harbour at ${harbor.x},${harbor.y} selected building ${ui.selectedId}`);
+    const order = () => state.trade.orders[good] ?? null;
+    const press = (find, what) => {
+      const button = [...document.querySelectorAll('#info button[data-action^="trade:"]')].find(find);
+      if (!button || button.disabled) throw new Error(`The ${what} button for ${good} is missing or disabled`);
+      button.click();
+      counts.tradeClicks++;
+      ui.frame(0);
+    };
+    for (let i = 0; i < 3 && (order()?.mode ?? 'off') !== mode; i++) press((b) => b.classList.contains('trade-order') && b.dataset.action.startsWith(`trade:${good}:`), 'order');
+    if ((order()?.mode ?? 'off') !== mode) throw new Error(`Clicking the order button never set ${good} to ${mode}`);
+    for (let i = 0; i < 200 && mode !== 'off' && order().level !== level; i++) {
+      const higher = order().level < level;
+      press((b) => b.classList.contains('trade-step') && b.title === (higher ? 'Higher' : 'Lower') && b.dataset.action.startsWith(`trade:${good}:`), higher ? '+' : '−');
+    }
+    if (mode !== 'off' && order().level !== level) throw new Error(`The + and − buttons never set ${good} to ${level}`);
+  }
+
   // The headless bot only acts on whole seconds. Line up with it, so the two
   // runs can be compared tick for tick.
   while (state.tick % rules.ticksPerSecond !== 0) step(game);
@@ -156,6 +185,7 @@ export async function playThroughUi({ game, camera, renderer, ui }, orderName = 
   for (const s of steps) {
     if (state.won) break;
     if (s.kind === 'build') build(s.building);
+    else if (s.kind === 'trade') tradeOrder(s);
     else upgrade(s.to ?? null);
   }
   wait(() => state.won, 'the win');

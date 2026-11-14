@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadData } from '../src/platform/loadData.node.js';
 import { canPlace, canUpgrade, createGame, execute, getSummary, loadGame, saveGame, step } from '../src/sim/index.js';
-import { compileRules, rulesStamp } from '../src/sim/rules.js';
+import { compileRules, rulesStamp, stableText } from '../src/sim/rules.js';
 import { createAdvisor } from '../src/ui/advice.js';
 import { currentGoal, milestoneMessage, reasonText, upgradePathText, winMessage } from '../src/ui/text.js';
 import { runBot } from '../tools/bot/bot.js';
@@ -333,7 +333,8 @@ test('a game saved before Artisans existed can be continued, and plays on as it 
     delete copy.goods.cloth;
     delete copy.milestones;
     delete copy.undo; // the old game still remembers its last action, long since too late to undo
-    return JSON.stringify(copy);
+    // Entries added back on loading come last, so compare what is there, not the order.
+    return stableText(copy);
   };
   assert.equal(shared(game.state), shared(before.state));
 

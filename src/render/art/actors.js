@@ -1,4 +1,4 @@
-// Draws the life on the map: walkers, carts and boats. Each is a handful of
+// Draws the life on the map: walkers, carts, boats and trade ships. Each is a handful of
 // small rectangles, because there may be dozens on screen and they are tiny.
 //
 // An actor's x and y are in tiles (see src/render/life.js). Its feet, wheels
@@ -97,6 +97,66 @@ function boat(ctx, a, time) {
   }
 }
 
+// The trade ship: a two-masted trader with cream sails, larger than a fishing boat.
+const SHIP = { hull: '#5e3d27', band: '#d9b46a', deck: '#9a7350', sail: '#f3ead2', stripe: '#3d6f8f', mast: '#4a3322' };
+function ship(ctx, a, time) {
+  const p = tileToWorld(a.x, a.y);
+  const x = p.x;
+  const y = p.y + CLIFF + Math.sin(time * 1.2 + a.look) * (a.docked ? 0.4 : 1);
+  const facing = a.dx - a.dy >= 0 ? 1 : -1;
+  // A wake behind it while it moves.
+  ctx.fillStyle = BOAT.ripple;
+  if (!a.docked) {
+    ctx.fillRect(x - facing * 26 - 5, y + 4, 10, 0.9);
+    ctx.fillRect(x - facing * 34 - 4, y + 5.4, 8, 0.8);
+  }
+  ctx.fillRect(x - 18, y + 5.2, 7, 0.8);
+  ctx.fillRect(x + 12, y + 5.6, 7, 0.8);
+  // The hull, its painted band, and the deck.
+  ctx.fillStyle = SHIP.hull;
+  ctx.beginPath();
+  ctx.moveTo(x - 20 * facing, y - 3);
+  ctx.lineTo(x + 24 * facing, y - 4);
+  ctx.lineTo(x + 16 * facing, y + 4.5);
+  ctx.lineTo(x - 16 * facing, y + 4.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = SHIP.band;
+  ctx.fillRect(Math.min(x - 19 * facing, x + 22 * facing), y - 1.2, 41, 1.1);
+  ctx.fillStyle = SHIP.deck;
+  ctx.fillRect(Math.min(x - 20 * facing, x + 23 * facing), y - 4.6, 43, 1.8);
+  // Masts and sails. Tied up, the sails are furled.
+  for (const [at, tall] of [[-7, 30], [7, 24]]) {
+    const mx = x + at * facing;
+    ctx.fillStyle = SHIP.mast;
+    ctx.fillRect(mx - 0.7, y - 4 - tall, 1.4, tall);
+    if (a.docked) {
+      ctx.fillStyle = SHIP.sail;
+      ctx.fillRect(mx - 6, y - tall + 2, 12, 2);
+      continue;
+    }
+    const top = y - tall;
+    const width = tall * 0.48;
+    ctx.fillStyle = SHIP.sail;
+    ctx.beginPath();
+    ctx.moveTo(mx - width / 2, top + 2);
+    ctx.lineTo(mx + width / 2, top + 2);
+    ctx.quadraticCurveTo(mx + width / 2 + 2.5 * facing, top + tall * 0.42, mx + width / 2, top + tall * 0.72);
+    ctx.lineTo(mx - width / 2, top + tall * 0.72);
+    ctx.quadraticCurveTo(mx - width / 2 + 2.5 * facing, top + tall * 0.42, mx - width / 2, top + 2);
+    ctx.fill();
+    ctx.fillStyle = SHIP.stripe;
+    ctx.fillRect(mx - width / 2, top + tall * 0.34, width, 2);
+  }
+  // A pennant at the top of the main mast.
+  ctx.fillStyle = '#c94f3d';
+  ctx.beginPath();
+  ctx.moveTo(x - 7 * facing, y - 34);
+  ctx.lineTo(x - 7 * facing - 7 * facing, y - 32.5 + Math.sin(time * 4 + a.look) * 0.6);
+  ctx.lineTo(x - 7 * facing, y - 31);
+  ctx.fill();
+}
+
 // Draws a list of actors, far to near as given. `goods` is rules.goods, for
 // the color of what a cart carries. `time` is in seconds, for bobbing.
 export function paintActors(ctx, actors, goods, time) {
@@ -104,5 +164,6 @@ export function paintActors(ctx, actors, goods, time) {
     if (a.kind === 'walker') walker(ctx, a);
     else if (a.kind === 'cart') cart(ctx, a, goods[a.good]?.color ?? '#b9a47a');
     else if (a.kind === 'boat') boat(ctx, a, time);
+    else if (a.kind === 'ship') ship(ctx, a, time);
   }
 }

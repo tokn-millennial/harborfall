@@ -8,6 +8,7 @@ import { compileRules, withDifficulty, withScenario, withSeed } from './rules.js
 import { generateMap } from './mapgen.js';
 import { addBuilding } from './buildings.js';
 import { refresh } from './refresh.js';
+import { createTradeState } from './trade.js';
 
 // options.map lets tests (or a future hand-made level) supply the island
 // instead of generating it: { width, height, terrain[], start: { x, y } | null }
@@ -44,6 +45,7 @@ export function createGame(rawData, options = {}) {
     wonAtTick: null,
     milestones: rules.milestones.map(() => null), // the tick each goal after the win was reached
     staffClock: 0, // thousandths of a tick of work saved up while short of staff (see staff.js)
+    trade: createTradeState(), // the ship's timer, the standing orders and the last call (see trade.js)
     undo: null, // what is needed to take back the last command (see undo.js)
   };
   const game = { rules, state };

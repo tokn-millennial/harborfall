@@ -126,7 +126,8 @@ export function fillHouse(game, house) {
 
 // The data files as they were when only the first `rounds` rounds of
 // additions (config.addedLater) had been made. 0 is the game as first
-// released; 1 is with wool, cloth and Artisans but before staff.
+// released; 1 is with wool, cloth and Artisans but before staff; 2 is with
+// staff but before the harbour and trade.
 export function dataBefore(rounds) {
   const data = loadData();
   const steps = data.config.addedLater;
@@ -139,9 +140,12 @@ export function dataBefore(rounds) {
     for (const key of added.buildingSettings ?? []) {
       for (const b of Object.values(data.buildings)) if (b !== null && typeof b === 'object') delete b[key];
     }
+    for (const key of added.goodSettings ?? []) {
+      for (const g of Object.values(data.goods)) if (g !== null && typeof g === 'object') delete g[key];
+    }
   }
-  // Scenarios came after all of these, and one of them needs Artisans.
-  if (rounds < steps.length) delete data.config.scenarios;
+  // Scenarios came in Phase 17, after staff (round 2) and before trade, and one of them needs Artisans.
+  if (rounds < 2) delete data.config.scenarios;
   if (rounds > 0) data.config.addedLater = steps.slice(0, rounds);
   else delete data.config.addedLater;
   return data;

@@ -74,6 +74,30 @@ export function staffText(rules, staff, closed = 0) {
   return { value: `${-gap} short`, short: true, title: `${facts} Every producer works at ${staff.percent}% speed. Build more houses, or close a building you can spare.${shut}` };
 }
 
+// Coins as the player reads them: whole where they are whole, otherwise to the
+// hundredth. `milli` is in thousandths of a coin.
+export function coinText(milli) {
+  const coins = Math.round(milli / 10) / 100;
+  return `${coins} ${coins === 1 ? 'coin' : 'coins'}`;
+}
+
+// A trade order in words: "Sell above 50", "Buy up to 20", "Off".
+export function tradeOrderText(order) {
+  if (!order) return 'Off';
+  return order.mode === 'sell' ? `Sell above ${order.level}` : `Buy up to ${order.level}`;
+}
+
+// What the trade ship did on its last call, as a sentence, or null if it
+// neither sold nor bought anything. `last` is state.trade.last.
+export function tradeCallText(rules, last) {
+  if (!last) return null;
+  const list = (amounts) => Object.entries(amounts).map(([good, n]) => amountText(rules, good, n)).join(', ');
+  const parts = [];
+  if (Object.keys(last.sold).length) parts.push(`sold ${list(last.sold)} for ${coinText(last.earnedMilli)}`);
+  if (Object.keys(last.bought).length) parts.push(`bought ${list(last.bought)} for ${coinText(last.spentMilli)}`);
+  return parts.length ? `The trade ship ${parts.join(', and ')}.` : null;
+}
+
 // One or two lines for the build menu: what the building is for.
 export function buildingBlurb(rules, id) {
   const def = rules.buildings[id];
@@ -92,6 +116,10 @@ export function buildingBlurb(rules, id) {
     lines.push(`Holds ${plural(tier.capacity, tier.name)}. Needs a market in range.`);
   }
   if (def.marketRadius > 0) lines.push(`Supplies houses within ${def.marketRadius} tiles.`);
+  if (def.harbor && rules.trade) {
+    const every = rules.trade.shipTicks % rules.ticksPerMinute === 0 ? `${rules.trade.shipTicks / rules.ticksPerMinute} minutes` : seconds(rules, rules.trade.shipTicks);
+    lines.push(`A trade ship calls every ${every} and carries ${rules.trade.unitsPerHarbor} goods. Set what it sells and buys in the harbour's panel.`);
+  }
   const rule = placementText(rules, id);
   if (rule) lines.push(rule);
   if (def.requiresRoad) lines.push('Needs a road to a warehouse.');
@@ -124,6 +152,9 @@ const FIXED_REASONS = {
   last_warehouse: 'You cannot demolish your last warehouse.',
   not_a_house: 'Only houses can be upgraded.',
   not_a_producer: 'Only buildings that make things can be closed.',
+  no_harbor: 'Build a harbour first. The trade ship calls there.',
+  not_tradable: 'That cannot be traded.',
+  no_change: 'That is the order already.',
   already_closed: 'It is already closed.',
   not_closed: 'It is not closed.',
   max_tier: 'This house is already at the top tier.',
@@ -235,6 +266,7 @@ export function undoLabel(rules, status) {
   if (status.kind === 'upgrade') return 'Upgrade';
   if (status.kind === 'close') return 'Closing';
   if (status.kind === 'reopen') return 'Reopening';
+  if (status.kind === 'trade') return 'Trade order';
   return 'Last action';
 }
 

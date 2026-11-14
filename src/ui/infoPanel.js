@@ -47,14 +47,33 @@ export function createInfoPanel(root, { onAction, onClose }) {
         return el('div', 'info-action', [button, action.reason ? el('div', 'action-reason', action.reason) : null]);
       });
 
+      // The harbour's standing orders: the good, what it trades for, and the order.
+      const trade = model.trade ? [
+        el('div', 'trade-head', [el('span', null, 'Standing orders'), el('span', 'trade-hint', 'Prices in coins. Click an order to change it.')]),
+        ...model.trade.map((row) => el('div', `trade-row ${row.mode}`, [
+          el('div', 'trade-good', [el('span', 'trade-name', `${row.name} `), el('span', 'trade-stock', String(row.stock)), el('div', 'trade-prices', row.prices)]),
+          el('button', { class: 'trade-order', type: 'button', 'data-action': row.next, title: 'Off, then sell, then buy' }, row.order),
+          tradeStep(row.down, '−', 'Lower'),
+          tradeStep(row.up, '+', 'Higher'),
+        ])),
+      ] : [];
+
       root.replaceChildren(
         el('div', 'info-head', [
           el('h2', `info-title ${model.level}`, model.title),
           el('button', { class: 'close', type: 'button', 'data-action': 'close', title: 'Close (Esc)' }, '×'),
         ]),
         ...rows,
+        ...trade,
         ...actions,
       );
     },
   };
+}
+
+// A small − or + button for a trade order's level. Disabled when there is nowhere to go.
+function tradeStep(command, text, title) {
+  const button = el('button', { class: 'trade-step', type: 'button', 'data-action': command ?? '', title }, text);
+  button.disabled = command === null;
+  return button;
 }

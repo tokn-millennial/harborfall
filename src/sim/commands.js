@@ -10,6 +10,7 @@ import { pay, refund } from './economy.js';
 import { refresh } from './refresh.js';
 import { producerStatuses, remember, undoLast } from './undo.js';
 import { syncProductionStatus } from './production.js';
+import { setTradeOrder, tradeOrderReason } from './trade.js';
 
 const fail = (reason) => ({ ok: false, reason });
 
@@ -22,6 +23,7 @@ export function execute(game, command) {
     case 'upgrade': return upgrade(game, command);
     case 'close': return setClosed(game, command, true);
     case 'reopen': return setClosed(game, command, false);
+    case 'trade': return trade(game, command);
     case 'undo': return undoLast(game);
     default: return fail('unknown_command');
   }
@@ -128,5 +130,19 @@ function setClosed(game, { id }, closed) {
   else delete p.closed;
   syncProductionStatus(game);
   remember(game, { kind: closed ? 'close' : 'reopen', id: building.id, status });
+  return { ok: true };
+}
+
+// { action: 'trade', good, mode, level }
+// A standing order for the trade ship. mode is 'sell' (sell everything above
+// `level`), 'buy' (buy up to `level`) or 'off' (no order; level is ignored).
+function trade(game, { good, mode, level }) {
+  const reason = tradeOrderReason(game, good, mode, level);
+  if (reason) return fail(reason);
+  const before = game.state.trade.orders[good] ?? null;
+  const next = mode === 'off' ? null : { mode, level };
+  if ((before === null && next === null) || (before && next && before.mode === next.mode && before.level === next.level)) return fail('no_change');
+  setTradeOrder(game, good, next);
+  remember(game, { kind: 'trade', good, before: before ? { mode: before.mode, level: before.level } : null });
   return { ok: true };
 }

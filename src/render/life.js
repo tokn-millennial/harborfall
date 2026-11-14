@@ -1,5 +1,5 @@
 // Life on the map: people walking the roads, carts taking goods to a
-// warehouse, and a boat for every fisherman.
+// warehouse, a boat for every fisherman, and the trade ship at each harbour.
 //
 // This is decoration. It reads the game and never changes it, and nothing in
 // the game depends on it: goods still move the instant they are made. The
@@ -7,6 +7,8 @@
 //   - Walkers: more of them the more residents there are.
 //   - Carts:   one sets out when a producer finishes a batch.
 //   - Boats:   out at sea while the fisherman is working, home when he is not.
+//   - Ships:   sailing in as the trade ship's call comes due, tied up at the
+//              harbour for a moment after it, then sailing away.
 //
 // It moves with game time, so it stops when the game is paused and hurries
 // at 4x. There is no canvas code here, so it is tested in Node. Positions are
@@ -27,6 +29,11 @@ const CART_MIN_TILES = 3;          // shorter trips are not worth showing
 const BOAT_REACH = 6;              // how far from the hut a boat goes, in tiles
 const BOAT_OUT_UNTIL = 0.4;        // share of the work cycle spent rowing out
 const BOAT_BACK_FROM = 0.6;        // and the share after which it rows home
+
+const SHIP_REACH = 10;             // how far out the trade ship is first seen, in tiles
+const SHIP_IN_TICKS = 200;         // it sails in over the last 20 game seconds before its call
+const SHIP_STAY_TICKS = 80;        // stays tied up for 8 seconds after it
+const SHIP_OUT_TICKS = 200;        // and takes 20 to sail away
 
 // If the game jumps by more than this (a test stepping it directly), start afresh.
 const MAX_CATCH_UP_TICKS = 600;
@@ -56,6 +63,7 @@ export function createLife(rules, seed = 7) {
   let seen = new Map();          // producer id -> its work timer last time
   let cartSentAt = new Map();    // producer id -> tick its last cart left
   let boatWaters = new Map();    // fisherman id -> { home, out } or null
+  let shipWaters = new Map();    // harbour id -> { home, out } or null
   let actors = [];
   let fresh = true;              // nothing has been shown yet for this game
 
@@ -72,6 +80,7 @@ export function createLife(rules, seed = 7) {
     seen = new Map();
     cartSentAt = new Map();
     boatWaters = new Map();
+    shipWaters = new Map();
     fresh = true;
   }
 
@@ -234,16 +243,16 @@ export function createLife(rules, seed = 7) {
   // ---- boats ---------------------------------------------------------------------
   // Where a fisherman's boat is kept and where it fishes: the nearest water,
   // and the farthest open water it can row to in a straight line.
-  function findWaters(map, building) {
+  function findWaters(map, building, reach = BOAT_REACH) {
     const def = rules.buildings[building.type];
     const cx = building.x + def.w / 2;
     const cy = building.y + def.h / 2;
     const waters = [];
-    for (let y = Math.floor(cy) - BOAT_REACH; y <= Math.floor(cy) + BOAT_REACH; y++) {
-      for (let x = Math.floor(cx) - BOAT_REACH; x <= Math.floor(cx) + BOAT_REACH; x++) {
+    for (let y = Math.floor(cy) - reach; y <= Math.floor(cy) + reach; y++) {
+      for (let x = Math.floor(cx) - reach; x <= Math.floor(cx) + reach; x++) {
         if (!isWater(map, x, y)) continue;
         const distance = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
-        if (distance <= BOAT_REACH) waters.push({ x: x + 0.5, y: y + 0.5, distance });
+        if (distance <= reach) waters.push({ x: x + 0.5, y: y + 0.5, distance });
       }
     }
     if (waters.length === 0) return null;
@@ -368,6 +377,38 @@ export function createLife(rules, seed = 7) {
       });
     }
     boatWaters = boatsNow;
+
+    // The trade ship: worked out from the ship's own timer and its last call,
+    // so it is always in step with the game and needs nothing remembered.
+    const shipsNow = new Map();
+    if (rules.trade && state.trade) {
+      const due = rules.trade.shipTicks;
+      const inTicks = Math.min(SHIP_IN_TICKS, Math.floor(due / 3));
+      const since = state.trade.last ? state.tick - state.trade.last.tick : Infinity;
+      let out = null; // 0 tied up, 1 far out at sea, null not to be seen
+      let leaving = false;
+      if (since < SHIP_STAY_TICKS) out = 0;
+      else if (since < SHIP_STAY_TICKS + SHIP_OUT_TICKS) {
+        out = ease((since - SHIP_STAY_TICKS) / SHIP_OUT_TICKS);
+        leaving = true;
+      } else if (state.trade.timer >= due - inTicks) out = 1 - ease((state.trade.timer - (due - inTicks)) / inTicks);
+      for (const b of state.buildings) {
+        if (!rules.buildings[b.type].harbor) continue;
+        const waters = shipWaters.has(b.id) ? shipWaters.get(b.id) : findWaters(state.map, b, SHIP_REACH);
+        shipsNow.set(b.id, waters);
+        if (!waters || out === null || !b.connected) continue;
+        const sign = leaving ? 1 : -1;
+        actors.push({
+          kind: 'ship', id: b.id, look: b.id,
+          x: waters.home.x + (waters.out.x - waters.home.x) * out,
+          y: waters.home.y + (waters.out.y - waters.home.y) * out,
+          dx: (waters.out.x - waters.home.x) * sign,
+          dy: (waters.out.y - waters.home.y) * sign,
+          docked: out === 0,
+        });
+      }
+    }
+    shipWaters = shipsNow;
     return actors;
   }
 

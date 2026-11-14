@@ -9,11 +9,14 @@ import { createPlanner } from './planner.js';
 import { createRng } from '../../src/sim/rng.js';
 
 // { steps: [{ build: 'house', count: 4 }, { upgrade: 2 }] } becomes one entry per action.
+// { trade: 'wood', mode: 'sell', level: 60 } gives the trade ship a standing order.
 export function expandOrder(order) {
   const steps = [];
   for (const entry of order.steps) {
     if (entry.build) {
       for (let i = 0; i < (entry.count ?? 1); i++) steps.push({ kind: 'build', building: entry.build, label: `build ${entry.build}` });
+    } else if (entry.trade) {
+      steps.push({ kind: 'trade', good: entry.trade, mode: entry.mode, level: entry.level ?? 0, label: `trade order: ${entry.mode} ${entry.trade}${entry.mode === 'off' ? '' : ` at ${entry.level}`}` });
     } else if (entry.upgrade) {
       // "to" picks which upgrade: { upgrade: 9, to: 'artisan' } only moves houses up to Artisans.
       for (let i = 0; i < entry.upgrade; i++) steps.push({ kind: 'upgrade', to: entry.to ?? null, label: entry.to ? `upgrade to ${entry.to}` : 'upgrade house' });
@@ -121,6 +124,12 @@ export function runBot(game, order, options = {}) {
       current.at = [plan.x, plan.y];
       current.roads = plan.roads.length;
       return null;
+    }
+
+    // A trade order: given as soon as there is a harbour to give it to.
+    if (current.kind === 'trade') {
+      const done = execute(game, { action: 'trade', good: current.good, mode: current.mode, level: current.level });
+      return done.ok || done.reason === 'no_change' ? null : done.reason;
     }
 
     // Upgrade: take the first house that is ready.

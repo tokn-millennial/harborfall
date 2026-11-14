@@ -124,6 +124,19 @@
     "visual": { "art": "weaver", "color": "#6f5fa8", "height": 1.3 }
   },
 
+  "harbor": {
+    "name": "Harbour",
+    "key": "T",
+    "category": "harbor",
+    "size": [2, 2],
+    "cost": { "coins": 120, "goods": { "wood": 20, "planks": 10 } },
+    "upkeepPerMinute": 5,
+    "requiresRoad": true,
+    "_placement": "Must share an edge with a coast tile. A trade ship calls here: see 'trade' in config.json and the prices in goods.json.",
+    "placement": { "adjacentTerrain": "coast" },
+    "visual": { "art": "harbor", "color": "#3d6f8f", "height": 1.25 }
+  },
+
   "house": {
     "name": "House",
     "key": "H",

@@ -1,0 +1,27 @@
+{
+  "name": "Merchant",
+  "description": "The standard order with a harbour after the first sawmill, selling wood and fish above 60. Shows what trade costs and earns in a sensible game.",
+  "steps": [
+    { "build": "lumberjack", "count": 2 },
+    { "build": "fisherman" },
+    { "build": "market" },
+    { "build": "house", "count": 5 },
+    { "build": "sawmill" },
+    { "build": "harbor" },
+    { "trade": "wood", "mode": "sell", "level": 60 },
+    { "trade": "fish", "mode": "sell", "level": 60 },
+    { "build": "fisherman" },
+    { "build": "house", "count": 5 },
+    { "build": "fisherman" },
+    { "build": "house", "count": 4 },
+    { "build": "farm", "count": 2 },
+    { "build": "bakery" },
+    { "build": "fisherman" },
+    { "upgrade": 6 },
+    { "build": "fisherman" },
+    { "build": "farm", "count": 2 },
+    { "build": "bakery" },
+    { "build": "fisherman" },
+    { "upgrade": 8 }
+  ]
+}

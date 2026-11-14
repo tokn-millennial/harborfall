@@ -66,7 +66,8 @@ Harborfall/
       production.js       Producer cycles: take inputs, work, deliver.
       population.js       Market coverage, buying goods, moving in and out, upgrades.
       economy.js          Taxes, base income, upkeep, paying costs, refunds.
-      commands.js         Applies a command: place, road, demolish, upgrade, close, reopen.
+      commands.js         Applies a command: place, road, demolish, upgrade, close, reopen, trade.
+      trade.js            The harbour's ship: its timer, the standing orders, and each call.
       win.js              The win check.
       summary.js          The numbers the HUD, bot and reports read.
       save.js             Turns a game into plain data and back, and refuses a save that cannot be trusted.
@@ -182,6 +183,7 @@ A game has two parts. `game.rules` is built from the data files and is locked, s
 | `demolish` | `x`, `y` |
 | `upgrade` | `id` (a house) |
 | `close`, `reopen` | `id` (a producer). Added in Phase 16: section 19. |
+| `trade` | `good`, `mode` (`sell`, `buy` or `off`), `level` (0 to 999). Added in Phase 18: section 21. |
 | `undo` | none. Added in Phase 11: section 14. |
 
 A command looks like `{ action: "place", building: "sawmill", x: 12, y: 30 }`. A failed command changes nothing.
@@ -195,6 +197,7 @@ Failure reasons are short fixed codes. The UI turns each code into a sentence.
 | Demolishing | `nothing_here`, `last_warehouse`, `out_of_bounds` |
 | Upgrading | `not_a_house`, `max_tier`, `house_not_full`, `no_market`, `needs_unmet`, `no_bread` |
 | Closing | `not_a_producer`, `already_closed`, `not_closed` |
+| Trade orders | `no_harbor`, `not_tradable`, `no_change`, `bad_command` |
 | Any | `unknown_command`, `bad_command` |
 
 The `needs_...` and `no_...` codes are built from the terrain or good named in the data files, so a new placement rule or need gets its own code with no code change.
@@ -204,8 +207,9 @@ The `needs_...` and `no_...` codes are built from the terrain or good named in t
 1. The tick counter goes up by one.
 2. Producers advance their cycles, oldest building first. If the town is short of staff, this step is skipped on some ticks (section 18).
 3. Houses buy goods, then residents move in or out, oldest house first.
-4. Income is settled, when the 6 second interval is due.
-5. The win check runs.
+4. The trade ship calls, when it is due (section 21).
+5. Income is settled, when the 6 second interval is due.
+6. The win check runs.
 
 The order is fixed so results are repeatable.
 
@@ -526,3 +530,16 @@ Two commands, `{ action: 'close', id }` and `{ action: 'reopen', id }`, both in 
 - **The checking of data** looks at every scenario each time the game starts, not just the one being played, so a mistake in any of them is reported at once. Only the settings listed in `SPEC.md` section 18 are allowed.
 
 **For testing.** `?fresh&scenario=fishing-village` opens a scenario on the test page, which never saves. A bot build order may name the scenario it was written for (`"scenario": "fishing-village"`), and `node tools/bot.mjs village` then plays it there. `--scenario` plays any order in any scenario. The through-the-buttons test tool now makes the upgrade a build order names (`"to": "artisan"`); before this phase it took whichever house was ready, which no build order had yet depended on.
+
+## 21. Trade
+
+All of it is in `src/sim/trade.js`.
+
+- **What is stored.** `state.trade` holds the ship's timer, the standing orders, and a record of the last call (what was sold and bought, and for how much). The orders are kept in the order the goods are listed, whatever order they were given in, so the same orders always give the same saved text. Undo depends on that.
+- **The tick.** `stepTrade` runs after the houses have eaten and before income is settled. With no harbour linked to a warehouse it holds the timer at 0 and returns, so a game with no harbour plays exactly as before. A test proves the standard bot game is identical with or without trade in the data.
+- **The data.** `config.trade` sets the interval and the ship's room per harbour; remove it and trade is off. Each good may carry `trade: { sell, buy }`; the data check refuses a buy price that is not higher than the sell price. The harbour is a new category of building, `harbor`.
+- **Older saves.** A third round in `config.addedLater` names the harbour, the new `goodSettings` kind (a setting added to every good, here `trade`), and `config.trade`. Loading a save with no trade record gives it an empty one. The stamp of games saved in Phases 15 to 17, `10d0dc80671f7e66`, is named in `tests/staff.test.js` beside the two older ones. Scenario games from Phase 17 are carried forward too, because older stamps are worked out on the data after the scenario has been applied.
+- **Loading** refuses a timer at or past the call, an order for a good with no prices, an order of an unknown kind, a level outside 0 to 999, a last-call record with negative or unknown goods, and an undo note that does not fit.
+- **The ship on the map** is worked out in `src/render/life.js` from the timer and the last call, so it needs nothing stored and is always in step with the game. It is drawn in `src/render/art/actors.js`.
+- **The panel.** `panelModel` lists one row per tradable good. Each button carries the whole command it gives as text, `trade:good:mode:level`, so the screen code only passes it on.
+- **The bot** understands a build-order step `{ "trade": "wood", "mode": "sell", "level": 60 }`, and so does `tools/ui-playthrough.js`, which gives it by clicking the harbour's panel. `tools/bot/orders/merchant.json` uses it.

@@ -4,6 +4,7 @@ import { MILLI } from './rules.js';
 import { incomeRates } from './economy.js';
 import { countAtLeast, countResidents } from './population.js';
 import { staffing } from './staff.js';
+import { tradeSummary } from './trade.js';
 
 export function getSummary(game) {
   const { rules, state } = game;
@@ -21,6 +22,8 @@ export function getSummary(game) {
     tick: state.tick,
     seconds: state.tick / rules.ticksPerSecond,
     coins: Math.floor(state.coinsMilli / MILLI),
+    // The harbour: when the ship is due, what it carries, the orders, and its last call.
+    trade: tradeSummary(game),
     // Producers the player has closed.
     closedProducers: state.buildings.filter((b) => b.production?.closed).length,
     // Coins per minute at this moment.
