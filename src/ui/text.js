@@ -174,14 +174,33 @@ export function currentGoal(rules, summary) {
   return next ? { tier: next.tier, target: next.target, current: next.current, reached: next.reachedAtTick !== null, title: next.title } : win;
 }
 
+// A scenario's medal times in words: "Gold within 13 minutes, silver within 20."
+// `medals` is { goldTicks, silverTicks }, as the rules hold them.
+export function medalTimesText(rules, medals) {
+  if (!medals) return '';
+  const minutes = (ticks) => Number((ticks / rules.ticksPerMinute).toFixed(1));
+  return `Gold within ${minutes(medals.goldTicks)} minutes, silver within ${minutes(medals.silverTicks)}.`;
+}
+
+const MEDAL_NAME = { gold: 'Gold', silver: 'Silver', bronze: 'Bronze' };
+export const medalName = (medal) => MEDAL_NAME[medal] ?? null;
+
+// What a scenario asks for: "120 Farmers".
+export function scenarioGoalText(rules, scenario) {
+  return `${scenario.win.residents} ${rules.tiers[scenario.win.tier]?.name ?? scenario.win.tier}s`;
+}
+
 // What the win screen says. `buildings` is how many stand on the island.
+// In a scenario with medal times it also says which medal was earned.
 export function winMessage(rules, summary, buildings) {
   const name = (tier) => `${rules.tiers[tier].name}s`;
   const next = summary.milestones.find((m) => m.reachedAtTick === null);
+  const medal = summary.win.medal ?? null;
   return {
     title: 'You win!',
     detail: `${summary.win.target} ${name(summary.win.tier)} live on your island. It took ${clock(summary.win.wonAtSeconds)} of game time.`,
     stats: `You finished with ${summary.coins} coins and ${buildings} buildings.`,
+    medal: medal ? { kind: medal, text: `${medalName(medal)} medal. ${medalTimesText(rules, rules.medals)}` } : null,
     next: next ? `There is more, if you want it. Next goal: ${next.target} ${name(next.tier)}.` : null,
   };
 }

@@ -44,6 +44,8 @@ export function getSummary(game) {
       won: state.won,
       wonAtTick: state.wonAtTick,
       wonAtSeconds: state.wonAtTick === null ? null : state.wonAtTick / rules.ticksPerSecond,
+      // In a scenario with medal times: 'gold', 'silver' or 'bronze' once won.
+      medal: medalFor(rules, state.wonAtTick),
     },
     // The goals for after the win, in order.
     milestones: rules.milestones.map((m, i) => ({
@@ -55,6 +57,14 @@ export function getSummary(game) {
       reachedAtSeconds: state.milestones[i] === null ? null : state.milestones[i] / rules.ticksPerSecond,
     })),
   };
+}
+
+// The medal a win at this tick earns: 'gold', 'silver', or 'bronze' for any
+// later finish. null before the win, and in a game with no medal times.
+export function medalFor(rules, wonAtTick) {
+  if (!rules.medals || wonAtTick === null || wonAtTick === undefined) return null;
+  if (wonAtTick <= rules.medals.goldTicks) return 'gold';
+  return wonAtTick <= rules.medals.silverTicks ? 'silver' : 'bronze';
 }
 
 // The one thing most wrong with a building right now, as a short code, or null

@@ -7,6 +7,7 @@
 //   (nothing)   the title screen: continue the saved game, or start a new one
 //   ?demo       a finished town built by the bot, to look at
 //   ?fresh      straight into a new game on the standard island, for the test tools
+//               (?fresh&scenario=fishing-village starts that scenario instead)
 // Only the first one saves. The other two never touch the saved game.
 
 import { loadData } from './platform/loadData.browser.js';
@@ -19,11 +20,12 @@ import { createSoundControls } from './ui/soundControls.js';
 import { createGuidePanel } from './ui/guidePanel.js';
 import { guideProblems } from './ui/guide.js';
 import { createFlag } from './platform/flagStore.js';
-import { createGame, loadGame, saveGame, step } from './sim/index.js';
+import { createRecords } from './platform/records.js';
+import { createGame, getSummary, loadGame, saveGame, step } from './sim/index.js';
 import { createCamera, MAX_ZOOM, MIN_ZOOM } from './render/camera.js';
 import { createRenderer } from './render/renderer.js';
 import { createGameUi } from './ui/gameUi.js';
-import { clock } from './ui/text.js';
+import { clock, medalTimesText, scenarioGoalText } from './ui/text.js';
 import { titleModel } from './ui/titleModel.js';
 import { showTitle } from './ui/titleScreen.js';
 
@@ -54,7 +56,7 @@ function browserStorage() {
 
 // Shows the title screen over the island. Returns the game to play, and for a
 // continued game where the player was looking when it was saved.
-async function chooseGame({ data, standard, store, renderer, audio }) {
+async function chooseGame({ data, standard, store, renderer, audio, records }) {
   const found = store.read();
   const saved = found.found ? loadGame(data, found.save) : null;
   if (saved && !saved.ok) console.warn(`The saved game was not loaded: ${saved.reason}. ${saved.detail}`);
@@ -72,12 +74,14 @@ async function chooseGame({ data, standard, store, renderer, audio }) {
   requestAnimationFrame(paint);
 
   document.body.classList.add('title-open');
-  const { choice, difficulty } = await showTitle(byId('title'), titleModel({ saved, canSave: store.working, rules: standard.rules }), { demoHref: './?demo' });
+  const { choice, difficulty, scenario } = await showTitle(byId('title'), titleModel({ saved, canSave: store.working, rules: standard.rules, records }), { demoHref: './?demo' });
   document.body.classList.remove('title-open');
   showing = false;
   audio.play('pick');
 
   if (choice === 'continue') return { game: preview, view: found.view };
+  // A scenario brings its own island, start and goal. It is not played on a difficulty.
+  if (choice === 'scenario') return { game: createGame(data, { scenario }), view: null };
   if (choice === 'new') return { game: difficulty === standard.rules.difficulty ? standard : createGame(data, { difficulty }), view: null };
   let seed = data.map.seed;
   while (seed === data.map.seed) seed = 1 + Math.floor(Math.random() * LARGEST_RANDOM_SEED);
@@ -111,8 +115,9 @@ async function start() {
   createSoundControls({ button: byId('sound-toggle'), slider: byId('sound-volume'), readout: byId('sound-readout'), audio });
   if (fresh) byId('sound-toggle').title = 'The test page is silent';
 
-  // Only a game begun from the title screen is saved.
+  // Only a game begun from the title screen is saved, and only such a game sets a record.
   const store = createSaveStore(titled ? browserStorage() : null);
+  const records = createRecords(titled ? browserStorage() : null);
 
   let game = standard;
   let savedView = null;
@@ -125,7 +130,9 @@ async function start() {
     runBot(game, order, { maxMinutes: 40 });
     byId('loading').hidden = true;
   } else if (titled) {
-    ({ game, view: savedView } = await chooseGame({ data, standard, store, renderer, audio }));
+    ({ game, view: savedView } = await chooseGame({ data, standard, store, renderer, audio, records }));
+  } else if (fresh && params.get('scenario')) {
+    game = createGame(data, { scenario: params.get('scenario') });
   }
 
   const camera = createCamera(game.state.map);
@@ -193,7 +200,9 @@ async function start() {
   }
   const islandSeed = game.state.map.seed;
   const level = game.rules.difficulties.length > 1 ? game.rules.difficulties.find((d) => d.id === game.rules.difficulty) : null;
-  byId('island-note').textContent = (islandSeed === standard.state.map.seed ? `Island ${islandSeed}, the standard island.` : `Island ${islandSeed}.`) + (level ? ` ${level.name}.` : '');
+  const scenario = game.rules.scenarios.find((s) => s.id === game.rules.scenario) ?? null;
+  byId('island-note').textContent = (scenario ? `Scenario: ${scenario.name}. Goal: ${scenarioGoalText(game.rules, scenario)}. ${medalTimesText(game.rules, scenario.medals)} ` : '')
+    + (islandSeed === standard.state.map.seed ? `Island ${islandSeed}, the standard island.` : `Island ${islandSeed}.`) + (level && !scenario ? ` ${level.name}.` : '');
   const toTitle = byId('to-title');
   toTitle.textContent = titled ? 'Save and go to the title screen' : 'Go to the title screen';
   toTitle.addEventListener('click', () => {
@@ -202,10 +211,11 @@ async function start() {
   });
   byId('demo-link').hidden = demo;
 
-  // The first-game guide. Not on the demo town or the test page. A guide with a
+  // The first-game guide. Not on the demo town or the test page, and not in a
+  // scenario, whose goal the guide's steps were not written for. A guide with a
   // mistake in it is left out, with the reason in the console, and the game goes on.
   let guide = null;
-  if (titled) {
+  if (titled && !scenario) {
     const problems = guideProblems(game.rules, data.guide);
     if (problems.length) console.warn(`The guide is not shown:\n- ${problems.join('\n- ')}`);
     else {
@@ -216,18 +226,25 @@ async function start() {
     }
   }
 
+  // A scenario already won when it was loaded has had its time recorded before.
+  let recorded = game.state.won;
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(MAX_FRAME_SECONDS, Math.max(0, (now - last) / 1000));
     last = now;
     ui.frame(dt);
     guide?.frame(dt);
+    // A scenario won: keep the time if it is the player's best.
+    if (scenario && game.state.won && !recorded) {
+      recorded = true;
+      records.report(scenario.id, game.state.wonAtTick, getSummary(game).win.medal);
+    }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 
   // For checking things from the browser's console.
-  window.harborfall = { game, camera, renderer, loop, ui, audio, save: { now: saveNow, store } };
+  window.harborfall = { game, camera, renderer, loop, ui, audio, records, save: { now: saveNow, store } };
 }
 
 start().catch((error) => {

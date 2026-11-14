@@ -5,8 +5,9 @@ import { el } from './dom.js';
 
 const CONFIRM_SECONDS = 4;
 
-// Returns a promise for { choice, difficulty }: the id of the chosen button
-// ('continue', 'new' or 'random') and the difficulty picked for a new game.
+// Returns a promise for { choice, difficulty, scenario }: the id of the chosen
+// button ('continue', 'new', 'random' or 'scenario'), the difficulty picked for
+// a new game, and for a scenario its id.
 export function showTitle(root, model, { demoHref }) {
   return new Promise((resolve) => {
     root.replaceChildren();
@@ -37,25 +38,41 @@ export function showTitle(root, model, { demoHref }) {
       armed = null;
     };
 
+    // A press on a button: the first press arms it if it would replace a saved
+    // game, and the second (or the only) one makes the choice.
+    const press = (button, detail, text, confirm, result) => {
+      if (confirm && armed?.button !== button) {
+        disarm();
+        armed = { button, detail, text, timer: setTimeout(disarm, CONFIRM_SECONDS * 1000) };
+        button.classList.add('armed');
+        detail.textContent = confirm;
+        return;
+      }
+      if (armed) clearTimeout(armed.timer);
+      root.hidden = true;
+      root.replaceChildren();
+      resolve(result());
+    };
+
     const buttons = model.buttons.map((b) => {
       const detail = el('span', 'title-detail', b.detail);
       const button = el('button', { class: b.id === model.primary ? 'title-button primary' : 'title-button', type: 'button', 'data-choice': b.id }, [
         el('span', 'title-label', b.label),
         detail,
       ]);
-      button.addEventListener('click', () => {
-        if (b.confirm && armed?.button !== button) {
-          disarm();
-          armed = { button, detail, text: b.detail, timer: setTimeout(disarm, CONFIRM_SECONDS * 1000) };
-          button.classList.add('armed');
-          detail.textContent = b.confirm;
-          return;
-        }
-        if (armed) clearTimeout(armed.timer);
-        root.hidden = true;
-        root.replaceChildren();
-        resolve({ choice: b.id, difficulty });
-      });
+      button.addEventListener('click', () => press(button, detail, b.detail, b.confirm, () => ({ choice: b.id, difficulty, scenario: null })));
+      return button;
+    });
+
+    // Scenarios: smaller buttons under the rest, each with its goal and the best time so far.
+    const scenarios = (model.scenarios ?? []).map((s) => {
+      const text = `${s.goal} ${s.best ?? s.medals}`;
+      const detail = el('span', 'title-detail', text);
+      const button = el('button', { class: 'title-button title-scenario', type: 'button', 'data-scenario': s.id, title: `${s.about} ${s.medals}` }, [
+        el('span', 'title-label', s.name),
+        detail,
+      ]);
+      button.addEventListener('click', () => press(button, detail, text, s.confirm, () => ({ choice: 'scenario', difficulty, scenario: s.id })));
       return button;
     });
 
@@ -66,6 +83,8 @@ export function showTitle(root, model, { demoHref }) {
       el('div', 'title-buttons', buttons),
       levels.length ? el('div', 'title-levels', [el('span', 'title-levels-label', 'A new game is'), ...levels.map((level) => level.button)]) : null,
       levels.length ? about : null,
+      scenarios.length ? el('p', 'title-heading', 'Or try a scenario') : null,
+      scenarios.length ? el('div', 'title-buttons title-scenarios', scenarios) : null,
       el('p', 'title-foot', [
         model.footnote ? el('span', null, `${model.footnote} `) : null,
         el('a', { href: demoHref }, 'Watch a finished town'),

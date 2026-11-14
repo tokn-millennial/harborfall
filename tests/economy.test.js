@@ -130,7 +130,7 @@ test('the summary reports coins, goods, storage, residents and win progress', ()
   assert.deepEqual(s.milestones, [{ tier: 'artisan', target: 100, title: 'A city of Artisans', current: 0, reachedAtTick: null, reachedAtSeconds: null }]);
   assert.deepEqual(s.win, {
     tier: game.rules.win.tier, target: game.rules.win.residents, current: 0,
-    won: false, wonAtTick: null, wonAtSeconds: null,
+    won: false, wonAtTick: null, wonAtSeconds: null, medal: null,
   });
   s.goods.fish = -1;
   assert.notEqual(game.state.goods.fish, -1, 'the summary is a copy, not the live state');

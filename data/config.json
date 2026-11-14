@@ -12,6 +12,35 @@
   },
   "defaultDifficulty": "normal",
 
+  "_scenarios": "Games with their own island, start and goal, offered on the title screen. A scenario may set: seed (the island), startCoins, startGoods, baseIncomePerMinute, win (tier and residents), milestones (goals after the win; an empty list means none), workforce (base and perResident), and medals (gold and silver, in game minutes: finish within the time to earn the medal, and any later finish is bronze). Anything left out stays as in the standard game. Scenarios never change the standard game or its saved games.",
+  "scenarios": {
+    "fishing-village": {
+      "name": "Fishing village",
+      "about": "A gentle one. No upgrades needed: fill the shore with houses and keep them in fish.",
+      "win": { "tier": "farmer", "residents": 120 },
+      "milestones": [],
+      "medals": { "gold": 13, "silver": 20 }
+    },
+    "weavers-guild": {
+      "name": "The weavers' guild",
+      "about": "A well-off start, and a town that wants fine cloth. Go straight for Artisans, and mind who staffs the workshops.",
+      "seed": 42,
+      "startCoins": 1000,
+      "startGoods": { "wood": 60, "planks": 60 },
+      "win": { "tier": "artisan", "residents": 60 },
+      "milestones": [],
+      "medals": { "gold": 24, "silver": 32 }
+    },
+    "short-handed": {
+      "name": "Short-handed",
+      "about": "Few hands on this island. The first crew is larger, but only 1 resident in 4 works. Keep houses ahead of workshops.",
+      "seed": 2024,
+      "workforce": { "base": 16, "perResident": 0.25 },
+      "milestones": [],
+      "medals": { "gold": 35, "silver": 45 }
+    }
+  },
+
   "_undoSeconds": "How long, in game seconds, your last action can be taken back with Undo. 0 switches Undo off.",
   "undoSeconds": 30,
 

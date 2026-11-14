@@ -234,6 +234,7 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 **Starting and saving**
 - The game opens on a title screen, with the island behind it. It offers Continue (if there is a saved game), New game on the standard island, and New game on a random island. A link shows a finished town built by the bot.
 - Continue shows the time played, the Workers so far and the coins. It puts you back where you were, looking at the same spot.
+- Below the usual buttons the title screen offers three scenarios, each with its own goal and medal times. See section 18.
 - A new game can be Easy, Normal or Hard, picked on the title screen. Normal is what it starts on. See section 14.
 - The game saves itself. It saves about every 10 seconds, whenever the page is hidden or closed, and when you go back to the title screen. There is no save button and nothing to remember.
 - There is one saved game, kept in the browser you played in. It is not shared with other browsers or computers, and clearing the browser's stored data removes it.
@@ -470,3 +471,37 @@ Added in Phase 16. It is the second way out of a staff shortage, and a way to st
 **Saved games.** No number in the data files changed, so every game saved in Phase 15 loads exactly as it was. A closed building is saved as closed.
 
 **Not in this phase:** closing several buildings at once, a shortcut key, lower upkeep while closed, and a bot that closes buildings.
+
+## 18. Scenarios
+
+Added in Phase 17. A scenario is a new game with its own island, its own start and its own goal. The standard game is exactly as it was, and its saved games are untouched.
+
+**The three scenarios**
+
+| Scenario | Island | Start | Goal | Gold | Silver | The bot |
+|---|---|---|---|---|---|---|
+| Fishing village | The standard one | As the standard game | 120 Farmers | within 13 min | within 20 | 10.5 min |
+| The weavers' guild | 42 | 1000 coins, 60 wood, 60 planks | 60 Artisans | within 24 min | within 32 | 20.0 min |
+| Short-handed | 2024 | As the standard game, but 16 staff to begin with and only 1 resident in 4 works | 100 Workers | within 35 min | within 45 | 29.6 min |
+
+- **Fishing village** is the gentle one. It needs no upgrades and no bread: houses, fish, markets, and wood enough for thirty houses.
+- **The weavers' guild** goes straight for Artisans. Six houses taken all the way up are enough, but a town of only those cannot staff its own workshops: it needs plain Farmer houses beside them. The bot's first attempt, with no extra houses, stalled at 49 Artisans. Four more houses set it going again.
+- **Short-handed** is the standard game with the staff rule turned up. The bot is short of staff for 18 of its 30 minutes, down to 70% speed. If you wondered what the game is like when staff matter before the win, this is it.
+
+**Medals**
+- A scenario cannot be lost. It has a clock and two times.
+- Finish within the gold time for gold, within the silver time for silver. Any later finish is bronze.
+- The win screen says which medal you earned. Hovering over the clock in the top bar shows the two times while you play, and the ? panel shows them too.
+- The title screen remembers your best time in each scenario, in the browser you played in.
+- The times were set from the bot: gold is about a fifth longer than the bot takes when it never hesitates. A bot with a person's typical pauses still earns gold in all three, and one with slow hands earns silver.
+
+**How a scenario differs from a normal new game**
+- It is not played on a difficulty, and its island is fixed.
+- There is no goal after the win.
+- The first-game guide is not shown: its steps were written for the standard game.
+- It uses the same single save slot. Starting a scenario replaces your saved game, so the button must be pressed twice, like New game.
+- The Continue button names the scenario: "Fishing village, 5:03 played, 52 of 120 Farmers, 140 coins".
+
+**Making your own.** A scenario is an entry under `scenarios` in `data/config.json`. It may set the island (`seed`), `startCoins`, `startGoods`, `baseIncomePerMinute`, the goal (`win`), goals after the win (`milestones`), the staff numbers (`workforce`) and the medal times (`medals`, in game minutes). Anything left out stays as in the standard game. A name, a description or a medal time can be changed without affecting a saved game of that scenario. Changing anything else makes saved games of that scenario, and only that scenario, refuse to load.
+
+**Not in this phase:** losing, a scenario on a random island or a chosen difficulty, a best time for the standard game, more than one saved game, and scenarios with rules of their own beyond the settings listed.

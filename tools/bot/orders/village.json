@@ -1,0 +1,23 @@
+{
+  "name": "Village",
+  "description": "For the Fishing village scenario: thirty houses in fives, a fisherman with each five, and a sawmill for the planks that more markets need.",
+  "scenario": "fishing-village",
+  "steps": [
+    { "build": "lumberjack", "count": 2 },
+    { "build": "fisherman" },
+    { "build": "market" },
+    { "build": "house", "count": 5 },
+    { "build": "fisherman" },
+    { "build": "sawmill" },
+    { "build": "house", "count": 5 },
+    { "build": "fisherman" },
+    { "build": "house", "count": 5 },
+    { "build": "fisherman" },
+    { "build": "house", "count": 5 },
+    { "build": "fisherman" },
+    { "build": "house", "count": 5 },
+    { "build": "fisherman" },
+    { "build": "house", "count": 5 },
+    { "build": "fisherman" }
+  ]
+}

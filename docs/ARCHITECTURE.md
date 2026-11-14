@@ -511,3 +511,18 @@ Two commands, `{ action: 'close', id }` and `{ action: 'reopen', id }`, both in 
 - **Loading** refuses a closed mark that is anything but `true`, a status word that disagrees with the mark, and an undo note that does not match the building.
 - **The UI** adds the two buttons through `panelModel.js` like any other panel action. Their ids are `closeBuilding` and `reopenBuilding`, because `close` already means the panel's own × button.
 - **The renderer** draws a grey mark on a closed producer, after the checks for a problem or a ready upgrade, so a real problem is never hidden by it.
+
+## 20. Scenarios
+
+**A scenario is applied to the data before the rules are made,** the same way a difficulty is. `withScenario(data, id)` in `src/sim/rules.js` returns a copy of the data files with one scenario's settings written in: its island seed, start, goal, goals after the win, and staff numbers. The rules are then compiled from that copy. So the simulation has no "if this scenario" anywhere, and a scenario can only change what the data files can already express.
+
+- **Order.** Scenario first, then an island asked for by number, then the difficulty. `createGame(data, { scenario, seed, difficulty })`.
+- **The standard game does not notice.** The `scenarios` list is left out of the rules stamp, like the list of difficulties. A test compares the standard game with and without the list in the data: same stamp, same game.
+- **Each scenario has a stamp of its own,** because its numbers differ. Names, descriptions and medal times are inside the list, so they are not stamped and can be changed freely.
+- **Saving.** A save records its scenario, as it records its difficulty and island. Loading applies it again before checking the stamp. A save with no scenario entry is a standard game, so every older save loads as before. A scenario that has been removed from the data, or whose rules have changed, is refused as `rules_changed`.
+- **Medals** are worked out, not stored: `medalFor(rules, wonAtTick)` in `src/sim/summary.js`, and `summary.win.medal`. The game state gained nothing in this phase.
+- **Best times** are not part of any game. `src/platform/records.js` keeps one best time per scenario in a storage box it is handed, the same pattern as the save slot. Only a game begun from the title screen reports a time.
+- **The title screen** gets its list from `titleModel`, which is plain data and tested in Node: each scenario's name, goal, medal times and best time.
+- **The checking of data** looks at every scenario each time the game starts, not just the one being played, so a mistake in any of them is reported at once. Only the settings listed in `SPEC.md` section 18 are allowed.
+
+**For testing.** `?fresh&scenario=fishing-village` opens a scenario on the test page, which never saves. A bot build order may name the scenario it was written for (`"scenario": "fishing-village"`), and `node tools/bot.mjs village` then plays it there. `--scenario` plays any order in any scenario. The through-the-buttons test tool now makes the upgrade a build order names (`"to": "artisan"`); before this phase it took whichever house was ready, which no build order had yet depended on.

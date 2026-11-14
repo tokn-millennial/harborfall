@@ -1,0 +1,23 @@
+{
+  "name": "Guild",
+  "description": "For the weavers' guild scenario: six houses taken up to Artisans, four more Farmer houses to staff the workshops, and one of each chain.",
+  "scenario": "weavers-guild",
+  "steps": [
+    { "build": "lumberjack", "count": 2 },
+    { "build": "fisherman" },
+    { "build": "market" },
+    { "build": "house", "count": 6 },
+    { "build": "sawmill" },
+    { "build": "fisherman" },
+    { "build": "farm", "count": 2 },
+    { "build": "bakery" },
+    { "upgrade": 6 },
+    { "build": "house", "count": 4 },
+    { "build": "fisherman" },
+    { "build": "sheepfarm", "count": 2 },
+    { "build": "weaver" },
+    { "build": "farm" },
+    { "build": "fisherman" },
+    { "upgrade": 6, "to": "artisan" }
+  ]
+}

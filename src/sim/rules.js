@@ -57,10 +57,31 @@ export function withDifficulty(rawData, id = null) {
   return { ...rawData, config, population };
 }
 
+// The same data with one of the scenarios in config.json applied: its island,
+// its start and its goal. The original is left alone. Like a difficulty, a
+// scenario is written into the data before the rules are made, so the game
+// itself has no "if this scenario" anywhere. With no id the data comes back
+// as it is: that is the standard game.
+export function withScenario(rawData, id = null) {
+  if (id === null) return rawData;
+  const all = rawData.config?.scenarios;
+  const s = all !== null && typeof all === 'object' && Object.hasOwn(all, id) ? all[id] : null;
+  if (s === null || typeof s !== 'object') throw new Error(`There is no scenario called "${id}" in config.json`);
+  const config = { ...rawData.config, scenario: id, standardWin: rawData.config.standardWin ?? rawData.config.win, start: { ...rawData.config.start }, economy: { ...rawData.config.economy } };
+  if (s.startCoins !== undefined) config.start.coins = s.startCoins;
+  if (s.startGoods !== undefined) config.start.goods = { ...s.startGoods };
+  if (s.baseIncomePerMinute !== undefined) config.economy.baseIncomePerMinute = s.baseIncomePerMinute;
+  if (s.win !== undefined) config.win = { ...s.win };
+  if (s.milestones !== undefined) config.milestones = Array.isArray(s.milestones) ? s.milestones.map((m) => ({ ...m })) : s.milestones;
+  if (s.workforce !== undefined) config.workforce = s.workforce !== null && typeof s.workforce === 'object' ? { ...s.workforce } : s.workforce;
+  const map = s.seed !== undefined ? { ...rawData.map, seed: s.seed } : rawData.map;
+  return { ...rawData, config, map };
+}
+
 // Keys that cannot make a saved game impossible: how things look, what they
 // are called, how long an undo lasts, and the first-game guide. A change to
 // one of these does not make an older saved game unusable.
-const LOOKS_ONLY = new Set(['visual', 'color', 'name', 'singular', 'key', 'title', 'undoSeconds', 'guide', 'addedLater', 'difficulties', 'defaultDifficulty', 'difficulty', 'about']);
+const LOOKS_ONLY = new Set(['visual', 'color', 'name', 'singular', 'key', 'title', 'undoSeconds', 'guide', 'addedLater', 'difficulties', 'defaultDifficulty', 'difficulty', 'about', 'scenarios', 'scenario', 'standardWin']);
 
 // Text that is the same for the same value whatever order its keys are in.
 export function stableText(value) {
@@ -133,6 +154,12 @@ function deepFreeze(value) {
   return value;
 }
 
+// Medal times, given in minutes in the data, as ticks. null if there are none.
+function medalTicks(medals, ticksPerMinute) {
+  if (medals === null || typeof medals !== 'object') return null;
+  return { goldTicks: Math.round(medals.gold * ticksPerMinute), silverTicks: Math.round(medals.silver * ticksPerMinute) };
+}
+
 export function compileRules(rawData) {
   const data = stripNotes(rawData);
   const errors = validateData(data);
@@ -145,6 +172,7 @@ export function compileRules(rawData) {
   const ticksPerMinute = ticksPerSecond * 60;
   const toTicks = (seconds) => Math.max(1, Math.round(seconds * ticksPerSecond));
   const toMilli = (coins) => Math.round(coins * MILLI);
+  const rawWin = config.standardWin ?? config.win;
   const compileCost = (cost) => ({ coinsMilli: toMilli(cost.coins), goods: { ...(cost.goods ?? {}) } });
 
   const compiledBuildings = {};
@@ -236,6 +264,17 @@ export function compileRules(rawData) {
     difficulty: config.difficulty ?? null,
     difficulties: Object.entries(config.difficulties ?? {}).map(([id, d]) => ({ id, name: d.name ?? id, about: d.about ?? '' })),
     defaultDifficulty: config.defaultDifficulty ?? Object.keys(config.difficulties ?? {})[0] ?? null,
+    // Which scenario these rules are for (null is the standard game), the
+    // medal times of that scenario in ticks, and the scenarios there are.
+    scenario: config.scenario ?? null,
+    medals: medalTicks(config.scenarios?.[config.scenario]?.medals, ticksPerMinute),
+    scenarios: Object.entries(config.scenarios ?? {}).map(([id, s]) => ({
+      id,
+      name: s.name ?? id,
+      about: s.about ?? '',
+      win: { tier: s.win?.tier ?? rawWin.tier, residents: s.win?.residents ?? rawWin.residents },
+      medals: medalTicks(s.medals, ticksPerMinute),
+    })),
     // Goals for after the win, in order.
     milestones: (config.milestones ?? []).map((m) => ({ tier: m.tier, residents: m.residents, title: m.title ?? null })),
     // How long the last command can be undone. 30 seconds if the data does not say.

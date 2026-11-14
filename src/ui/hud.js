@@ -1,7 +1,7 @@
 // The bar across the top: coins and income, goods, population, and the clock.
 
 import { el, setText } from './dom.js';
-import { clock, currentGoal, staffText } from './text.js';
+import { clock, currentGoal, medalTimesText, staffText } from './text.js';
 import { goodIcon, icon } from './icons.js';
 
 export function createHud(root, rules) {
@@ -43,7 +43,7 @@ export function createHud(root, rules) {
   const goal = el('span', 'hud-label');
   popRow.append(el('span', 'hud-good', [goal, bar]));
 
-  const time = el('span', { class: 'hud-time', title: 'Game time' });
+  const time = el('span', { class: 'hud-time', title: rules.medals ? `Game time. ${medalTimesText(rules, rules.medals)}` : 'Game time' });
 
   root.append(
     el('div', { class: 'hud-coins', title: 'Coins' }, [icon('coin', { size: 20 }), coins, net]),

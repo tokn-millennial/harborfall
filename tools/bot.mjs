@@ -8,6 +8,8 @@
 //   node tools/bot.mjs standard --seed 42   play on a different island
 //   node tools/bot.mjs standard --pace typical   act at a person's speed (brisk, typical or slow)
 //   node tools/bot.mjs standard --difficulty hard   play on Easy, Normal or Hard
+//   node tools/bot.mjs village          play the Fishing village scenario with the order written for it
+//   node tools/bot.mjs standard --scenario short-handed   play any order in a scenario
 import { readFileSync } from 'node:fs';
 import { loadData } from '../src/platform/loadData.node.js';
 import { createGame } from '../src/sim/index.js';
@@ -16,12 +18,14 @@ import { runBot } from './bot/bot.js';
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(`--${name}`);
 const value = (name) => (args.includes(`--${name}`) ? args[args.indexOf(`--${name}`) + 1] : undefined);
-const orderName = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--seed' && args[i - 1] !== '--pace' && args[i - 1] !== '--difficulty') ?? 'standard';
+const orderName = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--seed' && args[i - 1] !== '--pace' && args[i - 1] !== '--difficulty' && args[i - 1] !== '--scenario') ?? 'standard';
 
 const order = JSON.parse(readFileSync(new URL(`./bot/orders/${orderName}.json`, import.meta.url), 'utf8'));
 const data = loadData();
 if (value('seed') !== undefined) data.map.seed = Number(value('seed'));
-const game = createGame(data, { difficulty: value('difficulty') ?? null });
+// An order written for a scenario plays that scenario, unless another is asked for.
+const scenario = value('scenario') ?? order.scenario ?? null;
+const game = createGame(data, { difficulty: value('difficulty') ?? null, scenario, seed: value('seed') !== undefined ? Number(value('seed')) : undefined });
 const paces = JSON.parse(readFileSync(new URL('./bot/paces.json', import.meta.url), 'utf8'));
 const paceName = value('pace');
 if (paceName !== undefined && !paces[paceName]) throw new Error(`Unknown pace "${paceName}". Use brisk, typical or slow.`);
@@ -32,13 +36,17 @@ const pad = (v, n) => String(v).padStart(n, ' ');
 
 console.log(`Build order: ${result.order}. ${order.description ?? ''}`);
 console.log(`Island seed: ${game.state.map.seed}`);
+if (scenario) {
+  const s = game.rules.scenarios.find((entry) => entry.id === scenario);
+  console.log(`Scenario: ${s.name}. Goal: ${s.win.residents} ${game.rules.tiers[s.win.tier].name}s. The 25 to 40 minute target is for the standard game.`);
+}
 if (game.rules.difficulty && game.rules.difficulty !== game.rules.defaultDifficulty) console.log(`Difficulty: ${game.rules.difficulty}. The 25 to 40 minute target is for Normal.`);
 if (paceName) console.log(`Pace: ${paceName}. The bot spent ${result.thinkingMinutes.toFixed(1)} minutes "thinking" between actions, as a person would.`);
 console.log('');
 if (result.won) {
   const m = result.wonAtMinutes;
   const verdict = m < 25 ? 'FASTER than the 25 to 40 minute target' : m > 40 ? 'SLOWER than the 25 to 40 minute target' : 'inside the 25 to 40 minute target';
-  console.log(`RESULT: WON at ${m.toFixed(1)} minutes (${verdict}).`);
+  console.log(scenario ? `RESULT: WON at ${m.toFixed(1)} minutes. Medal: ${result.summary.win.medal ?? 'none'}${game.rules.medals ? ` (gold within ${game.rules.medals.goldTicks / game.rules.ticksPerMinute} minutes, silver within ${game.rules.medals.silverTicks / game.rules.ticksPerMinute})` : ''}.` : `RESULT: WON at ${m.toFixed(1)} minutes (${verdict}).`);
 } else {
   console.log(`RESULT: DID NOT WIN in ${result.endedAtMinutes.toFixed(0)} minutes. Steps done: ${result.stepsDone} of ${result.stepsTotal}.`);
 }

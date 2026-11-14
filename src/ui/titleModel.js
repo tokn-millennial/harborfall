@@ -4,10 +4,11 @@
 //   saved    null when there is no saved game, otherwise what loading it gave:
 //            { ok: true, game } or { ok: false, reason }
 //   canSave  whether this browser lets the game save at all
-//   rules    any game's rules, for the difficulties to offer (optional)
+//   rules    any game's rules, for the difficulties and scenarios to offer (optional)
+//   records  the player's best scenario times (optional; see platform/records.js)
 
 import { getSummary } from '../sim/index.js';
-import { clock } from './text.js';
+import { clock, medalName, medalTimesText, scenarioGoalText } from './text.js';
 
 const SAVE_PROBLEM = {
   rules_changed: 'The rules of the game have changed since your game was saved, so it cannot be continued. If you changed a data file, changing it back brings your game back.',
@@ -26,13 +27,16 @@ export function savedGameLine(game) {
     summary.win.won ? `won with ${summary.win.current} ${tierName}s` : `${summary.win.current} of ${summary.win.target} ${tierName}s`,
     `${summary.coins} coins`,
   ];
+  // A scenario is named. The standard game needs no name.
+  const scenario = game.rules.scenarios.find((s) => s.id === game.rules.scenario);
+  if (scenario) parts.unshift(scenario.name);
   // The difficulty is only worth saying when it is not the usual one.
   const { difficulty, defaultDifficulty, difficulties } = game.rules;
   if (difficulty && difficulty !== defaultDifficulty) parts.push(difficulties.find((d) => d.id === difficulty)?.name ?? difficulty);
   return parts.join(', ');
 }
 
-export function titleModel({ saved, canSave, rules = null }) {
+export function titleModel({ saved, canSave, rules = null, records = null }) {
   const usable = Boolean(saved?.ok);
   // Anything in the save slot, readable or not, is lost when a new game begins.
   const confirm = saved ? REPLACE_WARNING : null;
@@ -54,6 +58,19 @@ export function titleModel({ saved, canSave, rules = null }) {
     // With only one there is nothing to choose, so none are listed.
     difficulties: rules && rules.difficulties.length > 1 ? rules.difficulties.map((d) => ({ id: d.id, name: d.name, about: d.about })) : [],
     difficulty: rules?.defaultDifficulty ?? null,
+    // Games with their own island, start and goal. Each replaces the saved game, like any new game.
+    scenarios: (rules?.scenarios ?? []).map((s) => {
+      const best = records?.best(s.id) ?? null;
+      return {
+        id: s.id,
+        name: s.name,
+        about: s.about,
+        goal: `Goal: ${scenarioGoalText(rules, s)}.`,
+        medals: medalTimesText(rules, s.medals),
+        best: best ? `Your best: ${clock(best.ticks / rules.ticksPerSecond)}${medalName(best.medal) ? `, ${medalName(best.medal).toLowerCase()}` : ''}.` : null,
+        confirm,
+      };
+    }),
     footnote: canSave ? 'Your game saves itself in this browser as you play.' : null,
   };
 }

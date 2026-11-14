@@ -238,6 +238,59 @@ export function validateData(data) {
       });
     }
   }
+  if (config.scenarios !== undefined) {
+    if (!isObject(config.scenarios)) err('config.scenarios must be an object');
+    else {
+      const ALLOWED = ['name', 'about', 'seed', 'startCoins', 'startGoods', 'baseIncomePerMinute', 'win', 'milestones', 'workforce', 'medals'];
+      for (const [id, s] of Object.entries(config.scenarios)) {
+        const where = `config.scenarios.${id}`;
+        if (!isObject(s)) { err(`${where} must be an object`); continue; }
+        if (typeof s.name !== 'string') err(`${where} needs a name`);
+        if (s.about !== undefined && typeof s.about !== 'string') err(`${where}.about must be text`);
+        if (s.seed !== undefined) number(s.seed, `${where}.seed`, { integer: true });
+        if (s.startCoins !== undefined) number(s.startCoins, `${where}.startCoins`, { integer: true });
+        if (s.startGoods !== undefined) goodAmounts(s.startGoods, `${where}.startGoods`);
+        if (s.baseIncomePerMinute !== undefined) number(s.baseIncomePerMinute, `${where}.baseIncomePerMinute`);
+        if (s.win !== undefined) {
+          if (!isObject(s.win)) err(`${where}.win must be an object`);
+          else {
+            if (!tiers[s.win.tier]) err(`${where}.win.tier names an unknown tier "${s.win.tier}"`);
+            number(s.win.residents, `${where}.win.residents`, { min: 1, integer: true });
+          }
+        }
+        if (s.milestones !== undefined) {
+          if (!Array.isArray(s.milestones)) err(`${where}.milestones must be a list`);
+          else {
+            s.milestones.forEach((m, i) => {
+              if (!isObject(m)) { err(`${where}.milestones[${i}] must be an object`); return; }
+              if (!tiers[m.tier]) err(`${where}.milestones[${i}].tier names an unknown tier "${m.tier}"`);
+              number(m.residents, `${where}.milestones[${i}].residents`, { min: 1, integer: true });
+            });
+          }
+        }
+        if (s.workforce !== undefined) {
+          if (!isObject(s.workforce)) err(`${where}.workforce must be an object`);
+          else {
+            number(s.workforce.base, `${where}.workforce.base`, { min: 1, integer: true });
+            number(s.workforce.perResident, `${where}.workforce.perResident`);
+          }
+        }
+        if (s.medals !== undefined) {
+          if (!isObject(s.medals)) err(`${where}.medals must be an object`);
+          else {
+            number(s.medals.gold, `${where}.medals.gold`, { min: 0, minExclusive: true });
+            number(s.medals.silver, `${where}.medals.silver`, { min: 0, minExclusive: true });
+            if (typeof s.medals.gold === 'number' && typeof s.medals.silver === 'number' && s.medals.silver <= s.medals.gold) {
+              err(`${where}.medals.silver must be a longer time than gold`);
+            }
+          }
+        }
+        for (const key of Object.keys(s)) {
+          if (!ALLOWED.includes(key) && !key.startsWith('_')) err(`${where} has an unknown setting "${key}"`);
+        }
+      }
+    }
+  }
   if (config.workforce !== undefined) {
     if (!isObject(config.workforce)) err('config.workforce must be an object');
     else {

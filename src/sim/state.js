@@ -4,7 +4,7 @@
 //   rules  comes from the data files and never changes.
 //   state  is plain numbers, text and lists, so it can be saved or copied.
 
-import { compileRules, withDifficulty, withSeed } from './rules.js';
+import { compileRules, withDifficulty, withScenario, withSeed } from './rules.js';
 import { generateMap } from './mapgen.js';
 import { addBuilding } from './buildings.js';
 import { refresh } from './refresh.js';
@@ -13,8 +13,11 @@ import { refresh } from './refresh.js';
 // instead of generating it: { width, height, terrain[], start: { x, y } | null }
 // options.seed asks for a different island than the one named in map.json.
 // options.difficulty picks one of the difficulties in config.json.
+// options.scenario picks one of the scenarios in config.json. A scenario may
+// name its own island; options.seed still wins if both are given.
 export function createGame(rawData, options = {}) {
-  const seeded = Number.isInteger(options.seed) ? withSeed(rawData, options.seed) : rawData;
+  const base = withScenario(rawData, options.scenario ?? null);
+  const seeded = Number.isInteger(options.seed) ? withSeed(base, options.seed) : base;
   const rules = compileRules(withDifficulty(seeded, options.difficulty ?? null));
   const freeDef = rules.start.freeBuilding ? rules.buildings[rules.start.freeBuilding] : null;
   const map = options.map

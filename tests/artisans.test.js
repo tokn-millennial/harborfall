@@ -221,7 +221,8 @@ test('the win screen says what comes next, and the last goal says there is no mo
   assert.equal(last.title, 'A city of Artisans');
   assert.match(last.detail, /^100 Artisans live on your island\./);
   assert.equal(last.next, 'That was the last goal. The island is yours.');
-  for (const text of [...Object.values(win), ...Object.values(last)]) assert.doesNotMatch(String(text), /undefined|null|_/);
+  assert.equal(win.medal, null, 'the standard game has no medals');
+  for (const text of [win.title, win.detail, win.stats, win.next, ...Object.values(last)]) assert.doesNotMatch(String(text), /undefined|null|_/);
 
   assert.equal(upgradePathText(rules), 'Farmer to Worker, Worker to Artisan');
 });

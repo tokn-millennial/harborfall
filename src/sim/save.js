@@ -6,7 +6,7 @@
 // stamp of the rules it was played under. Loading refuses a save whose rules
 // have changed, because its numbers may no longer make sense.
 
-import { compileRules, stableText, withDifficulty, withSeed } from './rules.js';
+import { compileRules, stableText, withDifficulty, withScenario, withSeed } from './rules.js';
 import { refresh } from './refresh.js';
 import { footprint, inBounds, tileIndex } from './grid.js';
 import { undoProblem } from './undo.js';
@@ -25,6 +25,7 @@ export function saveGame(game) {
     rulesStamp: game.rules.stamp,
     seed: game.rules.map.seed,
     difficulty: game.rules.difficulty,
+    scenario: game.rules.scenario,
     state: copy(game.state),
   };
 }
@@ -44,9 +45,13 @@ export function loadGame(rawData, save) {
   if (save.format > SAVE_FORMAT) return fail('newer_version');
   if (save.format < 1) return fail('not_a_save');
 
-  // The rules the game was played under: its island, and its difficulty. A
-  // save from before difficulties existed was played on the default one.
-  const seeded = Number.isInteger(save.seed) ? withSeed(rawData, save.seed) : rawData;
+  // The rules the game was played under: its scenario, its island, and its
+  // difficulty. A save from before scenarios existed is a standard game, and
+  // one from before difficulties existed was played on the default one.
+  const scenario = typeof save.scenario === 'string' ? save.scenario : null;
+  if (scenario !== null && !Object.hasOwn(rawData.config?.scenarios ?? {}, scenario)) return fail('rules_changed');
+  const base = withScenario(rawData, scenario);
+  const seeded = Number.isInteger(save.seed) ? withSeed(base, save.seed) : base;
   const wanted = typeof save.difficulty === 'string' ? save.difficulty : null;
   if (wanted !== null && rawData.config?.difficulties && !Object.hasOwn(rawData.config.difficulties, wanted)) return fail('rules_changed');
   const rules = compileRules(withDifficulty(seeded, wanted));

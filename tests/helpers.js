@@ -140,6 +140,8 @@ export function dataBefore(rounds) {
       for (const b of Object.values(data.buildings)) if (b !== null && typeof b === 'object') delete b[key];
     }
   }
+  // Scenarios came after all of these, and one of them needs Artisans.
+  if (rounds < steps.length) delete data.config.scenarios;
   if (rounds > 0) data.config.addedLater = steps.slice(0, rounds);
   else delete data.config.addedLater;
   return data;

@@ -126,9 +126,10 @@ export async function playThroughUi({ game, camera, renderer, ui }, orderName = 
     ui.frame(0);
   }
 
-  function upgrade() {
+  // `to` names the kind of house wanted ("artisan"), for an order that says which upgrade it means.
+  function upgrade(to = null) {
     let house = null;
-    const find = () => (house = state.buildings.find((b) => b.house && rules.tiers[b.house.tier].upgrade && canUpgrade(game, b.id).ok));
+    const find = () => (house = state.buildings.find((b) => b.house && rules.tiers[b.house.tier].upgrade && (!to || rules.tiers[b.house.tier].upgrade.to === to) && canUpgrade(game, b.id).ok));
     if (!wait(find, 'a house that can be upgraded')) return;
     const def = rules.buildings[house.type];
     const before = house.house.tier;
@@ -155,7 +156,7 @@ export async function playThroughUi({ game, camera, renderer, ui }, orderName = 
   for (const s of steps) {
     if (state.won) break;
     if (s.kind === 'build') build(s.building);
-    else upgrade();
+    else upgrade(s.to ?? null);
   }
   wait(() => state.won, 'the win');
   ui.frame(0);

@@ -1211,3 +1211,83 @@ Date: 2026-11-13. Status: approved by Colin with no changes (he asked for the co
 
 **What I would change**
 - Nothing in the code. In the checking: I should have compared the UI game with the bot's in Phase 15, as I had in every phase before it. Dropping that step let a wrong figure into the log.
+
+**After the gate:** committed as `ee25329` when you asked for the commit, and pushed when you said "Push".
+
+## Phase 17: Scenarios
+
+Date: 2026-11-14. Status: approved by Colin with no changes ("Proceed, do an amazing job!").
+
+**Turns used:** 1 (your "Keep going"). No plan approval was asked for (D218).
+
+**What was built**
+- **Scenarios:** a new game with its own island, start and goal, chosen on the title screen (`SPEC.md` section 18).
+- **Three of them:** Fishing village (120 Farmers), The weavers' guild (60 Artisans from a well-off start), and Short-handed (100 Workers with a tighter staff rule).
+- **Medals:** gold, silver or bronze by the time of the win, shown on the win screen. The title screen keeps your best time in each.
+- **The standard game did not change.** Its rules stamp is still `10d0dc80671f7e66`, and a test proves it plays the same with or without the scenarios in the data.
+
+**Automated tests: 480 pass, 0 fail.** That is 457 from before plus 23 new ones in `tests/scenarios.test.js`. 3 older tests were edited: two to expect the new medal entry (empty in the standard game), and the helper that rebuilds "the data files as they were" now also takes the scenarios out.
+
+**Did the tests mean anything?** All 23 new tests passed the first time they ran, which proves little. So I broke scenarios on purpose in six ways.
+
+| Break | Tests that failed |
+|---|---|
+| A scenario's goal is ignored | 8 |
+| A save forgets its scenario | 3 |
+| Gold needs a time under the limit, not within it | 1 |
+| A slower win replaces the best time | 1 |
+| The scenarios count as rules of the standard game | 10 |
+| A scenario's island is ignored | 2 |
+
+**Choosing the scenarios, by the bot.** 26 candidate set-ups were played, each at an instant pace and at a person's typical pace.
+
+| What I tried | What the bot did | What I chose |
+|---|---|---|
+| Fishing village at 60 and 80 Farmers | 3.1 and 6.2 minutes | 120 Farmers: 10.5 minutes |
+| Short-handed with first crews of 8, 10, 12, 14, 16 and 1 in 4 or 1 in 5 working | Smaller crews left one build order or the other stuck on bread for ever, or winning at one pace and not at another | 16 and 1 in 4: 29.6 minutes, short of staff for 17.7 |
+| The weavers' guild from the standard start, 1000 coins, 1500 coins | 59, 20 and 9.5 minutes | 1000 coins: 20.0 minutes |
+| The weavers' guild with only the six houses it upgrades | Never won: stalled at 49 of 60 Artisans, short of staff | Kept as the scenario's lesson. Four Farmer houses fix it, and a test plays both. |
+
+| Scenario | Instant bot | Typical pace | Slow pace | Gold, silver |
+|---|---|---|---|---|
+| Fishing village | 10.5, gold | 10.9, gold | 19.3, silver | 13, 20 |
+| The weavers' guild | 20.0, gold | 21.9, gold | 27.1, silver | 24, 32 |
+| Short-handed | 29.6, gold | 31.3, gold | 35.4, silver | 35, 45 |
+
+The standard game: the bot still wins at 28.6 minutes.
+
+**Browser checks.** My test browser's own storage was empty at the start, so this time I could use the real title screen. I removed what the test left there afterwards.
+
+| Check | How | Result |
+|---|---|---|
+| The title screen lists the scenarios and fits | Opened it at 1280 by 800 | Pass. See `docs/screenshots/phase17-title-scenarios.jpg`. |
+| Starting a scenario from the title screen | Pressed Fishing village | Pass. Goal 120 in the top bar, the game saved with its scenario, no guide shown. |
+| A whole scenario through the real buttons matches the bot | UI playthrough of Fishing village and of The weavers' guild, then the bot's game stepped to the same tick | Pass. Both identical: won at 10:44 and 19:58. |
+| The win screen shows the medal | Read it after each | Pass. "Gold medal. Gold within 13 minutes, silver within 20." See `docs/screenshots/phase17-gold-medal.jpg`. |
+| The best time is kept and shown | Went back to the title screen | Pass. "Your best: 10:44, gold." Continue read "Fishing village, 10:44 played, won with 120 Farmers, 73 coins". |
+| Starting another scenario over a saved game needs two presses | Pressed Short-handed once | Pass. The button turned red: "Press again. This replaces your saved game." Nothing started. |
+| The ? panel and the clock name the scenario and its times | Read them | Pass. |
+| The standard game through the real buttons | UI playthrough | Pass. Won at 28.55 minutes, identical to the bot, and no medal line. |
+| Random input in a scenario | 20,000 actions in Short-handed | Pass. No errors. |
+| A scenario that does not exist | Opened the test page asking for one | Pass. "Harborfall could not start. There is no scenario called..." |
+| The error console | Read it | Empty, apart from that one deliberate error. |
+
+**Bugs found: 1, in a test tool, and 1 in a test helper.**
+
+1. **The through-the-buttons test tool ignored which upgrade a build order asked for.** It upgraded whichever house was ready. No build order had depended on that until The weavers' guild, where it upgraded the wrong houses and never won. The headless bot was right all along. Fixed in the tool. This had been wrong since Phase 12.
+2. **The test helper that rebuilds older data files** left the scenarios in, and one of them needs Artisans, which the older data does not have. Fixed in the helper. Real older saved games were never affected.
+
+**Decisions made:** 17 (D218 to D234).
+
+**Weak or unfinished**
+- **Nobody has played a scenario.** The medal times come from a bot. Gold may be too easy or out of reach for a person, and I cannot tell which.
+- **Short-handed may be the least fun of the three.** It is a long game spent mostly at 70 to 85% speed. I kept it because it answers a question you left open.
+- **The weavers' guild can leave a player stuck** until they work out that the workshops need more hands. The tip line says so, but nobody has tried it.
+- **One save slot.** Trying a scenario replaces your saved standard game, after a warning.
+- **The title box is taller.** It fits a window 800 high. On a shorter one it scrolls inside the box, which I have not looked at.
+- **No scenario has a goal after the win,** and none can be played on another island or difficulty.
+- **A best time is only kept in the browser it was set in,** and only for games begun from the title screen.
+- **Not done:** your notes from playing, and a Mac test.
+
+**What I would change**
+- When Phase 12 let a build order name its upgrade, I taught the bot and not the test tool that mirrors it. The two should have been changed together. A tool that silently does something else is worse than one that refuses.

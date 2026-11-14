@@ -28,7 +28,7 @@ Harborfall is a small Anno-style city builder for desktop browsers. The owner is
 
 ## Commands
 
-- `node --test` runs all tests (457 at the end of Phase 16). They must all pass before a gate.
+- `node --test` runs all tests (480 at the end of Phase 17). They must all pass before a gate.
 - `node tools/bot.mjs` plays a full headless game (also `careless`, `bread-first`, `--seed N`, `--pace typical`, `--steps`, `--map`). The standard order must still win inside 25 to 40 minutes. It is the balance gate, and `tests/bot.test.js` checks it.
 - `node tools/tune.mjs` compares balance variants. `node tools/pace.mjs` estimates a person's time. `node tools/print-map.mjs` prints the island.
 - `node serve.mjs` serves the game at `http://localhost:5173`, which opens on the title screen and saves the game in the browser. `?demo` shows a finished town. `?fresh` opens a new game with no title screen. Neither of those two ever saves.
@@ -70,3 +70,7 @@ Update these in the same phase as the change, before the gate:
 - The embedded test browser may redraw the page only when you take a screenshot. Words read from the page straight after a click can be the old ones. Take a screenshot first, then read. The same quirk means the game's own clock may or may not run during a scripted playthrough, so compare the final state with the headless bot's at the same tick, as `TESTLOG.md` Phase 16 describes, and do not rely on the minute count alone.
 - The info panel is rebuilt many times a second, so a handle to one of its buttons goes stale at once. Click it from a script by its class (`#info button.closeBuilding`), in the same call that finds it.
 - A producer the player has closed carries `closed: true`; an open one has no such entry. Keep it that way, so a game with nothing closed is byte for byte a game from before closing existed.
+- A scenario, like a difficulty, is written into the data before the rules are made (`withScenario` in `src/sim/rules.js`). Never add an "if this scenario" to the simulation. The standard game must play the same with or without the scenarios in the data, and `tests/scenarios.test.js` checks it.
+- Before setting a scenario's numbers or medal times, let the bot play it at an instant, a typical and a slow pace (`--pace`). A set-up that wins at one pace and sticks at another is too fragile to ship.
+- `?fresh&scenario=<id>` opens a scenario on the test page. A bot build order may carry `"scenario": "<id>"`.
+- When you teach the bot something new about build orders, teach `tools/ui-playthrough.js` the same thing in the same change. In Phases 12 to 16 it ignored `"to"` on an upgrade step and nobody noticed, because no order depended on it.

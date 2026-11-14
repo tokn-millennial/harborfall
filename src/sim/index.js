@@ -7,7 +7,7 @@ import { buildingAt, buildingById } from './buildings.js';
 import { stepProduction } from './production.js';
 import { settleIncome } from './economy.js';
 import { checkWin } from './win.js';
-import { getSummary, buildingIssue } from './summary.js';
+import { getSummary, buildingIssue, medalFor } from './summary.js';
 import { stepHouses, upgradeReason, countResidents, isSatisfied, inMarketRange, housesInRangeOf } from './population.js';
 import { saveGame, loadGame, SAVE_FORMAT } from './save.js';
 import { undoStatus } from './undo.js';
@@ -16,7 +16,7 @@ import { staffing } from './staff.js';
 export {
   createGame, execute, canPlace, siteReason, buildingAt, buildingById,
   countResidents, isSatisfied, getSummary, buildingIssue, inMarketRange, housesInRangeOf,
-  saveGame, loadGame, SAVE_FORMAT, undoStatus, staffing,
+  saveGame, loadGame, SAVE_FORMAT, undoStatus, staffing, medalFor,
 };
 
 // Checks an upgrade without doing it. Never changes the game.
