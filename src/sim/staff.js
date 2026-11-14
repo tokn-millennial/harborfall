@@ -1,7 +1,7 @@
 // Staff: the people who run the town's producing buildings.
 //
-// Every producer that is linked to a warehouse needs a number of staff (set
-// per building in buildings.json). The town has a small crew to begin with,
+// Every producer that is linked to a warehouse and open needs a number of
+// staff (set per building in buildings.json). A closed one needs none. The town has a small crew to begin with,
 // and every resident adds to it (config.json, "workforce").
 //
 // A town with enough staff works at full speed. A town that is short works
@@ -21,7 +21,7 @@ export function staffing(game) {
   let residents = 0;
   for (const b of state.buildings) {
     if (b.house) residents += b.house.residents;
-    else if (b.production && b.connected) needed += rules.buildings[b.type].staff;
+    else if (b.production && b.connected && !b.production.closed) needed += rules.buildings[b.type].staff;
   }
   const available = workforce.base + Math.floor((residents * workforce.perResidentMilli) / FULL);
   const ratioMilli = needed <= available ? FULL : Math.max(1, Math.floor((available * FULL) / needed));

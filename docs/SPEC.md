@@ -420,11 +420,11 @@ Added in Phase 15. This is the first rule that makes residents matter for more t
 - Half a person does not count: 7 residents add 3 staff.
 - Only making things is slowed. Houses eat at their usual pace, upkeep is paid in full, and taxes are unchanged.
 
-**The way out of a shortage** is more residents: build houses, or upgrade them so they hold more. Demolishing a workshop you do not need also works.
+**The way out of a shortage** is more residents: build houses, or upgrade them so they hold more. Since Phase 16 you can also close a building for now (section 17). Demolishing one you do not need works too.
 
 **What you see**
 - The top bar shows a staff count beside the residents: "13 spare", or "10 short" in amber. Hover over it for the full sum and the speed your buildings are working at.
-- After 30 game seconds short of staff, the tip line says: "Your buildings are short of staff and work at 88% speed. Build more houses." This comes before any tip about a good running out, because a good running out may only be a sign of it, and another workshop would make it worse.
+- After 30 game seconds short of staff, the tip line says: "Your buildings are short of staff and work at 88% speed. Build more houses, or close a building you can spare." This comes before any tip about a good running out, because a good running out may only be a sign of it, and another workshop would make it worse.
 - The build menu says how many staff each producer needs. A producer's panel says the same, and when the town is short it adds the speed.
 - The ? panel explains the rule in two sentences.
 - Tips are now also shown after the win, for as long as a goal is still ahead. Before this phase they stopped at the win, so the tips about wool and cloth from Phase 12 could never be seen.
@@ -443,4 +443,30 @@ Added in Phase 15. This is the first rule that makes residents matter for more t
 
 **Saved games.** A game saved before this phase can still be continued. It is played under the staff rule from then on. A large town from before may find itself short of staff the moment it loads: it is told so, and it keeps working.
 
-**Not in this phase:** staff are not people you can see walking to work, a building cannot be closed to free its staff, the kinds of resident do not differ as staff, and no difficulty changes the staff numbers.
+**Not in this phase:** staff are not people you can see walking to work, the kinds of resident do not differ as staff, and no difficulty changes the staff numbers. (Closing a building to free its staff came in Phase 16: section 17.)
+
+## 17. Closing a building for now
+
+Added in Phase 16. It is the second way out of a staff shortage, and a way to stop a workshop using up goods you want to keep.
+
+**The rule**
+- Any building that makes something can be closed. Select it and press **Close for now**. Press **Reopen** to put it back to work.
+- A closed building makes nothing, takes nothing from the stockpile, and needs no staff. Its staff go to the other buildings at once.
+- It still costs its full upkeep. Closing is a way to cope, not a way to save coins. Demolishing is still the way to stop paying.
+- Work in hand waits inside. A bakery closed halfway through a loaf finishes that loaf when it reopens. The grain already taken for it is not handed back.
+- Closing and reopening are free and happen at once.
+- Houses, markets, warehouses and roads cannot be closed.
+- A building can be closed before it has a road. It stays closed when the road arrives.
+
+**Undo.** A close or a reopen can be taken back with Undo for 30 game seconds, like any other action.
+
+**What you see**
+- A closed building carries a small grey mark with two bars, like a pause sign. It is not a warning: the building is as you want it.
+- Its panel says "Closed. It makes nothing." and "Staff: None while closed (5 when open)".
+- The staff count in the top bar changes at once. Its hover text says how many buildings are closed.
+- When the town is short of staff the tip now ends "Build more houses, or close a building you can spare."
+- If a good runs out and every building that makes it is closed, the tip says "Your fisherman is closed. Reopen it." and not "Build another fisherman."
+
+**Saved games.** No number in the data files changed, so every game saved in Phase 15 loads exactly as it was. A closed building is saved as closed.
+
+**Not in this phase:** closing several buildings at once, a shortcut key, lower upkeep while closed, and a bot that closes buildings.

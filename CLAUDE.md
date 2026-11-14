@@ -28,7 +28,7 @@ Harborfall is a small Anno-style city builder for desktop browsers. The owner is
 
 ## Commands
 
-- `node --test` runs all tests (435 at the end of Phase 15). They must all pass before a gate.
+- `node --test` runs all tests (457 at the end of Phase 16). They must all pass before a gate.
 - `node tools/bot.mjs` plays a full headless game (also `careless`, `bread-first`, `--seed N`, `--pace typical`, `--steps`, `--map`). The standard order must still win inside 25 to 40 minutes. It is the balance gate, and `tests/bot.test.js` checks it.
 - `node tools/tune.mjs` compares balance variants. `node tools/pace.mjs` estimates a person's time. `node tools/print-map.mjs` prints the island.
 - `node serve.mjs` serves the game at `http://localhost:5173`, which opens on the title screen and saves the game in the browser. `?demo` shows a finished town. `?fresh` opens a new game with no title screen. Neither of those two ever saves.
@@ -67,3 +67,6 @@ Update these in the same phase as the change, before the gate:
 - The game's word for the workforce is "staff". "Workers" is a kind of resident. Do not mix them in anything the player reads.
 - With enough staff the game must play tick for tick as it does with the staff rule taken out (`tests/staff.test.js` compares the two). Keep that true when changing production.
 - Check that a new tip, warning or panel line actually reaches the screen, in the browser, in the part of the game where it matters. In Phases 12 to 14 the tip line was switched off after the win and nobody noticed.
+- The embedded test browser may redraw the page only when you take a screenshot. Words read from the page straight after a click can be the old ones. Take a screenshot first, then read. The same quirk means the game's own clock may or may not run during a scripted playthrough, so compare the final state with the headless bot's at the same tick, as `TESTLOG.md` Phase 16 describes, and do not rely on the minute count alone.
+- The info panel is rebuilt many times a second, so a handle to one of its buttons goes stale at once. Click it from a script by its class (`#info button.closeBuilding`), in the same call that finds it.
+- A producer the player has closed carries `closed: true`; an open one has no such entry. Keep it that way, so a game with nothing closed is byte for byte a game from before closing existed.

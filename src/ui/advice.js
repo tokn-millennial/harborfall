@@ -62,9 +62,13 @@ export function createAdvisor(rules, { patienceSeconds = 30 } = {}) {
       const connected = built.filter((b) => b.connected);
       if (connected.length === 0) return `Your ${typeName} is not connected to a warehouse by road.`;
 
+      // Every maker closed by the player: the answer is to reopen one, not to build another.
+      const open = connected.filter((b) => !b.production.closed);
+      if (open.length === 0) return `Your ${typeName} is closed. Reopen it.`;
+
       // If every working maker is waiting for an input, the real shortage is upstream.
-      if (connected.every((b) => b.production.status === 'missing_input')) {
-        const inputs = rules.buildings[connected[0].type].production.inputs;
+      if (open.every((b) => b.production.status === 'missing_input')) {
+        const inputs = rules.buildings[open[0].type].production.inputs;
         const missing = Object.keys(inputs).find((g) => state.goods[g] < inputs[g]);
         if (missing && missing !== good) {
           good = missing;
@@ -91,7 +95,7 @@ export function createAdvisor(rules, { patienceSeconds = 30 } = {}) {
         .filter(([good]) => tick - shortSince[good] >= patienceTicks)
         .sort((a, b) => a[1] - b[1] || rules.goodIds.indexOf(a[0]) - rules.goodIds.indexOf(b[0]));
       if (staffShortSince !== null && tick - staffShortSince >= patienceTicks) {
-        return `Your buildings are short of staff and work at ${Math.floor(staff.ratioMilli / 10)}% speed. Build more houses.`;
+        return `Your buildings are short of staff and work at ${Math.floor(staff.ratioMilli / 10)}% speed. Build more houses, or close a building you can spare.`;
       }
       return lasting.length ? explain(game, lasting[0][0]) : null;
     },

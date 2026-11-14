@@ -1150,3 +1150,64 @@ One slip caught on the spot: a note I wrote in `buildings.json` had quotation ma
 **What I would change**
 - I would have tested in Phase 12 that a tip reaches the screen after the win. A whole phase's tips were invisible for three phases and no test or check of mine noticed.
 - The roadmap promised idle buildings and I built a slowdown. I think it is the better rule, but it is a different one, and I chose it without asking (D188).
+
+**After the gate:** committed as `b8e7a04` when you asked for the commit, and pushed when you said "Push".
+
+**A correction, found in Phase 16.** The table above says the game through the real UI "won at 28.8 minutes". The true figure is 28.55, the same as every phase before. In that one run my test browser happened to be drawing, so the game's own clock ran alongside the script for about 17 seconds. I did not compare the final state with the bot's in Phase 15, as earlier phases did. Phase 16 did, and they are identical.
+
+## Phase 16: Closing a building for now
+
+Date: 2026-11-13. Status: approved by Colin with no changes (he asked for the commit).
+
+**Turns used:** 1 (your "Keep going!"). No plan approval was asked for (D205).
+
+**What was built**
+- **Close for now and Reopen** on every building that makes something. A closed building makes nothing, needs no staff, and still costs its upkeep (`SPEC.md` section 17).
+- **Undo** for both.
+- **On screen:** the two buttons, a grey mark on the map, new words in the panel, the top bar's hover text and the tips.
+- **No data file changed.** The rules stamp is still `10d0dc80671f7e66`, so every game saved in Phase 15 loads as it is.
+
+**Automated tests: 457 pass, 0 fail.** That is 435 from before plus 22 new ones in `tests/closing.test.js`. 4 older tests were edited: three for new wording, and the random undo test, which now also closes and reopens buildings (800 random actions, was 600) and requires every kind of action to have been undone at least 5 times.
+
+**Did the tests mean anything?** I broke closing on purpose in five ways.
+
+| Break | Tests that failed |
+|---|---|
+| A closed building goes on working | 12 |
+| A closed building still needs staff | 5 |
+| Undo forgets the status word the building had | 2 |
+| A change to the roads forgets that a building is closed | 7 |
+| Loading accepts any closed mark | 1 |
+
+**The bot.** Unchanged, as it never closes anything: standard order wins at 28.6 minutes, Artisans goal at 50.5.
+
+**Browser checks** (on the test page, which never saves)
+
+| Check | How | Result |
+|---|---|---|
+| Close a building in a town short of staff | Ran the Artisans order to minute 45, selected the weaver, pressed Close for now | Pass. Top bar went from "10 short" to "5 short". Panel: "Closed. It makes nothing.", "None while closed (5 when open)", a Reopen button. Grey mark on the weaver. See `docs/screenshots/phase16-closed-weaver.jpg`. |
+| The hover text | Read it | Pass. "...94% speed. Build more houses, or close a building you can spare. 1 building is closed and needs none." |
+| Reopen | Pressed Reopen | Pass. Back to "10 short", status "Working.", Undo button reads "Reopening". |
+| Undo with the Z key | Pressed Z after a reopen | Pass. The weaver was closed again and the Undo button read "Nothing yet". |
+| A full game through the real UI matches the headless bot | UI playthrough, then the bot's game stepped to the same tick | Pass. Both won at tick 17131 (28.55 minutes) and the two games are identical. |
+| Random input, which also presses the new buttons | 20,000 actions on the demo town | Pass. No errors. |
+| The error console | Read it | Empty. |
+
+**Bugs found: 0 in the game. 3 mistakes in my own new tests,** all caught on first run: a wrong count of logs after reopening a sawmill, and twice a helper that emptied the wood a later house needed.
+
+**Something I learned about my test browser.** Its page only redraws when I take a screenshot. Twice I read the screen's words straight after a click and got the old ones, which looked like a bug and was not. I now take a screenshot before reading. This also explains the wrong "28.8 minutes" in Phase 15, corrected above.
+
+**Decisions made:** 13 (D205 to D217).
+
+**Weak or unfinished**
+- **Nobody has played it.** Whether "Close for now" is found, and whether the grey mark is noticed, I cannot tell.
+- **I pressed the buttons from a script, not with the pointer.** The panel redraws many times a second, and my test tool lost hold of the button between finding it and clicking it. The script's click goes through the same code as a real one. The random-input test does click the real buttons.
+- **Closing saves no coins.** A player may expect it to. The button says "still costs its upkeep".
+- **One building at a time.** A town with six farms to close needs six selections.
+- **The mark is small** and sits above the building's back corner, where the top bar can cover it for buildings near the top of the screen.
+- **A closed fisherman's boat** stays at its hut, as for any idle fisherman. Nothing else shows a closed building apart from the mark.
+- **Still open from Phase 15:** whether staff should bite before the win (D206).
+- **Not done:** your notes from playing, and a Mac test.
+
+**What I would change**
+- Nothing in the code. In the checking: I should have compared the UI game with the bot's in Phase 15, as I had in every phase before it. Dropping that step let a wrong figure into the log.

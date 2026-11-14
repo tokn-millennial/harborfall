@@ -232,7 +232,8 @@ test('the info panel for a producer: status, what it makes, progress, staff, upk
   assert.equal(model.lines[2].value, '50%');
   assert.deepEqual(model.lines[3], { label: 'Staff', value: 'Needs 2' });
   assert.deepEqual(model.lines[4], { label: 'Upkeep', value: '2 coins a minute' });
-  assert.deepEqual(model.actions, [{ id: 'demolish', label: 'Demolish', detail: 'Returns 10 coins.', enabled: true, reason: null }]);
+  assert.deepEqual(model.actions.map((a) => a.id), ['closeBuilding', 'demolish']);
+  assert.deepEqual(model.actions[1], { id: 'demolish', label: 'Demolish', detail: 'Returns 10 coins.', enabled: true, reason: null });
 });
 
 test('the info panel for a house: residents, needs, taxes, and an upgrade button that explains itself', () => {

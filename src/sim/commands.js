@@ -9,6 +9,7 @@ import { canPlace } from './placement.js';
 import { pay, refund } from './economy.js';
 import { refresh } from './refresh.js';
 import { producerStatuses, remember, undoLast } from './undo.js';
+import { syncProductionStatus } from './production.js';
 
 const fail = (reason) => ({ ok: false, reason });
 
@@ -19,6 +20,8 @@ export function execute(game, command) {
     case 'road': return road(game, command);
     case 'demolish': return demolish(game, command);
     case 'upgrade': return upgrade(game, command);
+    case 'close': return setClosed(game, command, true);
+    case 'reopen': return setClosed(game, command, false);
     case 'undo': return undoLast(game);
     default: return fail('unknown_command');
   }
@@ -111,4 +114,19 @@ function upgrade(game, { id }) {
   upgradeHouse(game, building);
   remember(game, { kind: 'upgrade', id: building.id, house: before });
   return { ok: true, tier: building.house.tier };
+}
+
+// { action: 'close', id } and { action: 'reopen', id }   (id of a producer)
+// A closed producer makes nothing and needs no staff. It still costs its upkeep.
+function setClosed(game, { id }, closed) {
+  const building = buildingById(game, id);
+  if (!building?.production) return fail('not_a_producer');
+  const p = building.production;
+  if (Boolean(p.closed) === closed) return fail(closed ? 'already_closed' : 'not_closed');
+  const status = p.status;
+  if (closed) p.closed = true;
+  else delete p.closed;
+  syncProductionStatus(game);
+  remember(game, { kind: closed ? 'close' : 'reopen', id: building.id, status });
+  return { ok: true };
 }

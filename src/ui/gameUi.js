@@ -28,6 +28,7 @@ const TINT = {
 };
 const SELECT = { mode: 'select', building: null };
 const MESSAGE_SECONDS = 3;
+const QUIET_ACTIONS = ['undo', 'close', 'reopen'];
 const CONFIRM_SECONDS = 4; // how long a first demolish click waits for the second
 
 // onSound(name) is told when something worth a sound happens: 'pick', 'place',
@@ -65,6 +66,8 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
       if (!building) return;
       if (id === 'upgrade') act({ action: 'upgrade', id: building.id }, { cost: rules.tiers[building.house.tier].upgrade?.cost });
       if (id === 'demolish' && demolishBuilding(building)) deselect();
+      if (id === 'closeBuilding') act({ action: 'close', id: building.id });
+      if (id === 'reopenBuilding') act({ action: 'reopen', id: building.id });
     },
   });
   const win = createWinScreen(elements.win, { onContinue: () => speed.setSpeed(rules.speeds[0] ?? 1) });
@@ -114,7 +117,8 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
   // Sends a command. On failure, tells the player why. Returns whether it worked.
   function act(command, context = {}) {
     const result = execute(game, command);
-    if (result.ok) onSound(command.action === 'undo' ? 'pick' : command.action);
+    // Undo, closing and reopening share the plain click. The rest have a sound of their own.
+    if (result.ok) onSound(QUIET_ACTIONS.includes(command.action) ? 'pick' : command.action);
     else say(reasonText(game, result.reason, context));
     return result.ok;
   }

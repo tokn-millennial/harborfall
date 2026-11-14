@@ -38,6 +38,7 @@ const MARK = {
   bad: { color: '#e5484d', text: '!' },     // stops the building working: no road, no market
   warn: { color: '#f5a524', text: '!' },    // a wait: missing input, full storage, a shortage
   ready: { color: '#2fb463', text: '▲' },   // a house that can be upgraded now
+  closed: { color: '#6f7d88', text: null },  // a producer the player has closed: two bars, like a pause sign
 };
 const markLevel = (issue) => (issue === 'no_road' || issue === 'no_market' ? 'bad' : 'warn');
 const GHOST_OUTLINE = { ok: '#5df08a', bad: '#ff5a5a' };
@@ -455,6 +456,7 @@ export function createRenderer(canvas, rules) {
         let mark = null;
         if (issue) mark = MARK[markLevel(issue)];
         else if (building.house && canUpgrade(game, building.id).ok) mark = MARK.ready;
+        else if (building.production?.closed) mark = MARK.closed;
         if (!mark) continue;
         // Above the back corner, clear of the roof and the residents plate.
         const corner = tileToWorld(building.x, building.y);
@@ -467,7 +469,13 @@ export function createRenderer(canvas, rules) {
         ctx.lineWidth = 1.5 / zoom;
         ctx.stroke();
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(mark.text, corner.x, cy + 0.5 / zoom);
+        if (mark.text) {
+          ctx.fillText(mark.text, corner.x, cy + 0.5 / zoom);
+        } else {
+          const bar = radius * 0.3;
+          ctx.fillRect(corner.x - bar * 1.5, cy - radius * 0.5, bar, radius);
+          ctx.fillRect(corner.x + bar * 0.5, cy - radius * 0.5, bar, radius);
+        }
       }
     }
   }

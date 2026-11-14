@@ -45,10 +45,12 @@ export function panelModel(game, building, options = {}) {
       });
     }
   } else {
+    // A producer the player has closed says so, unless something worse (no road) is wrong with it.
+    const closed = Boolean(building.production?.closed) && !issue;
     lines.push({
       label: 'Status',
-      value: issue ? reasonText(game, issue, { building: building.type }) : building.production ? 'Working.' : 'Fine.',
-      level: issueLevel(issue),
+      value: closed ? 'Closed. It makes nothing.' : issue ? reasonText(game, issue, { building: building.type }) : building.production ? 'Working.' : 'Fine.',
+      level: closed ? 'warn' : issueLevel(issue),
     });
   }
 
@@ -61,8 +63,9 @@ export function panelModel(game, building, options = {}) {
     lines.push({ label: 'Progress', value: `${Math.floor((building.production.progress / p.cycleTicks) * 100)}%`, progress: building.production.progress / p.cycleTicks });
     if (rules.workforce && def.staff > 0) {
       const staff = staffing(game);
-      const slowed = building.connected && staff.ratioMilli < 1000;
-      if (slowed) lines.push({ label: 'Staff', value: `Needs ${def.staff}. Town is short: ${Math.floor(staff.ratioMilli / 10)}% speed`, level: 'warn' });
+      const slowed = building.connected && !building.production.closed && staff.ratioMilli < 1000;
+      if (building.production.closed) lines.push({ label: 'Staff', value: `None while closed (${def.staff} when open)` });
+      else if (slowed) lines.push({ label: 'Staff', value: `Needs ${def.staff}. Town is short: ${Math.floor(staff.ratioMilli / 10)}% speed`, level: 'warn' });
       else lines.push({ label: 'Staff', value: `Needs ${def.staff}` });
     }
   }
@@ -78,6 +81,28 @@ export function panelModel(game, building, options = {}) {
   }
 
   if (def.upkeepMilliPerMinute > 0) lines.push({ label: 'Upkeep', value: `${def.upkeepMilliPerMinute / MILLI} coins a minute` });
+
+  // Closing a producer: it stops, and its staff go to the others.
+  if (building.production) {
+    const staffed = rules.workforce && def.staff > 0;
+    if (building.production.closed) {
+      actions.push({
+        id: 'reopenBuilding',
+        label: 'Reopen',
+        detail: staffed ? `It goes back to work. Needs ${def.staff} staff.` : 'It goes back to work.',
+        enabled: true,
+        reason: null,
+      });
+    } else {
+      actions.push({
+        id: 'closeBuilding',
+        label: 'Close for now',
+        detail: `${staffed ? `Frees its ${def.staff} staff. ` : ''}It makes nothing${def.upkeepMilliPerMinute > 0 ? ' and still costs its upkeep' : ''}.`,
+        enabled: true,
+        reason: null,
+      });
+    }
+  }
 
   const demolish = previewDemolish(game, building.x, building.y, building);
   actions.push({

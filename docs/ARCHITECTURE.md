@@ -66,7 +66,7 @@ Harborfall/
       production.js       Producer cycles: take inputs, work, deliver.
       population.js       Market coverage, buying goods, moving in and out, upgrades.
       economy.js          Taxes, base income, upkeep, paying costs, refunds.
-      commands.js         Applies a command: place, road, demolish, upgrade.
+      commands.js         Applies a command: place, road, demolish, upgrade, close, reopen.
       win.js              The win check.
       summary.js          The numbers the HUD, bot and reports read.
       save.js             Turns a game into plain data and back, and refuses a save that cannot be trusted.
@@ -181,6 +181,8 @@ A game has two parts. `game.rules` is built from the data files and is locked, s
 | `road` | `tiles` (a list of `[x, y]`). Places as many as valid and affordable, in order. Tiles that are already road are skipped for free. |
 | `demolish` | `x`, `y` |
 | `upgrade` | `id` (a house) |
+| `close`, `reopen` | `id` (a producer). Added in Phase 16: section 19. |
+| `undo` | none. Added in Phase 11: section 14. |
 
 A command looks like `{ action: "place", building: "sawmill", x: 12, y: 30 }`. A failed command changes nothing.
 
@@ -192,6 +194,7 @@ Failure reasons are short fixed codes. The UI turns each code into a sentence.
 | Paying | `not_enough_coins`, `not_enough_goods` |
 | Demolishing | `nothing_here`, `last_warehouse`, `out_of_bounds` |
 | Upgrading | `not_a_house`, `max_tier`, `house_not_full`, `no_market`, `needs_unmet`, `no_bread` |
+| Closing | `not_a_producer`, `already_closed`, `not_closed` |
 | Any | `unknown_command`, `bad_command` |
 
 The `needs_...` and `no_...` codes are built from the terrain or good named in the data files, so a new placement rule or need gets its own code with no code change.
@@ -494,3 +497,17 @@ Why it is done by skipping whole ticks:
 - A single round written as one object, the old form, is still read.
 
 **The bot** now reports the minutes it spent short of staff and the slowest speed it fell to. Its build orders were not changed.
+
+## 19. Closing a building
+
+Two commands, `{ action: 'close', id }` and `{ action: 'reopen', id }`, both in `src/sim/commands.js`.
+
+- **What is stored.** A closed producer carries `closed: true` in its production record. An open one has no such entry at all. So a game in which nothing was ever closed is, byte for byte, a game from before closing existed, and no older save needed carrying forward. A test checks that a bot game holds no trace of the word.
+- **No data file changed,** so the rules stamp is the same as in Phase 15 (`10d0dc80671f7e66` on Normal).
+- **The status word.** A producer's one-word status gains `closed`. It is worked out, like the others: no road beats closed, closed beats everything else. `syncProductionStatus` sets it whenever roads change, so a closed building that is cut off and joined again is still closed.
+- **The production step** skips a closed producer before it can take inputs or advance. Its progress is left where it was.
+- **Staff.** `staffing` leaves closed producers out of the count.
+- **Undo.** Each command leaves a note with the building's number and the status word it had, so undoing puts back that exact word. The random undo test now throws closes and reopens in with placing, roads and demolishing, and requires each kind to have been undone at least five times.
+- **Loading** refuses a closed mark that is anything but `true`, a status word that disagrees with the mark, and an undo note that does not match the building.
+- **The UI** adds the two buttons through `panelModel.js` like any other panel action. Their ids are `closeBuilding` and `reopenBuilding`, because `close` already means the panel's own × button.
+- **The renderer** draws a grey mark on a closed producer, after the checks for a problem or a ready upgrade, so a real problem is never hidden by it.

@@ -1,15 +1,15 @@
 # Harborfall: Handoff Guide
 
-Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 15, by Fable 5.2.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 16, by Fable 5.2.
 
 This is the one document to read when you come back to the project, or when you hand it to a new helper, human or AI. It says what exists, how to run and check it, how we worked, and what is still unproven. `ROADMAP.md` says what could come next.
 
 ## 1. The project in a minute
 
-- **What it is:** a small Anno-style city builder that runs in a desktop browser. One island, 11 buildings, 7 goods, three kinds of resident. You win at 100 Workers, in about 30 minutes, and can play on to 100 Artisans in about 20 more. Workshops need staff, who come from your residents. The game saves itself.
+- **What it is:** a small Anno-style city builder that runs in a desktop browser. One island, 11 buildings, 7 goods, three kinds of resident. You win at 100 Workers, in about 30 minutes, and can play on to 100 Artisans in about 20 more. Workshops need staff, who come from your residents, and can be closed for a while. The game saves itself.
 - **How it is made:** plain JavaScript, with no framework, no build step and nothing to install except Node. All game rules are in five data files. All art is drawn by code.
-- **Size:** about 15,500 lines of code, tests, tools and data. The whole project is 163 files, counting documents and screenshots.
-- **State:** Phases 0 to 15 are done. 435 automated tests pass.
+- **Size:** about 16,000 lines of code, tests, tools and data. The whole project is 165 files, counting documents and screenshots.
+- **State:** Phases 0 to 16 are done. 457 automated tests pass.
 - **Where:** the folder `Harborfall` in your Documents, and the private GitHub repository `tokn-millennial/harborfall`, branch `main`.
 
 ## 2. What to read, in order
@@ -22,12 +22,12 @@ This is the one document to read when you come back to the project, or when you 
 | `docs/BRIEF.md` | Your original brief, word for word. The working rules come from here. | A helper is new to the project. |
 | `docs/SPEC.md` | Every rule of the game in plain words, with the data file each number lives in. | You want to know how something works, or tune it. |
 | `docs/ARCHITECTURE.md` | How the code is put together, folder by folder, and the test plan. | A helper is about to change code. |
-| `docs/DECISIONS.md` | Every choice made, numbered Q1 to Q5 (yours) and D1 to D204 (mine), with the reason and how to change it. | You wonder "why is it like this?" |
+| `docs/DECISIONS.md` | Every choice made, numbered Q1 to Q5 (yours) and D1 to D217 (mine), with the reason and how to change it. | You wonder "why is it like this?" |
 | `docs/TESTLOG.md` | Per phase: what was built, tested, broken and fixed, and what is weak. | You want the honest history. |
 | `docs/PLAYTEST.md` | The 73-point checklist from Phase 5 and the ranked problem list. | Planning a playtest. |
 | `docs/FINAL_REPORT.md` | The scorecard for the original test, as written at the end of Phase 5, with short notes for Phases 6 and 7. | You want the verdict on the original brief. |
 | `CLAUDE.md` (top folder) | Standing instructions that an AI helper reads on its own at the start of a session. | You never need to. It is for the helper. |
-| `docs/screenshots/` | Pictures from Phases 3 to 15. | You want to see how it looked at each stage. |
+| `docs/screenshots/` | Pictures from Phases 3 to 16. | You want to see how it looked at each stage. |
 
 ## 3. How to run it
 
@@ -43,7 +43,7 @@ These are typed in a terminal opened in the project folder. A helper runs them f
 
 | Command | What it does | A good result |
 |---|---|---|
-| `node --test` | Runs all 435 automated tests. A few seconds. | `pass 435`, `fail 0` |
+| `node --test` | Runs all 457 automated tests. A few seconds. | `pass 457`, `fail 0` |
 | `node tools/bot.mjs` | A bot plays a whole game with no screen and prints a report. | Wins in 28.6 minutes, no long waits. |
 | `node tools/bot.mjs careless` | The same, with a sloppier build order. | Wins in 30.4 minutes. |
 | `node tools/bot.mjs bread-first` | The same, with a reckless opening. | Wins in 52.9 minutes. Slower than the target, which is a known open issue. The point is that it recovers. |
@@ -143,7 +143,7 @@ If the helper starts in a different folder, tell it the project is in `Documents
 
 | Claim | Status | Evidence |
 |---|---|---|
-| The rules work as the spec says | **Proven** | 435 automated tests. |
+| The rules work as the spec says | **Proven** | 457 automated tests. |
 | A saved game comes back exactly | **Proven** | Saved, loaded and played-on games end identical to never-saved ones, in tests and in the browser. |
 | The game cannot leave you permanently stuck | **Proven** for the cases tested | Tests for zero coins, and bot wins from three bad openings. |
 | A win takes 25 to 40 minutes | **Proven for a bot,** estimated for a person | Bot: 28.6 minutes. With guessed human delays: 29 to 35. |
@@ -156,6 +156,8 @@ If the helper starts in a different folder, tell it the project is in `Documents
 | A game saved before Phase 12, or before Phase 15, still loads | **Proven** | In tests that name the old rules stamps, and in the browser with real saves from both times. |
 | The staff rule leaves a sensible first game alone | **Proven for a bot** | Two build orders on three difficulties win at the same minute with and without the rule, and are never short. |
 | The staff rule is noticed, understood and fair | **Unknown** | Nobody has played with it. It is felt mainly after the win. |
+| Closing a building works and can be undone exactly | **Proven** | Tests, including random closes and reopens each undone at once, and the real buttons in the browser. |
+| "Close for now" is found and understood | **Unknown** | Nobody has played with it. |
 | Every difficulty can be won | **Proven for a bot** | Two sensible build orders win on all three. On Hard a reckless opening needs a demolish to recover. |
 | Dust, smoke and night look right in motion | **Unknown** | I have seen them only in still screenshots. |
 | The first-game guide helps a new player | **Unknown** | The steps are my guess. Nobody new to the game has tried it. |

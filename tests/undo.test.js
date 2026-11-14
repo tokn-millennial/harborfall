@@ -225,14 +225,20 @@ test('random actions, each undone at once, always leave the game exactly as it w
   const pick = (n) => Math.floor(random() * n);
   const kinds = Object.keys(game.rules.buildings);
   let undone = 0;
-  for (let i = 0; i < 600; i++) {
+  const kindsTried = {};
+  const kindsUndone = {};
+  for (let i = 0; i < 800; i++) {
     const x = pick(map.width);
     const y = pick(map.height);
-    const roll = pick(10);
+    const roll = pick(13);
+    const anyBuilding = () => game.state.buildings[pick(game.state.buildings.length)].id;
     let command;
     if (roll < 5) command = { action: 'place', building: kinds[pick(kinds.length)], x, y };
     else if (roll < 7) command = { action: 'road', tiles: line(x, y, Math.min(map.width - 1, x + pick(6)), y) };
-    else command = { action: 'demolish', x, y };
+    else if (roll < 10) command = { action: 'demolish', x, y };
+    else if (roll < 12) command = { action: 'close', id: anyBuilding() };
+    else command = { action: 'reopen', id: anyBuilding() };
+    kindsTried[command.action] = (kindsTried[command.action] ?? 0) + 1;
 
     game.state.undo = null;
     const before = snapshot(game);
@@ -242,6 +248,7 @@ test('random actions, each undone at once, always leave the game exactly as it w
       assert.equal(back.ok, true, `${JSON.stringify(command)} could not be undone: ${back.reason}`);
       assert.equal(snapshot(game), before, `${JSON.stringify(command)} was not undone exactly`);
       undone++;
+      kindsUndone[command.action] = (kindsUndone[command.action] ?? 0) + 1;
       execute(game, command); // do it for real, so the island fills up
     } else {
       // Nothing changed: the command failed, or it was road over road that is already
@@ -255,6 +262,9 @@ test('random actions, each undone at once, always leave the game exactly as it w
     for (const good of game.rules.goodIds) game.state.goods[good] = game.state.storageCap;
   }
   assert.ok(undone > 150, `only ${undone} actions were undone`);
+  for (const action of ['place', 'road', 'demolish', 'close', 'reopen']) {
+    assert.ok((kindsUndone[action] ?? 0) >= 5, `only ${kindsUndone[action] ?? 0} ${action} actions were undone, of ${kindsTried[action] ?? 0} tried`);
+  }
   assert.ok(game.state.buildings.length > 3, 'the random run built almost nothing');
 });
 

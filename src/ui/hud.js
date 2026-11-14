@@ -76,7 +76,7 @@ export function createHud(root, rules) {
       for (const id of Object.keys(tiers)) setText(tiers[id], `${summary.residents[id]} / ${summary.housing[id]}`);
 
       if (summary.staff.on) {
-        const staff = staffText(rules, summary.staff);
+        const staff = staffText(rules, summary.staff, summary.closedProducers);
         setText(staffValue, staff.value);
         staffBox.title = staff.title;
         staffBox.classList.toggle('short', staff.short);

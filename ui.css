@@ -158,6 +158,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
 }
 .action:hover:not(:disabled) { filter: brightness(1.15); }
+.action.closeBuilding, .action.reopenBuilding { background: linear-gradient(180deg, #5d7482, #46596a); }
 .action.demolish { background: linear-gradient(180deg, #b34a3d, var(--red)); }
 .action:disabled { background: rgba(255, 255, 255, 0.1); color: #93a3a9; cursor: default; box-shadow: none; }
 .action-detail { font-size: 12px; font-weight: 400; opacity: 0.92; }

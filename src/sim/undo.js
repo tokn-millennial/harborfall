@@ -8,6 +8,7 @@
 //   - a building just demolished is put back as it was, and what the demolish
 //     gave back is taken away again
 //   - a house just upgraded goes back to what it was, and the cost is returned
+//   - a producer just closed is open again, and one just reopened is closed
 // An undo cannot itself be undone.
 //
 // What is needed to undo is kept in the state (state.undo), so it is saved
@@ -30,8 +31,8 @@ export function remember(game, record) {
 
 // What an undo would do right now, without doing it. Never changes the game.
 // { ok: true, kind, type, count, ticksLeft } or { ok: false, reason }.
-//   kind   'place', 'road', 'demolish', 'unroad' or 'upgrade'
-//   type   the building involved, for place and demolish
+//   kind   'place', 'road', 'demolish', 'unroad', 'upgrade', 'close' or 'reopen'
+//   type   the building involved, for everything but roads
 //   count  the number of road tiles, for road
 export function undoStatus(game) {
   const { state } = game;
@@ -41,7 +42,7 @@ export function undoStatus(game) {
   const status = { ok: true, kind: u.kind, type: null, count: null, ticksLeft: u.untilTick - state.tick };
   if (u.kind === 'place') status.type = buildingById(game, u.id)?.type ?? null;
   if (u.kind === 'demolish') status.type = u.building.type;
-  if (u.kind === 'upgrade') status.type = buildingById(game, u.id)?.type ?? null;
+  if (u.kind === 'upgrade' || u.kind === 'close' || u.kind === 'reopen') status.type = buildingById(game, u.id)?.type ?? null;
   if (u.kind === 'road') status.count = u.tiles.length;
   return status;
 }
@@ -115,6 +116,12 @@ export function undoLast(game) {
     const cost = rules.tiers[u.house.tier].upgrade.cost;
     building.house = copy(u.house);
     giveBack(game, cost);
+  } else if (u.kind === 'close' || u.kind === 'reopen') {
+    const building = buildingById(game, u.id);
+    if (!building?.production) return fail('nothing_to_undo');
+    if (u.kind === 'close') delete building.production.closed;
+    else building.production.closed = true;
+    building.production.status = u.status; // the word it had before, exactly
   } else {
     return fail('nothing_to_undo');
   }
@@ -156,10 +163,16 @@ export function undoProblem(rules, state) {
   const given = (g) => g !== null && typeof g === 'object' && isCount(g.coinsMilli) && g.goods !== null && typeof g.goods === 'object'
     && Object.entries(g.goods).every(([good, amount]) => rules.goodIds.includes(good) && isCount(amount));
   const onMap = (x, y) => Number.isInteger(x) && Number.isInteger(y) && inBounds(map, x, y);
-  const STATUS = ['missing_input', 'working', 'storage_full'];
+  const STATUS = ['missing_input', 'working', 'storage_full', 'closed'];
   const statuses = (s) => s !== null && typeof s === 'object' && Object.values(s).every((word) => STATUS.includes(word));
 
   if (u.kind === 'place') return Number.isInteger(u.id) ? null : 'the undo record names no building';
+  if (u.kind === 'close' || u.kind === 'reopen') {
+    const building = state.buildings.find((b) => b?.id === u.id);
+    if (!building?.production) return 'the undo record closes something that is not a producer';
+    if (!['no_road', ...STATUS].includes(u.status)) return 'the undo record for a closing is wrong';
+    return Boolean(building.production.closed) === (u.kind === 'close') ? null : 'the undo record for a closing does not match the building';
+  }
   if (u.kind === 'road') {
     return Array.isArray(u.tiles) && u.tiles.every((t) => Array.isArray(t) && onMap(t[0], t[1])) ? null : 'the undo record lists a road tile off the island';
   }

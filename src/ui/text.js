@@ -65,11 +65,13 @@ export function staffSourceText(rules) {
 
 // The staff item on the top bar. `staff` is the summary's staff entry.
 // { value, title, short }: "13 spare", or "18 short" with the speed in the title.
-export function staffText(rules, staff) {
+// `closed` is how many producers the player has closed.
+export function staffText(rules, staff, closed = 0) {
   const gap = staff.available - staff.needed;
   const facts = `Your producing buildings need ${staff.needed} staff. The town has ${staff.available} (${staffSourceText(rules)}).`;
-  if (!staff.short) return { value: `${gap} spare`, short: false, title: `${facts} Every producer works at full speed.` };
-  return { value: `${-gap} short`, short: true, title: `${facts} Every producer works at ${staff.percent}% speed. Build more houses.` };
+  const shut = closed > 0 ? ` ${closed === 1 ? '1 building is' : `${closed} buildings are`} closed and ${closed === 1 ? 'needs' : 'need'} none.` : '';
+  if (!staff.short) return { value: `${gap} spare`, short: false, title: `${facts} Every producer works at full speed.${shut}` };
+  return { value: `${-gap} short`, short: true, title: `${facts} Every producer works at ${staff.percent}% speed. Build more houses, or close a building you can spare.${shut}` };
 }
 
 // One or two lines for the build menu: what the building is for.
@@ -121,6 +123,9 @@ const FIXED_REASONS = {
   nothing_here: 'There is nothing to demolish here.',
   last_warehouse: 'You cannot demolish your last warehouse.',
   not_a_house: 'Only houses can be upgraded.',
+  not_a_producer: 'Only buildings that make things can be closed.',
+  already_closed: 'It is already closed.',
+  not_closed: 'It is not closed.',
   max_tier: 'This house is already at the top tier.',
   house_not_full: 'The house must be full before it can be upgraded.',
   no_market: 'No market in range.',
@@ -209,6 +214,8 @@ export function undoLabel(rules, status) {
   if (status.kind === 'demolish') return `${name} back`;
   if (status.kind === 'unroad') return 'Road back';
   if (status.kind === 'upgrade') return 'Upgrade';
+  if (status.kind === 'close') return 'Closing';
+  if (status.kind === 'reopen') return 'Reopening';
   return 'Last action';
 }
 

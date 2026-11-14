@@ -21,6 +21,8 @@ export function getSummary(game) {
     tick: state.tick,
     seconds: state.tick / rules.ticksPerSecond,
     coins: Math.floor(state.coinsMilli / MILLI),
+    // Producers the player has closed.
+    closedProducers: state.buildings.filter((b) => b.production?.closed).length,
     // Coins per minute at this moment.
     income: {
       taxes: rates.taxesMilli / MILLI,
@@ -58,6 +60,7 @@ export function getSummary(game) {
 // The one thing most wrong with a building right now, as a short code, or null
 // when it is fine. Used for warning markers and the info panel.
 //   no_road, missing_input, storage_full   producers and markets
+// A producer the player has closed has no issue: it is as the player wants it.
 //   no_market, no_<good>                   houses
 export function buildingIssue(game, building) {
   const def = game.rules.buildings[building.type];

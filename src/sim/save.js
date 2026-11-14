@@ -138,6 +138,7 @@ function stateProblem(rules, state) {
     }
     if (Boolean(def.production) !== Boolean(b.production)) return `building ${b.id} has the wrong kind of record`;
     if (b.production && !isCount(b.production.progress)) return `building ${b.id} has a wrong work timer`;
+    if (b.production && b.production.closed !== undefined && b.production.closed !== true) return `building ${b.id} has a wrong closed mark`;
     if (Boolean(def.housingTier) !== Boolean(b.house)) return `building ${b.id} has the wrong kind of record`;
     if (b.house) {
       const tier = Object.hasOwn(rules.tiers, b.house.tier) ? rules.tiers[b.house.tier] : null;

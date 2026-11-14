@@ -393,7 +393,7 @@ test('the top bar says how many staff are spare, or how many short and how slow'
   text = staffText(short.rules, getSummary(short).staff);
   assert.equal(text.value, '4 short');
   assert.equal(text.short, true);
-  assert.match(text.title, /need 16 staff\. The town has 12 .*Every producer works at 75% speed\. Build more houses\.$/);
+  assert.match(text.title, /need 16 staff\. The town has 12 .*Every producer works at 75% speed\. Build more houses, or close a building you can spare\.$/);
 
   // Exactly enough is "0 spare", not a shortage.
   const even = richGame();
@@ -452,7 +452,7 @@ test('tips: a town short of staff is told to build houses, before anything about
     return tip;
   };
   assert.equal(tipAfter(20), null, 'it waits before speaking');
-  assert.equal(tipAfter(15), 'Your buildings are short of staff and work at 75% speed. Build more houses.');
+  assert.equal(tipAfter(15), 'Your buildings are short of staff and work at 75% speed. Build more houses, or close a building you can spare.');
   // Houses fill, the shortage ends, and the tip moves on to the next thing.
   game.state.goods.planks = 100;
   fullHouses(game, 2);
