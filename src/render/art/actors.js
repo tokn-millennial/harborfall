@@ -59,6 +59,8 @@ function cart(ctx, a, goodColor) {
   ctx.fillRect(p.x - 4.6, p.y - 5.6, 9.2, 3.6);
   ctx.fillStyle = CART.rim;
   ctx.fillRect(p.x - 4.6, p.y - 2.8, 9.2, 0.8);
+  // The load, in the color of the good. An empty cart, on its way out, has none.
+  if (!goodColor) return;
   ctx.fillStyle = goodColor;
   ctx.fillRect(p.x - 3.6, p.y - 8, 7.2, 2.6);
 }
@@ -162,7 +164,7 @@ function ship(ctx, a, time) {
 export function paintActors(ctx, actors, goods, time) {
   for (const a of actors) {
     if (a.kind === 'walker') walker(ctx, a);
-    else if (a.kind === 'cart') cart(ctx, a, goods[a.good]?.color ?? '#b9a47a');
+    else if (a.kind === 'cart') cart(ctx, a, a.good === null ? null : goods[a.good]?.color ?? '#b9a47a');
     else if (a.kind === 'boat') boat(ctx, a, time);
     else if (a.kind === 'ship') ship(ctx, a, time);
   }

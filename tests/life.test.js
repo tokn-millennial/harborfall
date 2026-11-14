@@ -49,7 +49,7 @@ test('a town that already has people is filled with walkers at once: one for eve
   assert.equal(walkers.length, Math.min(40, Math.floor(residents / 5)));
 });
 
-test('there are never more than 40 walkers or 14 carts, however large the town', () => {
+test('there are never more than 40 walkers, and never more carts than the game has, however large the town', () => {
   const game = town(90); // played to the win and beyond
   for (const b of game.state.buildings) if (b.house) b.house.residents = 8;
   const life = createLife(game.rules);
@@ -57,7 +57,7 @@ test('there are never more than 40 walkers or 14 carts, however large the town',
   for (const b of game.state.buildings) if (b.house) b.house.residents = 400; // far more than could ever live there
   live(game, life, 3000, (actors) => {
     assert.ok(of(actors, 'walker').length <= 40);
-    assert.ok(of(actors, 'cart').length <= 14);
+    assert.ok(of(actors, 'cart').length <= game.state.carts.length);
   });
   // Walkers come and go, so the number hovers just under the limit.
   assert.ok(of(life.actors, 'walker').length >= 36, `only ${of(life.actors, 'walker').length} walkers in a huge town`);
@@ -123,14 +123,21 @@ test('when the residents leave, the walkers go indoors', () => {
   assert.equal(of(life.update(game), 'walker').length, 0);
 });
 
-test('a cart sets out when a producer delivers, carries what it made, and ends beside a warehouse', () => {
+test('every cart on the map is a real one on its trip: as many as are out, carrying what they loaded, ending beside a warehouse', () => {
   const game = town(20);
   const life = createLife(game.rules);
   const { state, rules } = game;
   const lastSeen = new Map();
   const finished = [];
   live(game, life, 3000, (actors) => {
-    const now = new Map(of(actors, 'cart').map((a) => [a.id, a]));
+    const shown = of(actors, 'cart');
+    assert.ok(shown.length <= state.carts.filter((c) => c.phase !== 'home').length, 'a cart was shown that is not on the road');
+    // A loaded cart shows its load; an empty one, on its way out, shows none.
+    for (const a of shown) {
+      const real = state.carts[Number(a.id.split('-')[2])];
+      assert.equal(a.good === null, Object.keys(real.load).length === 0);
+    }
+    const now = new Map(shown.filter((a) => a.good !== null).map((a) => [a.id, a]));
     for (const [id, a] of lastSeen) if (!now.has(id)) finished.push(a);
     for (const [id, a] of now) lastSeen.set(id, a);
     for (const id of [...lastSeen.keys()]) if (!now.has(id)) lastSeen.delete(id);

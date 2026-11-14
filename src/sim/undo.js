@@ -106,6 +106,8 @@ export function undoLast(game) {
       // Back into the same place in the list, because older houses are fed first.
       state.buildings.splice(Math.min(u.index, state.buildings.length), 0, copy(building));
       for (const [x, y] of footprint(building.x, building.y, def.w, def.h)) state.occupancy[tileIndex(state.map, x, y)] = building.id;
+      // The carts as they were: a warehouse's carts come back, and carts sent home set out again.
+      if (Array.isArray(u.carts)) state.carts = copy(u.carts);
     });
   } else if (u.kind === 'unroad') {
     const i = tileIndex(state.map, u.x, u.y);
@@ -167,7 +169,7 @@ export function undoProblem(rules, state) {
   const given = (g) => g !== null && typeof g === 'object' && isCount(g.coinsMilli) && g.goods !== null && typeof g.goods === 'object'
     && Object.entries(g.goods).every(([good, amount]) => rules.goodIds.includes(good) && isCount(amount));
   const onMap = (x, y) => Number.isInteger(x) && Number.isInteger(y) && inBounds(map, x, y);
-  const STATUS = ['missing_input', 'working', 'storage_full', 'closed'];
+  const STATUS = ['missing_input', 'working', 'storage_full', 'closed', 'yard_full'];
   const statuses = (s) => s !== null && typeof s === 'object' && Object.values(s).every((word) => STATUS.includes(word));
 
   if (u.kind === 'place') return Number.isInteger(u.id) ? null : 'the undo record names no building';
@@ -198,6 +200,7 @@ export function undoProblem(rules, state) {
   if (u.kind === 'demolish') {
     const b = u.building;
     if (b === null || typeof b !== 'object' || !given(u.given) || !isCount(u.index) || !statuses(u.statuses)) return 'the undo record for a demolish is wrong';
+    if (u.carts !== undefined && !Array.isArray(u.carts)) return 'the undo record for a demolish holds wrong carts';
     const def = Object.hasOwn(rules.buildings, b.type) ? rules.buildings[b.type] : null;
     if (!def || def.category === 'road') return 'the undo record holds an unknown building';
     if (!Number.isInteger(b.id) || b.id < 1 || b.id >= state.nextId || state.buildings.some((other) => other?.id === b.id)) return 'the undo record holds a building with a wrong number';

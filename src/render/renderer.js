@@ -35,12 +35,12 @@ import { buildingIssue, canUpgrade } from '../sim/index.js';
 const LABEL_MIN_ZOOM = 0.55;
 const MARKER_MIN_ZOOM = 0.45;
 const MARK = {
-  bad: { color: '#e5484d', text: '!' },     // stops the building working: no road, no market
+  bad: { color: '#e5484d', text: '!' },     // stops the building working: no road, no market, out of a cart's reach
   warn: { color: '#f5a524', text: '!' },    // a wait: missing input, full storage, a shortage
   ready: { color: '#2fb463', text: '▲' },   // a house that can be upgraded now
   closed: { color: '#6f7d88', text: null },  // a producer the player has closed: two bars, like a pause sign
 };
-const markLevel = (issue) => (issue === 'no_road' || issue === 'no_market' ? 'bad' : 'warn');
+const markLevel = (issue) => (issue === 'no_road' || issue === 'no_market' || issue === 'too_far' ? 'bad' : 'warn');
 const GHOST_OUTLINE = { ok: '#5df08a', bad: '#ff5a5a' };
 
 // The ground picture is painted this many times finer than one world pixel,

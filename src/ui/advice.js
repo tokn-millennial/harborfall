@@ -5,9 +5,11 @@
 // A town short of staff is told so first: every producer is slowed, so a good
 // running out may only be a sign of it, and another producer would make it worse.
 //
+// Then, with carts: a producer no cart can reach, and carts that cannot keep up.
+//
 // No page code here, so it is tested in Node. It only reads the game.
 
-import { staffing } from '../sim/index.js';
+import { buildingIssue, staffing } from '../sim/index.js';
 
 const article = (word) => (/^[aeiou]/i.test(word) ? 'an' : 'a');
 
@@ -15,6 +17,8 @@ export function createAdvisor(rules, { patienceSeconds = 30 } = {}) {
   const patienceTicks = patienceSeconds * rules.ticksPerSecond;
   const shortSince = {}; // good -> the tick it was first seen short
   let staffShortSince = null; // the tick the town was first seen short of staff
+  const cartIssueSince = { too_far: null, yard_full: null }; // the tick each cart problem was first seen
+  const cartIssueAt = { too_far: null, yard_full: null };    // a building that has it, to name
 
   // Which building types make each good, and which goods anything costs.
   const makersOf = {};
@@ -96,6 +100,26 @@ export function createAdvisor(rules, { patienceSeconds = 30 } = {}) {
         .sort((a, b) => a[1] - b[1] || rules.goodIds.indexOf(a[0]) - rules.goodIds.indexOf(b[0]));
       if (staffShortSince !== null && tick - staffShortSince >= patienceTicks) {
         return `Your buildings are short of staff and work at ${Math.floor(staff.ratioMilli / 10)}% speed. Build more houses, or close a building you can spare.`;
+      }
+      if (rules.carts) {
+        // The first producer with each problem, in the order they were built.
+        const found = { too_far: null, yard_full: null };
+        for (const b of game.state.buildings) {
+          if (!b.production) continue;
+          const issue = buildingIssue(game, b);
+          if (issue in found && !found[issue]) found[issue] = b;
+        }
+        for (const issue of Object.keys(found)) {
+          if (!found[issue]) cartIssueSince[issue] = null;
+          else cartIssueSince[issue] ??= tick;
+          cartIssueAt[issue] = found[issue];
+        }
+        const lasted = (issue) => cartIssueSince[issue] !== null && tick - cartIssueSince[issue] >= patienceTicks;
+        if (lasted('too_far')) {
+          const name = rules.buildings[cartIssueAt.too_far.type].name.toLowerCase();
+          return `Your ${name} is too far from a warehouse by road for any cart. Build a warehouse nearer to it.`;
+        }
+        if (lasted('yard_full')) return 'Your carts cannot keep up. Build another warehouse near your workshops.';
       }
       return lasting.length ? explain(game, lasting[0][0]) : null;
     },

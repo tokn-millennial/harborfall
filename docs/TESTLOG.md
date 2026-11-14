@@ -1373,3 +1373,78 @@ No way of trading beat the standard order, so trade is not a money machine. A ch
 
 **What I would change**
 - Write the check on paper first. It found the wood price in a second, where the bot runs took minutes and did not.
+
+**After the gate:** committed as `5b18a13` when you chose the next phase. Not pushed.
+
+## Phase 19: Carts: goods travel by road
+
+Date: 2026-11-14. Status: approved by Colin with no changes ("Approved and proceed").
+
+**Turns used:** 2. Your "Let's do goods carried along roads by workers", and "Please continue" after your usage limit reset. Built by Claude Opus 5.5.
+
+**What was built**
+- **Carts.** What a building makes waits in its yard until a cart from the nearest warehouse fetches it along the roads (`SPEC.md` section 20).
+- **Reach.** Buildings more than 30 road tiles from every warehouse are never collected.
+- **The carts on the map are now the real ones.**
+- **On screen:** yard and distance in each building's panel, carts in each warehouse's panel, red and amber marks, two new tips, a paragraph in the ? panel.
+- **The bot** reports time spent waiting for carts.
+- **Older saved games still load,** now from four generations back.
+
+**Automated tests: 533 pass, 0 fail.** That is 509 from before plus 24 new ones in `tests/carts.test.js`.
+
+35 older tests broke when the rule went in, as expected for a change to how goods move:
+- **Tests of other rules counting goods the moment they are made:** the test helpers now switch carts off unless asked (D266).
+- **Save tests:** the new round of additions needed adding to the "data as it was" helper and the list of known stamps, and tests that load a test game now load it against the same data.
+- **Two "plays on exactly as before" tests** about earlier additions are now checked without carts. Carrying a pre-cart save forward has a test of its own, with carts on.
+- **The weavers' guild rescue:** its rescue order now finishes the upgrades. It had leaned on exactly how far the stalled town got.
+- **One test loosened**, D267: the second act may touch zero coins for under half a minute.
+
+**Did the tests mean anything?** I broke carts on purpose in seven ways.
+
+| Break | Tests that failed |
+|---|---|
+| Goods skip the yard and reach the stockpile at once | 13 |
+| Carts ignore their reach | 4 |
+| Any warehouse's cart serves any producer | 2 |
+| Carts go for goods there is no room for | 1 (only once both of the two checks were removed; each alone is covered) |
+| A cart takes everything in the yard | 3 |
+| Undo of a demolish forgets the carts | 2 |
+| Loading accepts any number of carts | 1 |
+
+**Bugs found: 2 real ones in the rule, 1 in my bot figure, and some test mistakes.**
+1. **Carts could all get stuck at a full warehouse.** My first version let a cart wait at the warehouse until there was room. Once wood was full, all three carts ended up waiting there with wood. Nobody fetched fish, and the bot's town starved and never won. Found by the bot on the first run. Fixed (D260): carts never set out for goods with no room, and in the rare case they arrive to a full store they unload what fits.
+2. **Saves from before carts were refused as damaged** when they had an empty list of carts, not a missing one. Found by the save tests. Fixed: a save from before carts always gets its carts, whatever it holds.
+3. **My "waiting for a cart" figure** also counted buildings waiting for room in the store, which made carts look like a bottleneck when they were not. A second warehouse then seemed not to help. Fixed in the bot; the real figure is small, 3 to 6 producer-minutes a game.
+4. Test mistakes: warehouses placed with no wood to build them, a spot on the main island that is not buildable, a check made before any cart was on the road, and a stray line that did nothing.
+
+**Tried and dropped.** Carts that wait for a full load unless a good is running low. Measured with the bot: no gain in most games, and 7 minutes lost by the bread-first town (D259).
+
+**Balance, by the bot**, every build order and scenario with carts off and on: see `SPEC.md` section 20. All win, all scenarios still earn gold, and the standard game moves from 28.6 to 29.3 minutes.
+
+**Browser checks** (on the test page and the demo, which never save)
+
+| Check | How | Result |
+|---|---|---|
+| A whole game through the real buttons matches the bot | UI playthrough of the standard order, then the bot's game stepped to the same tick | Pass. Both won at tick 17601 (29.3 minutes), identical. |
+| The carts on the map | Paused a town at 14 minutes and zoomed in | Pass by my eye: a carter walking behind a cart loaded with grain, and two more carts with fish by a fisherman's hut. See `docs/screenshots/phase19-cart-with-grain.jpg` and `phase19-carts-and-panel.jpg`. |
+| A building's panel | Clicked a fisherman | Pass after a fix (bug 5). "Waiting here: Nothing (room for 6)", "Warehouse: 7 road tiles · 3.5 s by cart". |
+| Random input | 20,000 actions on the demo town | Pass. No errors. It built three more warehouses, 12 carts in all. |
+| The error console | Read it | Empty. |
+
+5. **The warehouse line in a building's panel wrapped** onto two lines. Shortened twice until it fitted.
+
+**Decisions made:** 16 (D254 to D269).
+
+**Weak or unfinished**
+- **Nobody has played it.** Whether a player notices carts, understands the red and amber marks, or thinks of building a second warehouse, I cannot tell.
+- **The bot never builds far from its warehouse,** so its games show little effect. The effect of distance is shown on a small hand-made island, not in a real game.
+- **Materials do not travel.** A sawmill takes its wood straight from the stockpile however far away it is.
+- **Reach is not drawn on the map.** You find out a building is too far only after placing it.
+- **A warehouse's carts never help another warehouse,** even when idle.
+- **Goods can be lost** in two rare cases: a demolished building's yard, and a cart arriving at a full store.
+- **Carts are drawn small,** as the carts for show were.
+- **Phases 17, 18 and 19 are not pushed.**
+- **Not done:** your notes from playing, and a Mac test.
+
+**What I would change**
+- I would have run the bot before writing anything else. Its first run found the stuck-cart trap in seconds; a player would have found it after twenty minutes of play.

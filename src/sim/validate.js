@@ -136,6 +136,10 @@ export function validateData(data) {
     }
     cost(b.cost, `${where}.cost`);
     number(b.upkeepPerMinute, `${where}.upkeepPerMinute`);
+    if (b.carts !== undefined) {
+      number(b.carts, `${where}.carts`, { integer: true });
+      if (b.category !== 'storage' && b.carts !== 0) err(`${where}.carts: only warehouses keep carts`);
+    }
     if (b.staff !== undefined) {
       number(b.staff, `${where}.staff`, { integer: true });
       if (b.category !== 'producer' && b.staff !== 0) err(`${where}.staff: only producers need staff`);
@@ -288,6 +292,16 @@ export function validateData(data) {
         for (const key of Object.keys(s)) {
           if (!ALLOWED.includes(key) && !key.startsWith('_')) err(`${where} has an unknown setting "${key}"`);
         }
+      }
+    }
+  }
+  if (config.carts !== undefined) {
+    if (!isObject(config.carts)) err('config.carts must be an object');
+    else {
+      for (const key of ['ticksPerTile', 'load', 'yard', 'reachTiles']) number(config.carts[key], `config.carts.${key}`, { min: 1, integer: true });
+      // Without a cart a warehouse could collect nothing.
+      for (const [id, b] of Object.entries(buildings)) {
+        if (isObject(b) && b.category === 'storage' && !(isNumber(b.carts) && b.carts >= 1)) err(`buildings.${id} is a warehouse and needs at least 1 cart`);
       }
     }
   }

@@ -11,7 +11,7 @@ import { panelModel } from '../src/ui/panelModel.js';
 import { buildingBlurb, coinText, reasonText, tradeCallText, tradeOrderText, undoLabel } from '../src/ui/text.js';
 import { runBot } from '../tools/bot/bot.js';
 import { loadOrder } from '../tools/tune.mjs';
-import { dataBefore, line, place, richGame, road, run, snapshot, testGame } from './helpers.js';
+import { dataBefore, line, place, richGame, road, run, snapshot, testGame, withoutCarts } from './helpers.js';
 
 const throughText = (value) => JSON.parse(JSON.stringify(value));
 const SHIP = 1200; // ticks between calls: 120 game seconds
@@ -266,7 +266,7 @@ test('a game saved before trade existed loads, with no orders and no ship on its
   const save = throughText(saveGame(before));
   delete save.state.trade; // a save that old has no such entry
   assert.equal(save.rulesStamp, '10d0dc80671f7e66');
-  const loaded = loadGame(loadData(), save);
+  const loaded = loadGame(withoutCarts(loadData()), save);
   assert.equal(loaded.ok, true, `${loaded.reason}: ${loaded.detail}`);
   assert.deepEqual(loaded.game.state.trade, { timer: 0, orders: {}, last: null });
   assert.ok(loaded.game.rules.buildings.harbor, 'the continued game can build a harbour');
@@ -312,9 +312,9 @@ test('a save with a wrong trade record is refused as damaged', () => {
   for (const [name, tamper] of Object.entries(tampers)) {
     const save = throughText(saveGame(game));
     tamper(save.state);
-    assert.equal(loadGame(loadData(), save).reason, 'damaged', name);
+    assert.equal(loadGame(withoutCarts(loadData()), save).reason, 'damaged', name);
   }
-  assert.equal(loadGame(loadData(), throughText(saveGame(game))).ok, true);
+  assert.equal(loadGame(withoutCarts(loadData()), throughText(saveGame(game))).ok, true);
 });
 
 // ---- switching it off, and data mistakes ----------------------------------------------------
@@ -476,7 +476,8 @@ test('no harbour, or a harbour cut off by road: no ship', () => {
 // ---- the whole game ------------------------------------------------------------------------
 
 test('GATE: the standard game plays exactly as it did before trade, with or without it in the data', () => {
-  const withTrade = createGame(loadData());
+  // Carts, which came later, are left out on both sides.
+  const withTrade = createGame(withoutCarts(loadData()));
   const before = createGame(dataBefore(2));
   const a = runBot(withTrade, loadOrder('standard'));
   const b = runBot(before, loadOrder('standard'));

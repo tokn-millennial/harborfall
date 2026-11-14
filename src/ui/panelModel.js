@@ -4,7 +4,7 @@
 
 import { buildingIssue, canUpgrade, housesInRangeOf, staffing } from '../sim/index.js';
 import { MILLI } from '../sim/rules.js';
-import { amountText, clock, costText, issueLevel, reasonText, refundText, tradeCallText, tradeOrderText } from './text.js';
+import { amountText, cartTimeText, clock, costText, issueLevel, reasonText, refundText, tradeCallText, tradeOrderText } from './text.js';
 import { MAX_TRADE_LEVEL } from '../sim/trade.js';
 import { previewDemolish } from './tools.js';
 
@@ -55,6 +55,20 @@ export function panelModel(game, building, options = {}) {
     });
   }
 
+  // Carts: what waits in the yard, and how far the nearest warehouse is.
+  if (building.production && rules.carts) {
+    const yard = building.production.yard;
+    const waiting = rules.goodIds.filter((g) => yard[g] > 0).map((g) => amountText(rules, g, yard[g])).join(', ');
+    lines.push({ label: 'Waiting here', value: `${waiting || 'Nothing'} (room for ${rules.carts.yard})` });
+    const haul = building.production.haul;
+    if (haul && haul.tiles <= rules.carts.reachTiles) {
+      // Short, so it stays on one line beside its label: "7 road tiles · 3.5 s by cart".
+      lines.push({ label: 'Warehouse', value: `${haul.tiles} road ${haul.tiles === 1 ? 'tile' : 'tiles'} · ${cartTimeText(rules, haul.tiles)} by cart` });
+    } else if (haul) {
+      lines.push({ label: 'Warehouse', value: `${haul.tiles} road tiles. Carts go ${rules.carts.reachTiles}.`, level: 'bad' });
+    }
+  }
+
   if (building.production) {
     const p = def.production;
     const every = p.cycleTicks / rules.ticksPerSecond;
@@ -90,6 +104,12 @@ export function panelModel(game, building, options = {}) {
   if (def.storagePerGood > 0) {
     lines.push({ label: 'Storage', value: `${def.storagePerGood} of each good` });
     lines.push({ label: 'Island total', value: `${state.storageCap} of each good` });
+  }
+  if (rules.carts && def.carts > 0) {
+    const mine = state.carts.filter((c) => c.home === building.id);
+    const out = mine.filter((c) => c.phase !== 'home').length;
+    lines.push({ label: 'Carts', value: `${mine.length}, ${out === 0 ? 'all at home' : `${out} out`}` });
+    lines.push({ label: 'Reach', value: `${rules.carts.reachTiles} tiles by road` });
   }
 
   if (def.upkeepMilliPerMinute > 0) lines.push({ label: 'Upkeep', value: `${def.upkeepMilliPerMinute / MILLI} coins a minute` });

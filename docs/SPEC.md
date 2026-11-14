@@ -165,7 +165,7 @@ Phase 2 replaced the paper estimates with measurements. A bot played about 500 f
 |---|---|---|
 | One fisherman feeds about 20 residents | Exactly 20 | A fisherman makes 4 fish a minute and a resident eats 0.2. In play, 20 Farmers stayed fed for 30 minutes. |
 | A healthy 100-resident city earns about +40 a minute | +42.2 | Measured at the moment the bot won, with 100 Workers and 4 Farmers. |
-| A full win takes 25 to 40 minutes at 1x | 28.6 minutes | Standard build order on the shipped island. On 12 different islands: 25.9 to 28.6. |
+| A full win takes 25 to 40 minutes at 1x | 29.3 minutes since carts (Phase 19); 28.6 before | Standard build order on the shipped island. On 12 different islands, before carts: 25.9 to 28.6. |
 | A new player should not get stuck | No dead end found | Three bad openings all still win. See below. |
 
 ### The winning town
@@ -553,3 +553,58 @@ Added in Phase 18. A way to sell what the island has too much of and to buy what
 **Saved games.** A game saved before this phase still loads, with no orders and no ship on its way, and plays on exactly as before until you build a harbour.
 
 **Not in this phase:** prices that change with supply, more than one ship, buying goods the island cannot make, ships you send yourself, and a second island.
+
+## 20. Carts: goods travel by road
+
+Added in Phase 19. Until now, what a building made appeared in the stockpile the moment it was made. Now it has to be fetched.
+
+**The rule**
+- When a building makes something, it goes into the building's own **yard**, which holds 6.
+- Every warehouse keeps **3 carts**. A cart drives along the roads to a building with goods waiting, loads up to 4, drives back, and unloads into the stockpile. Only then can anything use them.
+- Carts drive 2 road tiles a second at 1x. A building 6 tiles from its warehouse by road gets its goods to the stockpile 6 seconds after they are made.
+- Each building is served by its **nearest warehouse by road**. A warehouse's carts serve only the buildings it is nearest to.
+- Carts go **30 road tiles at most**. A building farther than that from every warehouse is never collected. It is marked with a red !, and its panel and the tip line say so.
+- When a yard is full, the building stops and waits for a cart.
+- Idle carts set out for the building with the most goods waiting; if two have the same, the nearer one.
+- A cart never goes out for goods the stockpile has no room for. Such goods wait in the yard, and the building says "Storage is full", as before. If the store fills while a cart is on the road anyway (the trade ship bought some, say), the cart unloads what fits and the rest is lost. A cart is never stuck.
+
+**What does not travel**
+- Materials a workshop uses still come straight from the stockpile.
+- Houses still buy from markets as before. The trade ship still buys and sells from the stockpile.
+
+**Where you build now matters**
+
+| Three lumberjacks, two minutes | Wood that reached the stockpile |
+|---|---|
+| 4 to 6 road tiles from the warehouse | 72 of 72 |
+| 27 to 29 road tiles away | 56 of 72 |
+| 27 to 29 road tiles away, with a warehouse built beside them | 72 of 72 |
+
+A second warehouse helps twice: three more carts, and shorter trips for the buildings nearest to it.
+
+**What you see**
+- The carts on the map are now the real ones. Each cart you see is on its way to fetch goods, or bringing them back, loaded in the colour of the good. An empty cart on its way out carries nothing. Before this phase the carts were only for show.
+- A building's panel says what waits in its yard, "3 wood (room for 6)", and how far its warehouse is: "7 road tiles · 3.5 s by cart".
+- A warehouse's panel says how many carts it has and how many are out, and how far they reach.
+- A building waiting for a cart has an amber !. One beyond reach has a red !.
+- After 30 game seconds, the tip line says "Your carts cannot keep up. Build another warehouse near your workshops.", or names a building no cart can reach.
+
+**How it plays, measured by the bot.** A sensible, compact town barely notices; the bot builds close to its warehouse.
+
+| Build order | Without carts | With carts | Producer-minutes waiting for a cart |
+|---|---|---|---|
+| Standard | 28.6 | 29.3 | 3.2 |
+| Careless | 30.4 | 30.6 | 0 |
+| Bread first | 58.7 | 58.7 | 14.9 |
+| Merchant | 31.0 | 31.2 | 0 |
+| Second act, to 100 Artisans | 50.5 | 51.7 | 3.5 |
+| Standard, Hard | 36.9 | 37.0 | 4.8 |
+| Fishing village | 10.5 | 10.7 (gold) | 0 |
+| The weavers' guild | 20.0 | 20.7 (gold) | 2.7 |
+| Short-handed | 29.6 | 29.8 (gold) | 3.7 |
+
+Times quoted in earlier sections of this spec were measured before carts.
+
+**Saved games.** A game saved before this phase still loads: every warehouse gets its carts at home and every yard starts empty, and from then on it plays under the cart rule.
+
+**Not in this phase:** materials carried to workshops, carts that can be told where to go, more carts for a warehouse, roads of different speeds, and a way to see the 30-tile reach on the map.

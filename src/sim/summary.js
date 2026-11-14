@@ -5,6 +5,7 @@ import { incomeRates } from './economy.js';
 import { countAtLeast, countResidents } from './population.js';
 import { staffing } from './staff.js';
 import { tradeSummary } from './trade.js';
+import { cartsSummary, servedByCarts } from './carts.js';
 
 export function getSummary(game) {
   const { rules, state } = game;
@@ -24,6 +25,8 @@ export function getSummary(game) {
     coins: Math.floor(state.coinsMilli / MILLI),
     // The harbour: when the ship is due, what it carries, the orders, and its last call.
     trade: tradeSummary(game),
+    // Carts: how many there are and how many are out, and producers waiting for one or out of reach.
+    carts: cartsSummary(game),
     // Producers the player has closed.
     closedProducers: state.buildings.filter((b) => b.production?.closed).length,
     // Coins per minute at this moment.
@@ -73,6 +76,7 @@ export function medalFor(rules, wonAtTick) {
 // The one thing most wrong with a building right now, as a short code, or null
 // when it is fine. Used for warning markers and the info panel.
 //   no_road, missing_input, storage_full   producers and markets
+//   too_far, yard_full                     producers, with carts: out of a cart's reach, or waiting for one
 // A producer the player has closed has no issue: it is as the player wants it.
 //   no_market, no_<good>                   houses
 export function buildingIssue(game, building) {
@@ -85,7 +89,13 @@ export function buildingIssue(game, building) {
     return null;
   }
   if (def.requiresRoad && !building.connected) return 'no_road';
+  if (building.production && !servedByCarts(game.rules, building)) return 'too_far';
   const status = building.production?.status;
   if (status === 'missing_input' || status === 'storage_full') return status;
+  if (status === 'yard_full') {
+    // Waiting for a cart, or the cart is waiting for room in the stockpile.
+    const outputs = Object.keys(def.production.outputs);
+    return outputs.every((good) => game.state.goods[good] >= game.state.storageCap) ? 'storage_full' : 'yard_full';
+  }
   return null;
 }

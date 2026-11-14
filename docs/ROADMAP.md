@@ -1,6 +1,6 @@
 # Harborfall: Roadmap
 
-Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 18. Phases 0 to 17 by Claude Fable 5.2; Phase 18 finished by Claude Opus 5.5.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 19. Phases 0 to 17 by Claude Fable 5.2; Phases 18 and 19 by Claude Opus 5.5.
 
 This is a list of what could come next, in the order I would do it. **Nothing here is decided.** Every item is a proposal, and you choose. The working rule from the brief still stands: nothing gets built that you did not ask for.
 
@@ -8,8 +8,8 @@ Read `HANDOFF.md` first if you are picking the project up after a break.
 
 ## Where the project stands
 
-- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), undo with a first-game guide (Phase 11), a third kind of resident with a goal after the win (Phase 12), difficulty settings with two touches to the look (Phase 13), dust, chimney smoke and day and night (Phase 14), staff for buildings (Phase 15), closing a building for now (Phase 16), three scenarios with medals (Phase 17), and a harbour with a trade ship (Phase 18).
-- **Proven by machines:** 508 automated tests pass. A bot wins in 28.6 minutes. A script wins through the real UI and ends in exactly the bot's game.
+- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), undo with a first-game guide (Phase 11), a third kind of resident with a goal after the win (Phase 12), difficulty settings with two touches to the look (Phase 13), dust, chimney smoke and day and night (Phase 14), staff for buildings (Phase 15), closing a building for now (Phase 16), three scenarios with medals (Phase 17), a harbour with a trade ship (Phase 18), and carts that carry goods by road (Phase 19).
+- **Proven by machines:** 533 automated tests pass. A bot wins in 29.3 minutes. A script wins through the real UI and ends in exactly the bot's game.
 - **Checked by you:** you played for about 40 minutes on 2026-11-12. The game runs smoothly and the figures move well.
 - **Still not known:** whether you won and how long it took, how the sounds are, whether the guide helps someone new, and how any of it works on a Mac.
 
@@ -41,7 +41,8 @@ Each phase so far took one long working session. The sizes compare with that.
 | 16 | **Done, unplayed.** Close a building for now, to free its staff (a leftover of D2) | Small | The next thing that needed no choice from you. |
 | 17 | **Done, unplayed.** Three scenarios with medal times (the rest of D5) | Medium | The smallest of what was left. |
 | 18 | **Done, unplayed.** A harbour and a trade ship (most of D4) | Large | You said to proceed. The smaller of the two left. |
-| 19 onward | Real carriers (D3), and a second island (the rest of D4) | Large each | Each changes how the game plays, not just how long it lasts. They need your say first. **Everything I can safely do without your choice is done.** |
+| 19 | **Done, unplayed.** Carts carry finished goods by road to the warehouses (most of D3) | Large | You chose it. |
+| 20 onward | Materials carried to workshops (the rest of D3), and a second island (the rest of D4) | Large each | Each changes how the game plays, not just how long it lasts. They need your say first. **Everything I can safely do without your choice is done.** |
 | Any time | Put it online (E1) | Small | Independent of the rest. Read the privacy note there first. |
 
 ---
@@ -152,7 +153,9 @@ Every item here changes the rules. Each one needs new data, new tests, a new bot
 - **Left over:** kinds of resident that differ as staff, staff you can see walking to work, a harder setting where the rule bites in the first act, closing several buildings at once, and lower upkeep while closed.
 - **Size:** it took one session.
 
-### D3. Real logistics: carriers and warehouse range
+### D3. Real logistics: carriers and warehouse range (finished goods done in Phase 19)
+- **Done:** finished goods wait in a yard until a cart from the nearest warehouse fetches them, within 30 road tiles (`SPEC.md` section 20).
+- **Left over:** materials carried from the warehouse to workshops, reach drawn on the map, carts shared between warehouses.
 - **What you get:** goods are carried along roads, warehouses serve an area, and where you build starts to matter the way it does in the Anno games.
 - **Honest warning:** this is the largest change on the list. Today roads are a yes-or-no connection and all goods sit in one shared stockpile (`ARCHITECTURE.md` section 9). Carriers replace both ideas. Expect most production and storage tests to be rewritten.
 - **Size:** large, probably three sessions.
@@ -210,10 +213,10 @@ These are not features. They are debts and loose ends, smallest first.
 
 One line is enough. For example:
 
-> Phase 19: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
+> Phase 20: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
 
 or
 
-> Phase 19: build D3 from the roadmap. Show me the plan first.
+> Phase 20: carry materials to workshops too. Show me the plan first.
 
 The helper should then follow the working rules in `HANDOFF.md` section 6: plan first, one feature at a time, test everything itself, stop at the gate with the five-part report, and commit only after you approve.

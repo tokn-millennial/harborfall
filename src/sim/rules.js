@@ -192,6 +192,7 @@ export function compileRules(rawData) {
       requiresRoad: b.requiresRoad === true,
       staff: b.staff ?? 0, // people needed to run it (see staff.js)
       harbor: b.category === 'harbor', // a trade ship calls here (see trade.js)
+      carts: b.carts ?? 0, // carts kept here, that collect from producers (see carts.js)
       placement: b.placement ?? null,
       production: b.production
         ? {
@@ -260,6 +261,11 @@ export function compileRules(rawData) {
       freeBuilding: (config.start.freeBuildings ?? [])[0] ?? null,
     },
     win: { tier: config.win.tier, residents: config.win.residents },
+    // Carts: how fast they go, how much they carry, how much a producer's yard
+    // holds, and how far by road they will go. null: goods reach the stockpile at once.
+    carts: config.carts
+      ? { ticksPerTile: config.carts.ticksPerTile, load: config.carts.load, yard: config.carts.yard, reachTiles: config.carts.reachTiles }
+      : null,
     // Trade: how often the ship calls and how much it carries per harbour.
     // null switches trade off. Prices are per good, for the goods that have them.
     trade: config.trade

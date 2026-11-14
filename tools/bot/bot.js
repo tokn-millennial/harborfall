@@ -4,7 +4,7 @@
 // the step can be afforded, then does it. It records what it waited for, so a
 // run shows exactly where a build order slows down or gets stuck.
 
-import { execute, canUpgrade, getSummary, staffing, step as simStep } from '../../src/sim/index.js';
+import { buildingIssue, execute, canUpgrade, getSummary, staffing, step as simStep } from '../../src/sim/index.js';
 import { createPlanner } from './planner.js';
 import { createRng } from '../../src/sim/rng.js';
 
@@ -56,6 +56,7 @@ export function runBot(game, order, options = {}) {
   let lossTicks = 0;
   let shortStaffTicks = 0;      // time spent with too few staff
   let lowestStaffPercent = 100; // the slowest production ever ran
+  let cartWaitTicks = 0;        // producer-ticks spent with a full yard, waiting for a cart
   let roadsBuilt = 0;
 
   // A person's hands: after each action, a random time passes before the next.
@@ -190,6 +191,8 @@ export function runBot(game, order, options = {}) {
     simStep(game);
     if (state.coinsMilli === 0) zeroCoinTicks++;
     if (state.lastIncome && state.lastIncome.netMilli < 0) lossTicks++;
+    // Waiting for a cart, not for room in the stockpile: only more carts would help.
+    for (const b of state.buildings) if (b.production?.status === 'yard_full' && buildingIssue(game, b) === 'yard_full') cartWaitTicks++;
     const staffRatio = staffing(game).ratioMilli;
     if (staffRatio < 1000) {
       shortStaffTicks++;
@@ -234,6 +237,8 @@ export function runBot(game, order, options = {}) {
     zeroCoinMinutes: zeroCoinTicks / rules.ticksPerMinute,
     lossMinutes: lossTicks / rules.ticksPerMinute,
     shortStaffMinutes: shortStaffTicks / rules.ticksPerMinute,
+    // Producer-minutes lost waiting for a cart: 3 means, for example, three producers idle for a minute each.
+    cartWaitMinutes: cartWaitTicks / rules.ticksPerMinute,
     lowestStaffPercent,
   };
 }

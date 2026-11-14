@@ -28,7 +28,7 @@ Harborfall is a small Anno-style city builder for desktop browsers. The owner is
 
 ## Commands
 
-- `node --test` runs all tests (508 at the end of Phase 18). They must all pass before a gate.
+- `node --test` runs all tests (533 at the end of Phase 19). They must all pass before a gate.
 - `node tools/bot.mjs` plays a full headless game (also `careless`, `bread-first`, `--seed N`, `--pace typical`, `--steps`, `--map`). The standard order must still win inside 25 to 40 minutes. It is the balance gate, and `tests/bot.test.js` checks it.
 - `node tools/tune.mjs` compares balance variants. `node tools/pace.mjs` estimates a person's time. `node tools/print-map.mjs` prints the island.
 - `node serve.mjs` serves the game at `http://localhost:5173`, which opens on the title screen and saves the game in the browser. `?demo` shows a finished town. `?fresh` opens a new game with no title screen. Neither of those two ever saves.
@@ -77,3 +77,6 @@ Update these in the same phase as the change, before the gate:
 - Trade must stay a help, not a money machine. `tests/trade.test.js` checks on paper that no building earns more by selling all it makes than its staff would pay in taxes. Run it after changing any price, staff number or production time.
 - A game with no harbour must play exactly as it did before trade existed. Keep `stepTrade` returning early when there is none.
 - When you wait in the browser for something in the game, give the loop a limit. A loop waiting for a moment that never comes hangs the page, and the only way out is to close the tab.
+- `testGame` and `richGame` in `tests/helpers.js` switch carts off unless you pass `{ carts: true }`. A test of another rule sees goods arrive at once. Games made with `createGame(loadData())` have carts. A test game saved and loaded must be loaded against the same data: `loadGame(withoutCarts(loadData()), save)`.
+- A cart must never be able to get stuck. Before changing `stepCarts`, read `DECISIONS.md` D260: the first version starved the bot's town.
+- After any change to production or carts, run every bot order and scenario with carts on and off (see `SPEC.md` section 20 for the last figures), not just the standard one.

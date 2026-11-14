@@ -22,6 +22,8 @@
     "requiresRoad": false,
     "_storagePerGood": "Each warehouse adds this much room for every good in the shared island stockpile.",
     "storagePerGood": 100,
+    "_carts": "How many carts this warehouse keeps. They collect finished goods from producers: see 'carts' in config.json.",
+    "carts": 3,
     "visual": { "art": "warehouse", "color": "#6f7f96", "height": 1.45 }
   },
 

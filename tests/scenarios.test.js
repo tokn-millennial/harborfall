@@ -195,8 +195,8 @@ test('the weavers\' guild stalls without Farmer houses to staff it, and houses s
   const stalled = runBot(game, bare, { maxMinutes: 45 });
   assert.equal(stalled.won, false, 'the guild won with no one to staff it');
   assert.equal(getSummary(game).staff.short, true);
-  // Not a dead end: four more houses, and the town reaches its goal.
-  const rescued = runBot(game, { name: 'rescue', steps: [{ build: 'house', count: 4 }] }, { maxMinutes: 75 });
+  // Not a dead end: four more houses, and the upgrades it could not make before, and the town reaches its goal.
+  const rescued = runBot(game, { name: 'rescue', steps: [{ build: 'house', count: 4 }, { upgrade: 2, to: 'artisan' }] }, { maxMinutes: 75 });
   assert.equal(rescued.won, true, `still stuck with ${getSummary(game).win.current} Artisans`);
 });
 

@@ -9,7 +9,7 @@ import { panelModel } from '../src/ui/panelModel.js';
 import { reasonText, staffText, undoLabel } from '../src/ui/text.js';
 import { runBot } from '../tools/bot/bot.js';
 import { loadOrder } from '../tools/tune.mjs';
-import { buildMarket, line, place, richGame, road, run, snapshot } from './helpers.js';
+import { buildMarket, line, place, richGame, road, run, snapshot, withoutCarts } from './helpers.js';
 
 const throughText = (value) => JSON.parse(JSON.stringify(value));
 const close = (game, building) => execute(game, { action: 'close', id: building.id });
@@ -237,7 +237,7 @@ test('a game with closed buildings is saved and comes back exactly', () => {
   close(game, jacks[1]);
   close(game, jacks[3]);
   run(game, 77);
-  const loaded = loadGame(loadData(), throughText(saveGame(game)));
+  const loaded = loadGame(withoutCarts(loadData()), throughText(saveGame(game)));
   assert.equal(loaded.ok, true, `${loaded.reason}: ${loaded.detail}`);
   assert.equal(snapshot(loaded.game), snapshot(game));
   run(game, 900);
@@ -245,7 +245,7 @@ test('a game with closed buildings is saved and comes back exactly', () => {
   assert.equal(snapshot(loaded.game), snapshot(game));
   // Saved right after a close, the undo comes back too.
   close(game, jacks[0]);
-  const fresh = loadGame(loadData(), throughText(saveGame(game)));
+  const fresh = loadGame(withoutCarts(loadData()), throughText(saveGame(game)));
   assert.equal(fresh.ok, true, `${fresh.reason}: ${fresh.detail}`);
   assert.equal(execute(fresh.game, { action: 'undo' }).ok, true);
   assert.equal(fresh.game.state.buildings.find((b) => b.id === jacks[0].id).production.closed, undefined);
@@ -270,9 +270,9 @@ test('a save with a wrong closed mark is refused as damaged', () => {
   for (const [name, tamper] of Object.entries(tampers)) {
     const save = throughText(saveGame(game));
     tamper(save);
-    assert.equal(loadGame(loadData(), save).reason, 'damaged', name);
+    assert.equal(loadGame(withoutCarts(loadData()), save).reason, 'damaged', name);
   }
-  assert.equal(loadGame(loadData(), throughText(saveGame(game))).ok, true);
+  assert.equal(loadGame(withoutCarts(loadData()), throughText(saveGame(game))).ok, true);
 });
 
 test('a game in which nothing is ever closed holds no trace of closing', () => {

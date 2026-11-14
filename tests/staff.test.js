@@ -11,7 +11,7 @@ import { panelModel } from '../src/ui/panelModel.js';
 import { buildingBlurb, staffSourceText, staffText } from '../src/ui/text.js';
 import { runBot } from '../tools/bot/bot.js';
 import { loadOrder } from '../tools/tune.mjs';
-import { buildMarket, dataBefore, fillHouse, HOUSE_SITES, line, place, richGame, road, run, snapshot, testGame } from './helpers.js';
+import { buildMarket, dataBefore, fillHouse, HOUSE_SITES, line, place, richGame, road, run, snapshot, testGame, withoutCarts } from './helpers.js';
 
 const throughText = (value) => JSON.parse(JSON.stringify(value));
 const noStaffRule = (data) => { delete data.config.workforce; };
@@ -215,7 +215,7 @@ test('a game saved while short of staff carries on exactly where it was', () => 
   game.state.goods.wood = 0;
   run(game, 333);
   assert.ok(game.state.staffClock > 0, 'the test needs a half-saved-up tick of work');
-  const loaded = loadGame(loadData(), throughText(saveGame(game)));
+  const loaded = loadGame(withoutCarts(loadData()), throughText(saveGame(game)));
   assert.equal(loaded.ok, true, `${loaded.reason}: ${loaded.detail}`);
   assert.equal(loaded.game.state.staffClock, game.state.staffClock);
   run(game, 500);
@@ -229,9 +229,12 @@ test('the stamps that saved games out in the world carry are still recognised', 
   // changed, and every game saved back then will be refused. Be sure you mean it.
   const rules = compileRules(loadData());
   // Phase 18 added a third: games saved in Phases 15 to 17, before trade.
-  assert.deepEqual(rules.olderStamps.map((o) => o.stamp), ['6fe08f1bee9bb754', 'b16fd0a9142282c9', '10d0dc80671f7e66']);
-  assert.deepEqual(rules.olderStamps.map((o) => o.configAdded), [['milestones', 'workforce', 'trade'], ['workforce', 'trade'], ['trade']]);
+  // Phase 19 a fourth: games saved in Phase 18, before carts.
+  assert.deepEqual(rules.olderStamps.map((o) => o.stamp), ['6fe08f1bee9bb754', 'b16fd0a9142282c9', '10d0dc80671f7e66', 'fc1b9e1dd0f19bb7']);
+  assert.deepEqual(rules.olderStamps.map((o) => o.configAdded), [['milestones', 'workforce', 'trade', 'carts'], ['workforce', 'trade', 'carts'], ['trade', 'carts'], ['carts']]);
   assert.equal(createGame(dataBefore(2)).rules.stamp, '10d0dc80671f7e66');
+  assert.equal(createGame(dataBefore(3)).rules.stamp, 'fc1b9e1dd0f19bb7');
+  assert.equal(createGame(withoutCarts(loadData())).rules.stamp, 'fc1b9e1dd0f19bb7', 'with carts taken out, the data is that of Phase 18');
   assert.equal(createGame(dataBefore(1)).rules.stamp, 'b16fd0a9142282c9');
   assert.equal(createGame(dataBefore(0)).rules.stamp, '6fe08f1bee9bb754');
   // A Hard game of Phases 12 to 14.
@@ -239,6 +242,7 @@ test('the stamps that saved games out in the world carry are still recognised', 
   assert.equal(createGame(loadData(), { difficulty: 'hard' }).rules.olderStamps[1].stamp, 'd002f8878cb41b57');
   assert.notEqual(rules.stamp, 'b16fd0a9142282c9', 'adding staff is a change of rules');
   assert.notEqual(rules.stamp, '10d0dc80671f7e66', 'adding trade is a change of rules');
+  assert.notEqual(rules.stamp, 'fc1b9e1dd0f19bb7', 'adding carts is a change of rules');
 });
 
 test('the list of later additions may be one round or several', () => {
@@ -251,6 +255,7 @@ test('the list of later additions may be one round or several', () => {
   assert.equal(rulesStamp(data, steps), '6fe08f1bee9bb754');
   assert.equal(rulesStamp(data, steps.slice(1)), 'b16fd0a9142282c9');
   assert.equal(rulesStamp(data, steps.slice(2)), '10d0dc80671f7e66');
+  assert.equal(rulesStamp(data, steps.slice(3)), 'fc1b9e1dd0f19bb7');
 });
 
 test('a game saved before staff existed can be continued, with everything it had', () => {
@@ -260,7 +265,7 @@ test('a game saved before staff existed can be continued, with everything it had
   delete save.state.staffClock; // a save that old has no such entry
   assert.equal(save.rulesStamp, 'b16fd0a9142282c9');
 
-  const loaded = loadGame(loadData(), save);
+  const loaded = loadGame(withoutCarts(loadData()), save);
   assert.equal(loaded.ok, true, `${loaded.reason}: ${loaded.detail}`);
   const game = loaded.game;
   assert.equal(game.state.staffClock, 0);
@@ -275,9 +280,9 @@ test('a game saved before staff existed can be continued, with everything it had
   assert.equal(stableText(game.state), stableText(before.state));
 
   // And it saves and loads from here on as a game of today.
-  const again = loadGame(loadData(), throughText(saveGame(game)));
+  const again = loadGame(withoutCarts(loadData()), throughText(saveGame(game)));
   assert.equal(again.ok, true);
-  assert.equal(again.game.rules.stamp, compileRules(loadData()).stamp);
+  assert.equal(again.game.rules.stamp, compileRules(withoutCarts(loadData())).stamp);
   assert.equal(snapshot(again.game), snapshot(game));
 });
 

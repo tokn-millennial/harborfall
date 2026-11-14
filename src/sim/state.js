@@ -46,6 +46,7 @@ export function createGame(rawData, options = {}) {
     milestones: rules.milestones.map(() => null), // the tick each goal after the win was reached
     staffClock: 0, // thousandths of a tick of work saved up while short of staff (see staff.js)
     trade: createTradeState(), // the ship's timer, the standing orders and the last call (see trade.js)
+    carts: [], // every warehouse's carts, at home or on the road (see carts.js)
     undo: null, // what is needed to take back the last command (see undo.js)
   };
   const game = { rules, state };

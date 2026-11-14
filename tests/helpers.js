@@ -48,13 +48,25 @@ export function mapFromRows(rows, start = TEST_START) {
 //   change(data)  edit the data files before the game is built
 //   coins, goods  override the starting stock
 //   rows, start   use a different hand-drawn map
-export function testGame({ change, coins, goods, rows = TEST_ISLAND, start = TEST_START } = {}) {
-  const data = loadData();
+//   carts         true to keep carts on (see tests/carts.test.js). They are off
+//                 by default here, so a test of another rule sees goods arrive
+//                 the moment they are made, as they did before Phase 19. Games
+//                 made with createGame(loadData()) have them, as players do.
+export function testGame({ change, coins, goods, rows = TEST_ISLAND, start = TEST_START, carts = false } = {}) {
+  const data = carts ? loadData() : withoutCarts(loadData());
   if (change) change(data);
   const game = createGame(data, { map: mapFromRows(rows, start) });
   if (coins !== undefined) game.state.coinsMilli = coins * 1000;
   if (goods) Object.assign(game.state.goods, goods);
   return game;
+}
+
+// The data files with carts switched off: goods reach the stockpile at once.
+// Warehouses keep no carts either, so this is exactly the data of Phase 18.
+export function withoutCarts(data) {
+  delete data.config.carts;
+  for (const b of Object.values(data.buildings)) if (b !== null && typeof b === 'object') delete b.carts;
+  return data;
 }
 
 // A game with plenty of everything, for tests that are not about cost.
@@ -127,7 +139,7 @@ export function fillHouse(game, house) {
 // The data files as they were when only the first `rounds` rounds of
 // additions (config.addedLater) had been made. 0 is the game as first
 // released; 1 is with wool, cloth and Artisans but before staff; 2 is with
-// staff but before the harbour and trade.
+// staff but before the harbour and trade; 3 is with trade but before carts.
 export function dataBefore(rounds) {
   const data = loadData();
   const steps = data.config.addedLater;

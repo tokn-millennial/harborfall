@@ -88,11 +88,12 @@ function demolish(game, { x, y }) {
     const def = rules.buildings[building.type];
     if (def.category === 'storage' && countCategory(game, 'storage') === 1) return fail('last_warehouse');
     const index = state.buildings.indexOf(building);
+    const carts = JSON.parse(JSON.stringify(state.carts)); // a demolish can send carts home, or take them away
     removeBuilding(game, building);
     refresh(game);
     // The free starting building cost nothing, so it returns nothing.
     const given = building.free ? { coinsMilli: 0, goods: {} } : refund(game, def.cost, ratio);
-    remember(game, { kind: 'demolish', building: JSON.parse(JSON.stringify(building)), index, given, statuses });
+    remember(game, { kind: 'demolish', building: JSON.parse(JSON.stringify(building)), index, given, statuses, carts });
     return { ok: true, removed: building.type };
   }
 

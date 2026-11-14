@@ -65,6 +65,14 @@
     "perResident": 0.5
   },
 
+  "_carts": "Finished goods travel by road. A producer puts what it makes in its yard, which holds 'yard' units. A cart from the nearest warehouse by road fetches them, 'load' at a time, taking 'ticksPerTile' ticks (tenths of a second) for each road tile each way. A producer more than 'reachTiles' road tiles from every warehouse is never collected. How many carts a warehouse keeps is in buildings.json. Remove this whole entry and goods reach the stockpile the moment they are made.",
+  "carts": {
+    "ticksPerTile": 5,
+    "load": 4,
+    "yard": 6,
+    "reachTiles": 30
+  },
+
   "_trade": "The trade ship. While the island has a Harbour linked to a warehouse, a ship calls every 'shipEverySeconds' of game time. On each call it carries at most 'unitsPerHarbor' units for each such Harbour, sold and bought together. What it sells and buys is set by the player in the Harbour's panel. Prices are in goods.json. Remove this whole entry to switch trade off.",
   "trade": {
     "shipEverySeconds": 120,
@@ -99,6 +107,10 @@
       "buildings": ["harbor"],
       "goodSettings": ["trade"],
       "config": ["trade"]
+    },
+    {
+      "buildingSettings": ["carts"],
+      "config": ["carts"]
     }
   ]
 }

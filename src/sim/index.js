@@ -13,11 +13,12 @@ import { saveGame, loadGame, SAVE_FORMAT } from './save.js';
 import { undoStatus } from './undo.js';
 import { staffing } from './staff.js';
 import { stepTrade, tradeSummary, tradeOrderReason } from './trade.js';
+import { cartsSummary, servedByCarts, stepCarts } from './carts.js';
 
 export {
   createGame, execute, canPlace, siteReason, buildingAt, buildingById,
   countResidents, isSatisfied, getSummary, buildingIssue, inMarketRange, housesInRangeOf,
-  saveGame, loadGame, SAVE_FORMAT, undoStatus, staffing, medalFor, tradeSummary,
+  saveGame, loadGame, SAVE_FORMAT, undoStatus, staffing, medalFor, tradeSummary, cartsSummary, servedByCarts,
 };
 
 // Checks a trade order without giving it. Never changes the game.
@@ -35,9 +36,10 @@ export function canUpgrade(game, id) {
 // Advances the game by exactly one tick. The order below never changes.
 export function step(game) {
   game.state.tick++;       // 1. the clock
-  stepProduction(game);    // 2. producers work and deliver
-  stepHouses(game);        // 3. houses buy goods, residents move in or out
-  stepTrade(game);         // 4. the trade ship, when it is due
-  settleIncome(game);      // 5. taxes, base income and upkeep (on its interval)
-  checkWin(game);          // 6. the win check
+  stepProduction(game);    // 2. producers work, and put what they make in their yards
+  stepCarts(game);         // 3. carts collect from the yards and unload at warehouses
+  stepHouses(game);        // 4. houses buy goods, residents move in or out
+  stepTrade(game);         // 5. the trade ship, when it is due
+  settleIncome(game);      // 6. taxes, base income and upkeep (on its interval)
+  checkWin(game);          // 7. the win check
 }

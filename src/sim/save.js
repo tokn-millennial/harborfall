@@ -11,6 +11,7 @@ import { refresh } from './refresh.js';
 import { footprint, inBounds, tileIndex } from './grid.js';
 import { undoProblem } from './undo.js';
 import { createTradeState, tradeProblem } from './trade.js';
+import { cartsFor, cartsProblem, recomputeHauls } from './carts.js';
 
 export const SAVE_FORMAT = 1;
 const APP = 'harborfall';
@@ -69,6 +70,15 @@ export function loadGame(rawData, save) {
   }
   // A save from before undo existed has no undo record. That is fine: there is nothing to undo.
   if (state !== null && typeof state === 'object' && state.undo === undefined) state.undo = null;
+  // A save from before carts existed: empty yards, and every warehouse's carts at home.
+  const beforeCarts = older !== null && older.configAdded.includes('carts');
+  let addCarts = false;
+  if (state !== null && typeof state === 'object' && Array.isArray(state.buildings)) {
+    for (const b of state.buildings) {
+      if (b?.production && typeof b.production === 'object' && (beforeCarts || b.production.yard === undefined)) b.production.yard = {};
+    }
+    if (beforeCarts || state.carts === undefined) addCarts = true;
+  }
   // A save from before trade existed has no orders and no ship on its way.
   if (state !== null && typeof state === 'object' && state.trade === undefined) state.trade = createTradeState();
   // A save from before staff existed has saved up no work. It starts from nothing.
@@ -78,7 +88,13 @@ export function loadGame(rawData, save) {
     if (state.goods !== null && typeof state.goods === 'object') for (const good of rules.goodIds) state.goods[good] ??= 0;
     if (older.configAdded.includes('milestones')) state.milestones = rules.milestones.map(() => null);
   }
-  const problem = stateProblem(rules, state) ?? tradeProblem(rules, state) ?? undoProblem(rules, state);
+  let problem = stateProblem(rules, state);
+  if (!problem && addCarts) {
+    state.carts = cartsFor(rules, state.buildings);
+    // How far each producer is from a warehouse was never saved. Work it out now.
+    recomputeHauls({ rules, state });
+  }
+  problem ??= tradeProblem(rules, state) ?? cartsProblem(rules, state) ?? undoProblem(rules, state);
   if (problem) return fail('damaged', problem);
 
   // Everything worked out from what is built where (road connections, storage,

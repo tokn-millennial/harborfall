@@ -7,7 +7,7 @@ import { createGame, execute, loadGame, saveGame, step, SAVE_FORMAT } from '../s
 import { rulesStamp, withSeed } from '../src/sim/rules.js';
 import { runBot } from '../tools/bot/bot.js';
 import { loadOrder } from '../tools/tune.mjs';
-import { mapFromRows, run, snapshot, testGame, TEST_ISLAND } from './helpers.js';
+import { mapFromRows, run, snapshot, testGame, TEST_ISLAND, withoutCarts } from './helpers.js';
 import { playMiniCity } from './scenario.js';
 
 // A save as it would come back from storage: through text and out again.
@@ -249,7 +249,7 @@ test('a save that does not describe a possible game is refused as damaged', () =
 test('a game on a hand-made island saves and loads too', () => {
   const game = testGame();
   playMiniCity(game);
-  const loaded = reload(game);
+  const loaded = reload(game, withoutCarts(loadData())); // test games have carts off
   assert.equal(snapshot(loaded), snapshot(game));
   for (let i = 0; i < 2000; i++) { step(game); step(loaded); }
   assert.equal(snapshot(loaded), snapshot(game));

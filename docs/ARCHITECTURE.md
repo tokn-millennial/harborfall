@@ -68,6 +68,7 @@ Harborfall/
       economy.js          Taxes, base income, upkeep, paying costs, refunds.
       commands.js         Applies a command: place, road, demolish, upgrade, close, reopen, trade.
       trade.js            The harbour's ship: its timer, the standing orders, and each call.
+      carts.js            Carts: yards, the way to the nearest warehouse, trips, and loading.
       win.js              The win check.
       summary.js          The numbers the HUD, bot and reports read.
       save.js             Turns a game into plain data and back, and refuses a save that cannot be trusted.
@@ -205,11 +206,12 @@ The `needs_...` and `no_...` codes are built from the terrain or good named in t
 ### What happens in one tick, in order
 
 1. The tick counter goes up by one.
-2. Producers advance their cycles, oldest building first. If the town is short of staff, this step is skipped on some ticks (section 18).
-3. Houses buy goods, then residents move in or out, oldest house first.
-4. The trade ship calls, when it is due (section 21).
-5. Income is settled, when the 6 second interval is due.
-6. The win check runs.
+2. Producers advance their cycles, oldest building first, putting what they make in their yards. If the town is short of staff, this step is skipped on some ticks (section 18).
+3. Carts move, load and unload, and idle carts set out (section 22).
+4. Houses buy goods, then residents move in or out, oldest house first.
+5. The trade ship calls, when it is due (section 21).
+6. Income is settled, when the 6 second interval is due.
+7. The win check runs.
 
 The order is fixed so results are repeatable.
 
@@ -543,3 +545,16 @@ All of it is in `src/sim/trade.js`.
 - **The ship on the map** is worked out in `src/render/life.js` from the timer and the last call, so it needs nothing stored and is always in step with the game. It is drawn in `src/render/art/actors.js`.
 - **The panel.** `panelModel` lists one row per tradable good. Each button carries the whole command it gives as text, `trade:good:mode:level`, so the screen code only passes it on.
 - **The bot** understands a build-order step `{ "trade": "wood", "mode": "sell", "level": 60 }`, and so does `tools/ui-playthrough.js`, which gives it by clicking the harbour's panel. `tools/bot/orders/merchant.json` uses it.
+
+## 22. Carts
+
+All of it is in `src/sim/carts.js`.
+
+- **What is stored.** `state.carts` lists every warehouse's carts: home warehouse, what it is doing (`home`, `out` or `back`), the producer it is going to, the length of its trip and how much is left, and its load. Each producer's record gains `yard` (goods waiting) and `haul` (its nearest warehouse by road and how many road tiles away).
+- **`haul` is worked out, like `connected`.** `recomputeHauls` runs in `refresh` after the road connections: one search outward along the roads from every warehouse at once, with warehouses earlier in the list winning ties. Loading checks it against a fresh calculation, as it does connections.
+- **A trip's length is fixed when the cart sets out**: road tiles times `ticksPerTile`. Changing the roads does not change a trip already under way.
+- **Buildings come and go with their carts.** `addBuilding` gives a warehouse its carts; `removeBuilding` takes them away, and turns back any cart on its way to a producer that is gone. A demolish keeps a copy of all the carts in its undo note, so undoing it puts them back exactly. The random undo test in `tests/carts.test.js` checks this.
+- **The rule can be switched off.** Without `config.carts`, production puts goods straight into the stockpile as before, `state.carts` stays empty, and nothing on screen mentions carts.
+- **Tests.** `testGame` and `richGame` in `tests/helpers.js` now switch carts off unless asked (`{ carts: true }`), so a test of another rule sees goods arrive at once, as it was written to. Games made with `createGame(loadData())`, which includes every bot test and every whole-game test, have carts, as players do. `withoutCarts(data)` gives the data of Phase 18 exactly.
+- **On the map.** `src/render/life.js` draws each cart that is on the road at its true place: it finds the road route between the cart's warehouse and its producer, and places the cart the share of the way the game says it has come. Routes are kept until a road or building changes. With the rule off, the old carts for show are drawn instead.
+- **The bot** reports `cartWaitMinutes`: producer-minutes spent waiting for a cart, not counting waits for room in the stockpile, which more carts would not cure.

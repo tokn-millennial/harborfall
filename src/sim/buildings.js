@@ -4,6 +4,7 @@
 import { footprint, inBounds, tileIndex } from './grid.js';
 import { createProductionState } from './production.js';
 import { createHouseState } from './population.js';
+import { cartsArrive, cartsLose } from './carts.js';
 
 export function addBuilding(game, type, x, y, { free = false } = {}) {
   const { rules, state } = game;
@@ -16,6 +17,7 @@ export function addBuilding(game, type, x, y, { free = false } = {}) {
   for (const [tx, ty] of footprint(x, y, def.w, def.h)) {
     state.occupancy[tileIndex(state.map, tx, ty)] = building.id;
   }
+  cartsArrive(game, building);
   return building;
 }
 
@@ -26,6 +28,7 @@ export function removeBuilding(game, building) {
     state.occupancy[tileIndex(state.map, tx, ty)] = 0;
   }
   state.buildings.splice(state.buildings.indexOf(building), 1);
+  cartsLose(game, building);
 }
 
 export function buildingById(game, id) {

@@ -5,7 +5,9 @@
 // the game depends on it: goods still move the instant they are made. The
 // little figures only show what the game already knows.
 //   - Walkers: more of them the more residents there are.
-//   - Carts:   one sets out when a producer finishes a batch.
+//   - Carts:   with the cart rule on (config.json, "carts"), these are the real
+//              carts of the game, drawn where the game says they are. With it
+//              off, one sets out for show when a producer finishes a batch.
 //   - Boats:   out at sea while the fisherman is working, home when he is not.
 //   - Ships:   sailing in as the trade ship's call comes due, tied up at the
 //              harbour for a moment after it, then sailing away.
@@ -60,6 +62,8 @@ export function createLife(rules, seed = 7) {
   let nextId = 1;
   let walkers = [];
   let carts = [];
+  let cartRoutes = new Map();     // "warehouse>producer" -> the road tiles between them
+  let routesFor = null;           // the roads those routes were worked out on
   let seen = new Map();          // producer id -> its work timer last time
   let cartSentAt = new Map();    // producer id -> tick its last cart left
   let boatWaters = new Map();    // fisherman id -> { home, out } or null
@@ -81,6 +85,8 @@ export function createLife(rules, seed = 7) {
     cartSentAt = new Map();
     boatWaters = new Map();
     shipWaters = new Map();
+    cartRoutes = new Map();
+    routesFor = null;
     fresh = true;
   }
 
@@ -279,6 +285,57 @@ export function createLife(rules, seed = 7) {
 
   const ease = (t) => t * t * (3 - 2 * t);
 
+  // ---- the real carts ------------------------------------------------------------
+  // A short fingerprint of the roads and buildings, so routes are worked out
+  // again only when either changes.
+  function roadsKey(state) {
+    let h = state.buildings.length;
+    for (let i = 0; i < state.roads.length; i++) if (state.roads[i] === 1) h = (Math.imul(h, 31) + i + 1) >>> 0;
+    return h;
+  }
+
+  // A cart on its trip goes along the shortest road between its warehouse and
+  // the producer, the share of the way the game says it has come.
+  function realCarts(state) {
+    const key = roadsKey(state);
+    if (key !== routesFor) {
+      cartRoutes = new Map();
+      routesFor = key;
+    }
+    const byId = new Map(state.buildings.map((b) => [b.id, b]));
+    const shown = [];
+    state.carts.forEach((c, index) => {
+      if (c.phase === 'home' || c.target === null || c.trip === 0) return;
+      const producer = byId.get(c.target);
+      if (!producer) return;
+      const routeKey = `${c.home}>${c.target}`;
+      if (!cartRoutes.has(routeKey)) cartRoutes.set(routeKey, routeToStorage(state, producer, new Set([c.home])));
+      const route = cartRoutes.get(routeKey);
+      if (!route || route.length === 0) return;
+      // route[0] is beside the producer and the last tile beside the warehouse.
+      const last = route.length - 1;
+      const done = 1 - c.left / c.trip; // 0 just set off, 1 arrived
+      const at = c.phase === 'out' ? last * (1 - done) : last * done;
+      const i0 = Math.min(last, Math.floor(at));
+      const i1 = Math.min(last, i0 + 1);
+      const t = at - i0;
+      const [ax, ay] = route[i0];
+      const [bx, by] = route[i1];
+      // Heading: towards the producer on the way out, towards the warehouse on the way back.
+      const [px, py] = route[Math.max(0, i1 - 1)];
+      const [qx, qy] = route[i1];
+      const sign = c.phase === 'out' ? -1 : 1;
+      const good = rules.goodIds.find((g) => (c.load[g] ?? 0) > 0) ?? null;
+      shown.push({
+        kind: 'cart', id: `cart-${c.home}-${index}`, good, look: c.home * 7 + index,
+        x: ax + (bx - ax) * t + 0.5, y: ay + (by - ay) * t + 0.5,
+        dx: (qx - px) * sign, dy: (qy - py) * sign,
+        stride: (c.trip - c.left) / rules.carts.ticksPerTile,
+      });
+    });
+    return shown;
+  }
+
   // ---- one update ----------------------------------------------------------------
   // Brings everything up to the game's current time and returns what to draw.
   function update(game) {
@@ -314,9 +371,10 @@ export function createLife(rules, seed = 7) {
     // Too many (people moved out): the extra ones head indoors.
     for (let i = wanted; i < walkers.length; i++) walkers[i].life = Math.min(walkers[i].life, 0);
 
-    // Carts: a producer whose work timer has dropped back has just delivered.
+    // Carts for show, when the game has no real ones: a producer whose work
+    // timer has dropped back has just delivered.
     const nowSeen = new Map();
-    for (const b of producers) {
+    for (const b of rules.carts ? [] : producers) {
       const progress = b.production.progress;
       const before = seen.get(b.id);
       nowSeen.set(b.id, progress);
@@ -377,6 +435,9 @@ export function createLife(rules, seed = 7) {
       });
     }
     boatWaters = boatsNow;
+
+    // The real carts, each where the game says it is on its trip.
+    if (rules.carts && state.carts) actors.push(...realCarts(state));
 
     // The trade ship: worked out from the ship's own timer and its last call,
     // so it is always in step with the game and needs nothing remembered.

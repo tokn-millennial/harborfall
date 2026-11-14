@@ -7,7 +7,7 @@ import { canPlace, canUpgrade, createGame, execute, loadGame, saveGame, step, un
 import { rulesStamp } from '../src/sim/rules.js';
 import { reasonText, undoLabel } from '../src/ui/text.js';
 import { createRng } from '../src/sim/rng.js';
-import { line, place, richGame, road, run, runSeconds, snapshot, testGame } from './helpers.js';
+import { line, place, richGame, road, run, runSeconds, snapshot, testGame, withoutCarts } from './helpers.js';
 import { playMiniCity } from './scenario.js';
 
 const undo = (game) => execute(game, { action: 'undo' });
@@ -307,7 +307,7 @@ test('what is waiting to be undone is saved with the game, and works after loadi
   for (const act of cases) {
     act();
     run(game, 30);
-    const loaded = loadGame(loadData(), JSON.parse(JSON.stringify(saveGame(game))));
+    const loaded = loadGame(withoutCarts(loadData()), JSON.parse(JSON.stringify(saveGame(game))));
     assert.equal(loaded.ok, true, `${loaded.reason}: ${loaded.detail}`);
     assert.equal(snapshot(loaded.game), snapshot(game));
     assert.equal(undo(loaded.game).ok, true);
@@ -320,7 +320,7 @@ test('a game saved before undo existed still loads, with nothing to undo', () =>
   const { game } = town();
   const save = JSON.parse(JSON.stringify(saveGame(game)));
   delete save.state.undo;
-  const loaded = loadGame(loadData(), save);
+  const loaded = loadGame(withoutCarts(loadData()), save);
   assert.equal(loaded.ok, true, `${loaded.reason}: ${loaded.detail}`);
   assert.equal(loaded.game.state.undo, null);
   assert.equal(snapshot(loaded.game), snapshot(game));
@@ -348,11 +348,11 @@ test('a saved game with a broken undo record is refused as damaged', () => {
   for (const [what, tamper] of Object.entries(tampering)) {
     const save = JSON.parse(JSON.stringify(saveGame(game)));
     tamper(save.state);
-    const result = loadGame(loadData(), save);
+    const result = loadGame(withoutCarts(loadData()), save);
     assert.equal(result.ok, false, `${what} was accepted`);
     assert.equal(result.reason, 'damaged', what);
   }
-  assert.equal(loadGame(loadData(), JSON.parse(JSON.stringify(saveGame(game)))).ok, true);
+  assert.equal(loadGame(withoutCarts(loadData()), JSON.parse(JSON.stringify(saveGame(game)))).ok, true);
 });
 
 // ---- wording ---------------------------------------------------------------------

@@ -64,6 +64,9 @@ console.log(`At the end: ${result.summary.coins} coins, net ${inc.net >= 0 ? '+'
 console.log(`Residents: ${Object.entries(result.summary.residents).map(([tier, n]) => `${n} ${game.rules.tiers[tier].name}s`).join(', ')}.`);
 console.log(`Buildings: ${Object.entries(result.counts).map(([t, n]) => `${n} ${t}`).join(', ')}, ${result.roadsBuilt} road tiles.`);
 console.log(`Time at zero coins: ${result.zeroCoinMinutes.toFixed(1)} min. Time losing money: ${result.lossMinutes.toFixed(1)} min.`);
+if (result.summary.carts.on) {
+  console.log(`Carts: ${result.summary.carts.total}. Producer-minutes spent waiting for a cart: ${result.cartWaitMinutes.toFixed(1)}.`);
+}
 if (result.summary.staff.on) {
   const st = result.summary.staff;
   console.log(`Staff at the end: ${st.needed} needed, ${st.available} in town. Time short of staff: ${result.shortStaffMinutes.toFixed(1)} min${result.shortStaffMinutes > 0 ? ` (slowest: ${result.lowestStaffPercent}% speed)` : ''}.`);

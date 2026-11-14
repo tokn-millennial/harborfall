@@ -6,6 +6,7 @@
 //   missing_input  the stockpile lacks what it needs to start
 //   working        a cycle is in progress
 //   storage_full   finished goods are waiting for room in the stockpile
+//   yard_full      finished goods are waiting for a cart (see carts.js)
 //
 // A closed producer carries `closed: true` in its record. An open one has no
 // such entry at all, so games saved before closing existed need no change.
@@ -14,7 +15,7 @@
 import { staffWorksThisTick } from './staff.js';
 
 export function createProductionState() {
-  return { status: 'no_road', active: false, progress: 0 };
+  return { status: 'no_road', active: false, progress: 0, yard: {} };
 }
 
 // Keeps the status honest right after roads change, even while paused.
@@ -64,8 +65,21 @@ export function stepProduction(game) {
       continue;
     }
 
-    // Finished: deliver only if every output fits.
+    // Finished. With carts, the goods go to the yard, if there is room, to be collected.
     const outputs = Object.entries(def.outputs);
+    if (rules.carts) {
+      const units = Object.values(p.yard).reduce((sum, n) => sum + n, 0);
+      if (units + outputs.reduce((sum, [, n]) => sum + n, 0) <= rules.carts.yard) {
+        for (const [good, amount] of outputs) p.yard[good] = (p.yard[good] ?? 0) + amount;
+        p.active = false;
+        p.progress = 0;
+        p.status = 'working';
+      } else {
+        p.status = 'yard_full';
+      }
+      continue;
+    }
+    // Without carts, straight to the stockpile, only if every output fits.
     if (outputs.every(([good, amount]) => goods[good] + amount <= state.storageCap)) {
       for (const [good, amount] of outputs) goods[good] += amount;
       p.active = false;

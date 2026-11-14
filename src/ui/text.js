@@ -81,6 +81,11 @@ export function coinText(milli) {
   return `${coins} ${coins === 1 ? 'coin' : 'coins'}`;
 }
 
+// How long a cart takes one way over this many road tiles: "6 s".
+export function cartTimeText(rules, tiles) {
+  return seconds(rules, tiles * rules.carts.ticksPerTile);
+}
+
 // A trade order in words: "Sell above 50", "Buy up to 20", "Off".
 export function tradeOrderText(order) {
   if (!order) return 'Off';
@@ -104,6 +109,9 @@ export function buildingBlurb(rules, id) {
   const lines = [];
   if (def.category === 'road') lines.push('Links buildings to a warehouse. Drag to lay a line.');
   if (def.category === 'storage') lines.push(`Adds room for ${def.storagePerGood} more of each good.`);
+  if (def.category === 'storage' && rules.carts && def.carts > 0) {
+    lines.push(`Keeps ${plural(def.carts, 'cart')} that collect goods within ${rules.carts.reachTiles} tiles by road.`);
+  }
   if (def.production) {
     const p = def.production;
     const out = goodsList(rules, p.outputs);
@@ -164,6 +172,8 @@ const FIXED_REASONS = {
   no_road: 'Not connected to a warehouse by road.',
   missing_input: 'Waiting for materials.',
   storage_full: 'Storage is full.',
+  yard_full: 'Waiting for a cart to collect its goods.',
+  too_far: 'Too far from a warehouse by road. No cart comes this far.',
   nothing_to_undo: 'There is nothing to undo.',
   undo_expired: 'It is too late to undo that.',
   undo_spent: 'That cannot be undone: what it gave back has already been used.',
@@ -273,5 +283,5 @@ export function undoLabel(rules, status) {
 // Which problems are serious (red) and which are a wait (amber).
 export function issueLevel(code) {
   if (!code) return 'ok';
-  return code === 'no_road' || code === 'no_market' ? 'bad' : 'warn';
+  return code === 'no_road' || code === 'no_market' || code === 'too_far' ? 'bad' : 'warn';
 }
