@@ -88,18 +88,22 @@ function withoutLooks(value) {
 // and names, colors and shortcut keys are left out.
 //
 // `without` names things to leave out as well: goods, buildings, tiers, the
-// upgrade out of a tier, and config entries. That gives the stamp these data
-// files would have had before those things were added, which is how a game
-// saved back then is recognised.
+// upgrade out of a tier, config entries, and a setting on every building. That
+// gives the stamp these data files would have had before those things were
+// added, which is how a game saved back then is recognised. It may be one
+// such list or several.
 export function rulesStamp(rawData, without = null) {
   const data = withoutLooks(stripNotes(rawData));
   if (data.map) delete data.map.seed;
-  if (without) {
-    for (const id of without.goods ?? []) delete data.goods?.[id];
-    for (const id of without.buildings ?? []) delete data.buildings?.[id];
-    for (const id of without.tiers ?? []) delete data.population?.tiers?.[id];
-    for (const id of without.upgradesFrom ?? []) delete data.population?.tiers?.[id]?.upgrade;
-    for (const key of without.config ?? []) delete data.config?.[key];
+  for (const step of addedSteps(without)) {
+    for (const id of step.goods ?? []) delete data.goods?.[id];
+    for (const id of step.buildings ?? []) delete data.buildings?.[id];
+    for (const id of step.tiers ?? []) delete data.population?.tiers?.[id];
+    for (const id of step.upgradesFrom ?? []) delete data.population?.tiers?.[id]?.upgrade;
+    for (const key of step.config ?? []) delete data.config?.[key];
+    for (const key of step.buildingSettings ?? []) {
+      for (const b of Object.values(data.buildings ?? {})) if (b !== null && typeof b === 'object') delete b[key];
+    }
   }
   const text = stableText(data);
   let h1 = 0xdeadbeef;
@@ -112,6 +116,13 @@ export function rulesStamp(rawData, without = null) {
   h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
   return (h2 >>> 0).toString(16).padStart(8, '0') + (h1 >>> 0).toString(16).padStart(8, '0');
+}
+
+// config.addedLater as a list of steps, oldest first. It may be written as
+// one step or as a list of them.
+export function addedSteps(addedLater) {
+  if (Array.isArray(addedLater)) return addedLater.filter((s) => s !== null && typeof s === 'object');
+  return addedLater !== null && typeof addedLater === 'object' ? [addedLater] : [];
 }
 
 function deepFreeze(value) {
@@ -148,6 +159,7 @@ export function compileRules(rawData) {
       cost: compileCost(b.cost),
       upkeepMilliPerMinute: toMilli(b.upkeepPerMinute),
       requiresRoad: b.requiresRoad === true,
+      staff: b.staff ?? 0, // people needed to run it (see staff.js)
       placement: b.placement ?? null,
       production: b.production
         ? {
@@ -216,6 +228,10 @@ export function compileRules(rawData) {
       freeBuilding: (config.start.freeBuildings ?? [])[0] ?? null,
     },
     win: { tier: config.win.tier, residents: config.win.residents },
+    // Staff for the producing buildings. null switches the rule off.
+    workforce: config.workforce
+      ? { base: config.workforce.base, perResidentMilli: Math.round(config.workforce.perResident * MILLI) }
+      : null,
     // Which difficulty these rules are for, and the ones there are to choose from.
     difficulty: config.difficulty ?? null,
     difficulties: Object.entries(config.difficulties ?? {}).map(([id, d]) => ({ id, name: d.name ?? id, about: d.about ?? '' })),
@@ -226,7 +242,12 @@ export function compileRules(rawData) {
     undoTicks: Math.round((config.undoSeconds ?? 30) * ticksPerSecond),
     map,
     stamp: rulesStamp(data),
-    // The stamp these rules had before the things in config.addedLater existed.
-    olderStamp: config.addedLater ? rulesStamp(data, config.addedLater) : null,
+    // The stamps these rules had before each step in config.addedLater, oldest
+    // first, each with the config entries added since. A game saved under one
+    // of them can still be continued.
+    olderStamps: addedSteps(config.addedLater).map((_, i, steps) => ({
+      stamp: rulesStamp(data, steps.slice(i)),
+      configAdded: steps.slice(i).flatMap((s) => s.config ?? []),
+    })),
   });
 }

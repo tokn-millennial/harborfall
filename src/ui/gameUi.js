@@ -308,7 +308,9 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
 
     // Panels.
     const summary = getSummary(game);
-    hud.update(summary, state.won ? null : advisor.update(game));
+    // Tips are for a game with a goal still ahead: the win, or a goal after it.
+    const goalAhead = !state.won || summary.milestones.some((m) => m.reachedAtTick === null);
+    hud.update(summary, goalAhead ? advisor.update(game) : null);
     menu.update(tool);
     if (selected && tool.mode === 'select') info.show(panelModel(game, selected, { confirmDemolish: armed?.id === selected.id }));
     else info.hide();

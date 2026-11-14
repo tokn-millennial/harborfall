@@ -53,6 +53,25 @@ export function refundText(rules, building) {
   return parts.length ? `Returns ${parts.join(', ')}` : 'Returns nothing';
 }
 
+// Where the town's staff come from, as a few words: "12 to begin with, and 1 for every 2 residents".
+export function staffSourceText(rules) {
+  const w = rules.workforce;
+  if (!w) return '';
+  const each = w.perResidentMilli > 0 && 1000 % w.perResidentMilli === 0
+    ? (w.perResidentMilli === 1000 ? '1 for every resident' : `1 for every ${1000 / w.perResidentMilli} residents`)
+    : `${w.perResidentMilli / 1000} for every resident`;
+  return w.perResidentMilli > 0 ? `${w.base} to begin with, and ${each}` : `${w.base}`;
+}
+
+// The staff item on the top bar. `staff` is the summary's staff entry.
+// { value, title, short }: "13 spare", or "18 short" with the speed in the title.
+export function staffText(rules, staff) {
+  const gap = staff.available - staff.needed;
+  const facts = `Your producing buildings need ${staff.needed} staff. The town has ${staff.available} (${staffSourceText(rules)}).`;
+  if (!staff.short) return { value: `${gap} spare`, short: false, title: `${facts} Every producer works at full speed.` };
+  return { value: `${-gap} short`, short: true, title: `${facts} Every producer works at ${staff.percent}% speed. Build more houses.` };
+}
+
 // One or two lines for the build menu: what the building is for.
 export function buildingBlurb(rules, id) {
   const def = rules.buildings[id];
@@ -64,6 +83,7 @@ export function buildingBlurb(rules, id) {
     const out = goodsList(rules, p.outputs);
     const every = seconds(rules, p.cycleTicks);
     lines.push(Object.keys(p.inputs).length ? `Turns ${goodsList(rules, p.inputs)} into ${out} every ${every}.` : `Makes ${out} every ${every}.`);
+    if (rules.workforce && def.staff > 0) lines.push(`Needs ${def.staff} staff.`);
   }
   if (def.housingTier) {
     const tier = rules.tiers[def.housingTier];

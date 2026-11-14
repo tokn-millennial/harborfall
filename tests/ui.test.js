@@ -215,7 +215,7 @@ test('the issue of a building is the most useful thing to tell the player', () =
   assert.equal(buildingIssue(game, game.state.buildings[0]), null, 'a warehouse is always fine');
 });
 
-test('the info panel for a producer: status, what it makes, progress, upkeep, demolish', () => {
+test('the info panel for a producer: status, what it makes, progress, staff, upkeep, demolish', () => {
   const game = richGame();
   const jack = place(game, 'lumberjack', 8, 4);
   let model = panelModel(game, jack);
@@ -230,7 +230,8 @@ test('the info panel for a producer: status, what it makes, progress, upkeep, de
   assert.equal(model.lines[0].value, 'Working.');
   assert.deepEqual(model.lines[1], { label: 'Makes', value: '1 wood every 5 s' });
   assert.equal(model.lines[2].value, '50%');
-  assert.deepEqual(model.lines[3], { label: 'Upkeep', value: '2 coins a minute' });
+  assert.deepEqual(model.lines[3], { label: 'Staff', value: 'Needs 2' });
+  assert.deepEqual(model.lines[4], { label: 'Upkeep', value: '2 coins a minute' });
   assert.deepEqual(model.actions, [{ id: 'demolish', label: 'Demolish', detail: 'Returns 10 coins.', enabled: true, reason: null }]);
 });
 

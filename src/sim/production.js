@@ -6,6 +6,8 @@
 //   working        a cycle is in progress
 //   storage_full   finished goods are waiting for room in the stockpile
 
+import { staffWorksThisTick } from './staff.js';
+
 export function createProductionState() {
   return { status: 'no_road', active: false, progress: 0 };
 }
@@ -21,6 +23,8 @@ export function syncProductionStatus(game) {
 
 export function stepProduction(game) {
   const { rules, state } = game;
+  // A town short of staff works on only some ticks (see staff.js).
+  if (!staffWorksThisTick(game)) return;
   const goods = state.goods;
   for (const b of state.buildings) {
     const p = b.production;

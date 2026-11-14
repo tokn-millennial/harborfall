@@ -1064,3 +1064,89 @@ One adjustment by eye: the night light sat on each roof like a spotlight. I move
 
 **What I would change**
 - Nothing in how this phase was built. But this is the fourth phase in a row whose result only you can judge by eye or ear, and I have had no notes on the earlier three. The list of things I cannot verify is growing faster than the list I can.
+
+**After the gate:** committed as `e8d49c8` and pushed, on your "Approve and push both".
+
+## Phase 15: Staff for buildings
+
+Date: 2026-11-13. Status: approved by Colin with no changes (he asked for the commit).
+
+**Turns used:** 2. Your "Workers for buildings", and one message to carry on after your usage limit reset in the middle of the work. No plan approval was asked for (D186).
+
+**What was built**
+- **The rule:** producing buildings need staff, staff come from residents, and a town that is short works slower, every producer by the same share (`src/sim/staff.js`, `SPEC.md` section 16).
+- **On screen:** a staff count in the top bar, a line in each producer's panel, a line in the build menu, a tip when short, two sentences in the ? panel.
+- **Older saved games still load,** now from two generations back.
+- **The bot** reports time spent short of staff.
+
+**Automated tests: 435 pass, 0 fail.** That is 404 from before, plus 30 new ones in `tests/staff.test.js`, plus 1 because the check that simulation files use no browser code runs once per file and there is a new file. 7 older tests were edited to follow two changes: the list of later additions became a list of rounds, and a producer's panel has one more line. None was loosened.
+
+**Did the tests mean anything?** I broke the rule on purpose in three ways and ran the new tests each time.
+
+| Break | Tests that failed |
+|---|---|
+| A shortage no longer slows anything | 4 |
+| Residents add no staff | 8 |
+| Producers with no road count as needing staff | 1 |
+
+The first break showed that one of my tests was too weak: its lumberjacks filled the storage either way, so it passed with the rule broken. I rewrote it to count logs before storage fills.
+
+**Balance, by the bot.** Seven sets of numbers were tried on all four build orders and all three difficulties (84 games). Chosen: the set in D189 and D190.
+
+| Build order | No staff rule | With it | Short of staff |
+|---|---|---|---|
+| Standard, Normal | 28.6 min | 28.6 min | never |
+| Careless, Normal | 30.4 | 30.4 | never |
+| Bread first, Normal | 52.9 | 58.7 | 7.8 min, slowest 46% |
+| Bread first, Easy | 33.4 | 36.0 | 5.5 min, slowest 46% |
+| Artisans, Normal (goal after the win) | 49.8 | 50.5 | 14.1 min, slowest 78% |
+| Artisans, Hard | 69.6 | 69.6 | 18.7 min, slowest 78% |
+| Standard and careless, Easy and Hard | unchanged | unchanged | never |
+
+Bread first on Hard did not win before this phase (the trap written up in Phase 13) and does not win now.
+
+**Rules stamps.** Before: `b16fd0a9142282c9` (Normal). After: `10d0dc80671f7e66`. Taking the staff numbers out of today's data gives back `b16fd0a9142282c9` exactly, and taking Phase 12's additions out as well gives `6fe08f1bee9bb754`. A Hard game of Phases 12 to 14 carried `d002f8878cb41b57`, which is also reproduced.
+
+**Browser checks** (on the test page, which never saves)
+
+| Check | How | Result |
+|---|---|---|
+| A full game through the real UI | UI playthrough | Pass. Won at 28.8 minutes, 32 buildings, staff 51 needed and 64 in town, "13 spare" in the top bar. |
+| A town short of staff | Ran the Artisans order to minute 45 | Pass. "10 short" in amber; hover text gives the sum and "88% speed". See `docs/screenshots/phase15-short-of-staff.jpg`. |
+| The tip | Let 45 game seconds pass | Pass. "Your buildings are short of staff and work at 88% speed. Build more houses." It showed after the win, which it could not have before D199. |
+| A producer's panel | Clicked the weaver | Pass. "Needs 5. Town is short: 88% speed". See `docs/screenshots/phase15-staff-panel.jpg`. |
+| The build menu | Hovered Bakery | Pass. "Needs 5 staff." |
+| The top bar stays on one row at 1280 px | Measured each part | Pass after a fix (bug 4). |
+| A real older save | The Hard game left in my test browser by Phase 13, read without changing it | Pass. Stamp `d002f8878cb41b57`, loaded as a Hard game under today's rules. |
+| The demo town | Opened `?demo` | Pass. 51 needed, 64 in town. |
+| Random input | 20,000 actions | Pass. No errors. |
+| The error console | Read it | Empty. |
+
+**Bugs found: 4, and 3 mistakes in my own new tests.**
+
+1. **Tips stopped at the win.** Since Phase 12 the tip line was switched off once you had won, so its wool and cloth tips could never appear in a real game, though their test passed. Found because the staff tip did not show where I expected. Fixed (D199). This was a hole in Phase 12's testing: I tested the tip-maker, not whether the screen showed its tips.
+2. **Carrying a save forward wiped its goals after the win.** Harmless while only one older generation existed. With two, a save from Phases 12 to 14 would have lost its "100 Artisans" record. Fixed before it could happen, and tested.
+3. **Undo no longer restored the state byte for byte.** The new counter was written after the undo note, and undo rewrites the note last, so the order of entries changed. An existing undo test caught it at once. Fixed by where the counter sits.
+4. **The top bar wrapped to two rows at 1280 px** once the staff count was in it. Fixed with tighter spacing under 1380 px.
+
+Test mistakes: my row of lumberjacks stood too far from the forest; a helper emptied the wood store that later steps needed; and the weak test named above.
+
+One slip caught on the spot: a note I wrote in `buildings.json` had quotation marks inside it, which broke the file. The game refused to start and said where.
+
+**Decisions made:** 19 (D186 to D204).
+
+**Weak or unfinished**
+- **The rule may be too gentle to notice.** A sensible first game never meets it. That was the aim, but it means you may play 30 minutes and only see "13 spare". It is felt in the second act and in a town that builds workshops first.
+- **The second-act shortage barely slows the bot:** 14 minutes short and the goal arrives 0.7 minutes later, because its workshops made more than the town used. For a person the cost will depend on how tightly they built.
+- **Nobody has played it.** The numbers come from one bot with four build orders. Whether "10 short" and the tip are understood, and whether building houses feels like the right answer, I cannot tell.
+- **Your saved game may load short of staff** if the town has many workshops for its size. It will say so.
+- **Staff are a number.** No one is seen going to work, and a building cannot be closed to lend its staff elsewhere.
+- **A waiting building still holds its staff** (D191). A player might expect a farm with nothing to do to free its people.
+- **The Staff line in a panel is terse** when short: "Needs 5. Town is short: 88% speed". A longer sentence wrapped badly.
+- **The build menu's description line now wraps to two lines** for the longest buildings at 1280 px.
+- **The top bar has little room left** at 1280 px. One more item there will need a different layout.
+- **Not done:** your notes from playing, and a Mac test.
+
+**What I would change**
+- I would have tested in Phase 12 that a tip reaches the screen after the win. A whole phase's tips were invisible for three phases and no test or check of mine noticed.
+- The roadmap promised idle buildings and I built a slowdown. I think it is the better rule, but it is a different one, and I chose it without asking (D188).

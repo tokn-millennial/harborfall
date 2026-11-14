@@ -1,6 +1,6 @@
 # Harborfall: Roadmap
 
-Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 14, by Fable 5.2.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 15, by Fable 5.2.
 
 This is a list of what could come next, in the order I would do it. **Nothing here is decided.** Every item is a proposal, and you choose. The working rule from the brief still stands: nothing gets built that you did not ask for.
 
@@ -8,8 +8,8 @@ Read `HANDOFF.md` first if you are picking the project up after a break.
 
 ## Where the project stands
 
-- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), undo with a first-game guide (Phase 11), a third kind of resident with a goal after the win (Phase 12), difficulty settings with two touches to the look (Phase 13), and dust, chimney smoke and day and night (Phase 14).
-- **Proven by machines:** 404 automated tests pass. A bot wins in 28.6 minutes. A script wins through the real UI and ends in exactly the bot's game.
+- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), undo with a first-game guide (Phase 11), a third kind of resident with a goal after the win (Phase 12), difficulty settings with two touches to the look (Phase 13), dust, chimney smoke and day and night (Phase 14), and staff for buildings (Phase 15).
+- **Proven by machines:** 435 automated tests pass. A bot wins in 28.6 minutes. A script wins through the real UI and ends in exactly the bot's game.
 - **Checked by you:** you played for about 40 minutes on 2026-11-12. The game runs smoothly and the figures move well.
 - **Still not known:** whether you won and how long it took, how the sounds are, whether the guide helps someone new, and how any of it works on a Mac.
 
@@ -37,7 +37,8 @@ Each phase so far took one long working session. The sizes compare with that.
 | 12 | **Done.** A third kind of resident and a goal after the win (D1) | Large | It turned out smaller than feared, because the data files already allowed it. |
 | 13 | **Done.** Small polish: difficulty, house variety, a sharp ground up close (D5, part of C3, the rest of A2) | Small | You chose it. |
 | 14 | **Done.** Dust, chimney smoke, day and night (the rest of C3) | Small | The last of the changes that touch only how the game looks. |
-| 15 onward | More game: workforce, real carriers, trade (the rest of Stage D) | Large each | Each changes how the game plays, not just how long it lasts. They need your say first. **Everything I can safely do without your choice is now done.** |
+| 15 | **Done, unplayed.** Staff for buildings (D2) | Medium | You chose it. Buildings need staff, staff come from residents, and a town that is short works slower. |
+| 16 onward | More game: real carriers, trade, scenarios (the rest of Stage D) | Large each | Each changes how the game plays, not just how long it lasts. They need your say first. **Everything I can safely do without your choice is done.** |
 | Any time | Put it online (E1) | Small | Independent of the rest. Read the privacy note there first. |
 
 ---
@@ -140,10 +141,12 @@ Every item here changes the rules. Each one needs new data, new tests, a new bot
 - **Known limit:** the bot cannot place buildings larger than 2 by 2.
 - **Size:** large.
 
-### D2. Workforce
-- **What you get:** buildings need workers, so population matters for more than taxes. A sawmill with no free workers stands idle.
-- **Effect:** changes the whole economy curve. The balance targets from the brief would need restating.
-- **Size:** medium to large.
+### D2. Workforce (done in Phase 15, as "staff")
+- **What was built:** every producing building needs staff, the town's staff come from its residents, and a town that is short works slower, every producer by the same share. See `SPEC.md` section 16.
+- **Different from what this page promised:** it said a sawmill with no free workers would stand idle. Nothing stands idle. Everything slows together, so a town can always recover (`DECISIONS.md` D188).
+- **Effect on balance:** none on a sensible first game, by design. The targets from the brief still hold.
+- **Left over:** closing a building to free its staff, kinds of resident that differ as staff, staff you can see walking to work, and a harder setting where the rule bites in the first act.
+- **Size:** it took one session.
 
 ### D3. Real logistics: carriers and warehouse range
 - **What you get:** goods are carried along roads, warehouses serve an area, and where you build starts to matter the way it does in the Anno games.
@@ -201,10 +204,10 @@ These are not features. They are debts and loose ends, smallest first.
 
 One line is enough. For example:
 
-> Phase 15: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
+> Phase 16: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
 
 or
 
-> Phase 15: build D2 from the roadmap. Show me the plan first.
+> Phase 16: build D3 from the roadmap. Show me the plan first.
 
 The helper should then follow the working rules in `HANDOFF.md` section 6: plan first, one feature at a time, test everything itself, stop at the gate with the five-part report, and commit only after you approve.

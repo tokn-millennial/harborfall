@@ -123,3 +123,24 @@ export function fillHouse(game, house) {
   assert.equal(house.house.residents, capacity, 'the house never filled up');
   return house;
 }
+
+// The data files as they were when only the first `rounds` rounds of
+// additions (config.addedLater) had been made. 0 is the game as first
+// released; 1 is with wool, cloth and Artisans but before staff.
+export function dataBefore(rounds) {
+  const data = loadData();
+  const steps = data.config.addedLater;
+  for (const added of steps.slice(rounds)) {
+    for (const id of added.goods ?? []) delete data.goods[id];
+    for (const id of added.buildings ?? []) delete data.buildings[id];
+    for (const id of added.tiers ?? []) delete data.population.tiers[id];
+    for (const id of added.upgradesFrom ?? []) delete data.population.tiers[id].upgrade;
+    for (const key of added.config ?? []) delete data.config[key];
+    for (const key of added.buildingSettings ?? []) {
+      for (const b of Object.values(data.buildings)) if (b !== null && typeof b === 'object') delete b[key];
+    }
+  }
+  if (rounds > 0) data.config.addedLater = steps.slice(0, rounds);
+  else delete data.config.addedLater;
+  return data;
+}

@@ -11,11 +11,12 @@ import { getSummary, buildingIssue } from './summary.js';
 import { stepHouses, upgradeReason, countResidents, isSatisfied, inMarketRange, housesInRangeOf } from './population.js';
 import { saveGame, loadGame, SAVE_FORMAT } from './save.js';
 import { undoStatus } from './undo.js';
+import { staffing } from './staff.js';
 
 export {
   createGame, execute, canPlace, siteReason, buildingAt, buildingById,
   countResidents, isSatisfied, getSummary, buildingIssue, inMarketRange, housesInRangeOf,
-  saveGame, loadGame, SAVE_FORMAT, undoStatus,
+  saveGame, loadGame, SAVE_FORMAT, undoStatus, staffing,
 };
 
 // Checks an upgrade without doing it. Never changes the game.

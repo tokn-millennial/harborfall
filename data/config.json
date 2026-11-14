@@ -30,6 +30,12 @@
     "demolishRefundRatio": 0.5
   },
 
+  "_workforce": "Staff for the producing buildings. Each producer linked to a warehouse needs the 'staff' set for it in buildings.json. The town has 'base' staff to begin with, plus 'perResident' for every resident (0.5 means one in two residents works). A town with fewer staff than it needs works slower, every producer by the same share: 30 staff where 40 are needed is 75% speed. Remove this whole entry to switch the rule off.",
+  "workforce": {
+    "base": 12,
+    "perResident": 0.5
+  },
+
   "_win": "The win: this many residents of this tier, or of any tier above it.",
   "win": {
     "tier": "worker",
@@ -41,12 +47,18 @@
     { "tier": "artisan", "residents": 100, "title": "A city of Artisans" }
   ],
 
-  "_addedLater": "What has been added to the game since saved games first existed. A game saved before these were added can still be continued: it simply has none of them. If you add a good, a building or a tier of your own, list it here and older saved games keep working.",
-  "addedLater": {
-    "goods": ["wool", "cloth"],
-    "buildings": ["sheepfarm", "weaver"],
-    "tiers": ["artisan"],
-    "upgradesFrom": ["worker"],
-    "config": ["milestones"]
-  }
+  "_addedLater": "What has been added to the game since saved games first existed, one entry per round of additions, oldest first. A game saved before any of them can still be continued: it simply has none of what came after. If you add a good, a building or a tier of your own, add an entry at the end and older saved games keep working. 'buildingSettings' names a setting added to buildings, such as 'staff'.",
+  "addedLater": [
+    {
+      "goods": ["wool", "cloth"],
+      "buildings": ["sheepfarm", "weaver"],
+      "tiers": ["artisan"],
+      "upgradesFrom": ["worker"],
+      "config": ["milestones"]
+    },
+    {
+      "buildingSettings": ["staff"],
+      "config": ["workforce"]
+    }
+  ]
 }

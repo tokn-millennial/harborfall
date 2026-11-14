@@ -2,13 +2,19 @@
 // while. It looks for the root of the shortage: if bread is out because the
 // bakery has no grain, it talks about grain, not bread.
 //
+// A town short of staff is told so first: every producer is slowed, so a good
+// running out may only be a sign of it, and another producer would make it worse.
+//
 // No page code here, so it is tested in Node. It only reads the game.
+
+import { staffing } from '../sim/index.js';
 
 const article = (word) => (/^[aeiou]/i.test(word) ? 'an' : 'a');
 
 export function createAdvisor(rules, { patienceSeconds = 30 } = {}) {
   const patienceTicks = patienceSeconds * rules.ticksPerSecond;
   const shortSince = {}; // good -> the tick it was first seen short
+  let staffShortSince = null; // the tick the town was first seen short of staff
 
   // Which building types make each good, and which goods anything costs.
   const makersOf = {};
@@ -74,6 +80,9 @@ export function createAdvisor(rules, { patienceSeconds = 30 } = {}) {
     // Call often (every frame is fine). Returns a sentence, or null when there is nothing to say.
     update(game) {
       const tick = game.state.tick;
+      const staff = staffing(game);
+      if (staff.ratioMilli >= 1000) staffShortSince = null;
+      else staffShortSince ??= tick;
       const short = shortGoods(game);
       for (const good of Object.keys(shortSince)) if (!short.has(good)) delete shortSince[good];
       for (const good of short.keys()) shortSince[good] ??= tick;
@@ -81,6 +90,9 @@ export function createAdvisor(rules, { patienceSeconds = 30 } = {}) {
       const lasting = [...short.entries()]
         .filter(([good]) => tick - shortSince[good] >= patienceTicks)
         .sort((a, b) => a[1] - b[1] || rules.goodIds.indexOf(a[0]) - rules.goodIds.indexOf(b[0]));
+      if (staffShortSince !== null && tick - staffShortSince >= patienceTicks) {
+        return `Your buildings are short of staff and work at ${Math.floor(staff.ratioMilli / 10)}% speed. Build more houses.`;
+      }
       return lasting.length ? explain(game, lasting[0][0]) : null;
     },
   };

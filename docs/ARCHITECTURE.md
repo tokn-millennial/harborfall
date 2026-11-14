@@ -199,7 +199,7 @@ The `needs_...` and `no_...` codes are built from the terrain or good named in t
 ### What happens in one tick, in order
 
 1. The tick counter goes up by one.
-2. Producers advance their cycles, oldest building first.
+2. Producers advance their cycles, oldest building first. If the town is short of staff, this step is skipped on some ticks (section 18).
 3. Houses buy goods, then residents move in or out, oldest house first.
 4. Income is settled, when the 6 second interval is due.
 5. The win check runs.
@@ -424,12 +424,12 @@ Phase 12 added two goods, two buildings and a tier by editing data files, with t
 
 **Older saved games.** A saved game is normally refused once the rules change, because old numbers under new rules can describe an impossible game. Adding things is the exception: a game saved before wool existed is still a possible game, with no wool in it.
 
-- `config.json` has an entry, `addedLater`, naming everything added since saved games began.
-- The rules work out a second stamp, `olderStamp`: what the stamp would be without those things.
-- A save whose stamp matches the older one is carried forward: the new goods are added at zero, and no goal after the win counts as reached. Then it is checked like any other save.
+- `config.json` has an entry, `addedLater`, naming everything added since saved games began. Since Phase 15 it is a list of rounds, oldest first (section 18).
+- The rules work out an older stamp for each round, `olderStamps`: what the stamp would be without that round and every round after it.
+- A save whose stamp matches one of them is carried forward: the new goods are added at zero, and, if the goals after the win are new to it, none counts as reached. Then it is checked like any other save.
 - If one of the old numbers has changed as well, the older stamp no longer matches, and the save is refused as before. Changing one of the new numbers does not affect it.
 
-To add a good, building or tier of your own and keep older saves working, add its name to `addedLater`. The stamp before Phase 12 was `6fe08f1bee9bb754`. A save made in the browser under the old data carried exactly that stamp and was continued under the new data.
+To add a good, building or tier of your own and keep older saves working, add a round naming it at the end of `addedLater`. The stamp before Phase 12 was `6fe08f1bee9bb754`. A save made in the browser under the old data carried exactly that stamp and was continued under the new data.
 
 **The bot.** A build order may carry `"pastWin": true` to play on after the win until its steps are done and every milestone is reached. An upgrade step may say which upgrade: `{ "upgrade": 3, "to": "artisan" }`.
 
@@ -462,3 +462,35 @@ Phase 14 added three effects. Like the walkers and the house looks before them, 
 Because none of this is in the game state, saved games are unaffected, and the check that a full game through the UI ends identical to the headless bot still holds.
 
 **Night is drawn in the middle of a frame on purpose.** The order is: water, ground, roads, buildings and figures, dust, then the night tint and house lights, and only then the numbers over houses, the outlines, the placement preview and the warning marks. So everything the player reads is drawn after the tint and is never dimmed.
+
+## 18. Staff, and several rounds of additions
+
+**The staff rule is one small file,** `src/sim/staff.js`, with two functions.
+
+- `staffing(game)` only reads. It adds up the `staff` of every producer linked to a warehouse, counts the residents, and returns how many are needed, how many the town has, and the speed production runs at in thousandths (`ratioMilli`, 1000 is full speed). The top bar, the panels, the tip line and the bot all use it.
+- `staffWorksThisTick(game)` is called once a tick, at the top of the production step. It adds `ratioMilli` to a counter in the state, `staffClock`. If the counter has not reached 1000, the producers do not work this tick. Otherwise 1000 is taken off and they do. At 75% staffing, three ticks in every four are worked.
+
+Why it is done by skipping whole ticks:
+- **Production itself did not change.** A cycle is still a whole number of ticks. With enough staff the counter never moves, and the game plays tick for tick as it did before the rule. The tests check that against a game with the rule taken out.
+- **It is all whole numbers,** so the same game always plays the same, on any machine.
+- **Every producer is slowed alike,** so there is no question of who gets the staff first.
+
+`staffClock` is the only thing the rule adds to the game state. It is a whole number from 0 to 999, it is saved with the game, and loading refuses anything else. Commands never touch it, so undo is unaffected.
+
+**Switching it off.** Remove `workforce` from `config.json` and the rule is gone: `staffing` reports full speed, and the top bar, menu and panels stop mentioning staff. The `staff` numbers on the buildings are then ignored.
+
+**Several rounds of additions.** Until now one older rules stamp was recognised: the game before wool, cloth and Artisans. With staff there are two generations of saved games out in the world, so `addedLater` became a list:
+
+```
+"addedLater": [
+  { "goods": [...], "buildings": [...], "tiers": [...], "upgradesFrom": [...], "config": ["milestones"] },
+  { "buildingSettings": ["staff"], "config": ["workforce"] }
+]
+```
+
+- `buildingSettings` is new: it names a setting that was added to buildings.
+- For each round, the rules work out the stamp the data would have without that round and all later ones. On Normal these are `6fe08f1bee9bb754` (before Phase 12) and `b16fd0a9142282c9` (Phases 12 to 14). Both are checked by name in `tests/staff.test.js`. If that test fails, a rule those games were played under has changed and every game saved back then will be refused.
+- A save is carried forward by what it lacks. A save from Phases 12 to 14 already has its goals after the win, so they are kept. Before this phase they were always wiped, which would have cost such a save its "100 Artisans" record.
+- A single round written as one object, the old form, is still read.
+
+**The bot** now reports the minutes it spent short of staff and the slowest speed it fell to. Its build orders were not changed.

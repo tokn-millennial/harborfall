@@ -13,6 +13,7 @@ const SVG = {
   wool: '<g fill="#f1ece0" stroke="#8c8676" stroke-width="0.9"><circle cx="5.4" cy="9.4" r="3.4"/><circle cx="10.6" cy="9.4" r="3.4"/><circle cx="8" cy="6.4" r="3.6"/></g>',
   cloth: '<rect x="1.8" y="4.6" width="11" height="7.2" rx="1.2" fill="#7d6fb3" stroke="#40366b" stroke-width="0.9"/><path d="M2.2 7h10M2.2 9.4h10" stroke="#a79bd6" stroke-width="0.8"/><ellipse cx="12.8" cy="8.2" rx="1.7" ry="3.6" fill="#9c8fd0" stroke="#40366b" stroke-width="0.9"/>',
   person: '<circle cx="8" cy="4.6" r="2.6"/><path d="M3 14c0-3.2 2.2-5 5-5s5 1.8 5 5z"/>',
+  staff: '<path d="M3 14.4c0-3.2 2.2-5 5-5s5 1.8 5 5z" fill="#c9823a" stroke="#6b3f14" stroke-width="0.8"/><circle cx="8" cy="5.6" r="2.7" fill="#ecd3ae" stroke="#6b3f14" stroke-width="0.8"/><path d="M4.9 4.6c0-2 1.4-3.2 3.1-3.2s3.1 1.2 3.1 3.2z" fill="#e9c46a" stroke="#6b4a12" stroke-width="0.8"/><path d="M4.1 4.7h8.3" stroke="#6b4a12" stroke-width="1.1" stroke-linecap="round"/>',
   select: '<path d="M4 2l8.5 6.2-3.8 0.6 2.2 4.3-1.7 0.9-2.2-4.3L4 12.4z" fill="#f6eed6" stroke="#1c2a31" stroke-width="1" stroke-linejoin="round"/>',
   upgrade: '<path d="M8 1.8l5.5 6h-3.3v6.2H5.8V7.8H2.5z" fill="#4fae62" stroke="#1f5a2c" stroke-width="1" stroke-linejoin="round"/>',
   sound: '<path d="M2 6h2.8L8.5 2.8v10.4L4.8 10H2z" fill="#f1ead8" stroke="#1c2a31" stroke-width="0.8" stroke-linejoin="round"/><path d="M10.6 5.6c1.2 1.2 1.2 3.6 0 4.8M12.4 3.8c2.2 2.2 2.2 6.2 0 8.4" fill="none" stroke="#f1ead8" stroke-width="1.3" stroke-linecap="round"/>',

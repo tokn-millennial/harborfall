@@ -50,9 +50,9 @@ export function loadGame(rawData, save) {
   const wanted = typeof save.difficulty === 'string' ? save.difficulty : null;
   if (wanted !== null && rawData.config?.difficulties && !Object.hasOwn(rawData.config.difficulties, wanted)) return fail('rules_changed');
   const rules = compileRules(withDifficulty(seeded, wanted));
-  // A game saved before the latest things were added (config.addedLater) is
-  // still a possible game: it has none of them. It is carried forward below.
-  const older = save.rulesStamp !== rules.stamp && rules.olderStamp !== null && save.rulesStamp === rules.olderStamp;
+  // A game saved before some things were added (config.addedLater) is still
+  // a possible game: it has none of them. It is carried forward below.
+  const older = save.rulesStamp === rules.stamp ? null : rules.olderStamps.find((o) => o.stamp === save.rulesStamp) ?? null;
   if (save.rulesStamp !== rules.stamp && !older) return fail('rules_changed');
 
   let state;
@@ -63,10 +63,12 @@ export function loadGame(rawData, save) {
   }
   // A save from before undo existed has no undo record. That is fine: there is nothing to undo.
   if (state !== null && typeof state === 'object' && state.undo === undefined) state.undo = null;
+  // A save from before staff existed has saved up no work. It starts from nothing.
+  if (state !== null && typeof state === 'object' && state.staffClock === undefined) state.staffClock = 0;
   if (older && state !== null && typeof state === 'object') {
-    // None of the new goods, and no goal after the win reached yet.
+    // None of the new goods, and, if the goals after the win are new to it, none reached yet.
     if (state.goods !== null && typeof state.goods === 'object') for (const good of rules.goodIds) state.goods[good] ??= 0;
-    state.milestones = rules.milestones.map(() => null);
+    if (older.configAdded.includes('milestones')) state.milestones = rules.milestones.map(() => null);
   }
   const problem = stateProblem(rules, state) ?? undoProblem(rules, state);
   if (problem) return fail('damaged', problem);
@@ -91,6 +93,7 @@ function stateProblem(rules, state) {
   if (!isCount(state.coinsMilli)) return 'the coins are not a whole number';
   if (!isCount(state.storageCap)) return 'the storage limit is not a whole number';
   if (!isCount(state.incomeTimer)) return 'the income timer is not a whole number';
+  if (!isCount(state.staffClock) || state.staffClock >= 1000) return 'the staff timer is wrong';
   if (!Number.isInteger(state.nextId) || state.nextId < 1) return 'the next building number is wrong';
   if (typeof state.won !== 'boolean') return 'the win flag is missing';
   if (state.wonAtTick !== null && !isCount(state.wonAtTick)) return 'the win time is wrong';

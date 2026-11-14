@@ -40,6 +40,7 @@ export function createGame(rawData, options = {}) {
     won: false,
     wonAtTick: null,
     milestones: rules.milestones.map(() => null), // the tick each goal after the win was reached
+    staffClock: 0, // thousandths of a tick of work saved up while short of staff (see staff.js)
     undo: null, // what is needed to take back the last command (see undo.js)
   };
   const game = { rules, state };

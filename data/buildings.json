@@ -1,5 +1,5 @@
 {
-  "_about": "Every building type. Costs are paid once. Upkeep is coins per minute. Times are in seconds. 'size' is [width, height] in tiles. 'visual' sets how the building looks: 'art' names its drawing (leave it out for a plain box), 'color' is its main color, usually the roof, and 'height' is how tall it stands. 'key' is the keyboard shortcut that picks the building; W A S D, C and the number keys are taken. Keys starting with _ are notes and are ignored by the game.",
+  "_about": "Every building type. Costs are paid once. Upkeep is coins per minute. Times are in seconds. 'size' is [width, height] in tiles. 'visual' sets how the building looks: 'art' names its drawing (leave it out for a plain box), 'color' is its main color, usually the roof, and 'height' is how tall it stands. 'key' is the keyboard shortcut that picks the building; W A S D, C and the number keys are taken. 'staff' is how many people a producer needs to run at full speed (see 'workforce' in config.json). Keys starting with _ are notes and are ignored by the game.",
 
   "road": {
     "name": "Road",
@@ -33,6 +33,7 @@
     "cost": { "coins": 20, "goods": {} },
     "upkeepPerMinute": 2,
     "requiresRoad": true,
+    "staff": 2,
     "_placement": "Needs at least minTiles forest tiles within the radius.",
     "placement": { "terrainInRadius": { "terrain": "forest", "radius": 4, "minTiles": 8 } },
     "production": { "cycleSeconds": 5, "inputs": {}, "outputs": { "wood": 1 } },
@@ -47,6 +48,7 @@
     "cost": { "coins": 40, "goods": { "wood": 5 } },
     "upkeepPerMinute": 3,
     "requiresRoad": true,
+    "staff": 3,
     "production": { "cycleSeconds": 16, "inputs": { "wood": 2 }, "outputs": { "planks": 1 } },
     "visual": { "art": "sawmill", "color": "#9c5a3c", "height": 1.15 }
   },
@@ -59,6 +61,7 @@
     "cost": { "coins": 30, "goods": { "wood": 10 } },
     "upkeepPerMinute": 3,
     "requiresRoad": true,
+    "staff": 3,
     "_placement": "Must share an edge with a coast tile.",
     "placement": { "adjacentTerrain": "coast" },
     "production": { "cycleSeconds": 15, "inputs": {}, "outputs": { "fish": 1 } },
@@ -73,6 +76,7 @@
     "cost": { "coins": 50, "goods": { "wood": 10, "planks": 5 } },
     "upkeepPerMinute": 4,
     "requiresRoad": true,
+    "staff": 4,
     "_placement": "Every tile under the building must be fertile land.",
     "placement": { "footprintTerrain": "fertile" },
     "production": { "cycleSeconds": 30, "inputs": {}, "outputs": { "grain": 1 } },
@@ -87,6 +91,7 @@
     "cost": { "coins": 80, "goods": { "planks": 10 } },
     "upkeepPerMinute": 6,
     "requiresRoad": true,
+    "staff": 5,
     "production": { "cycleSeconds": 15, "inputs": { "grain": 1 }, "outputs": { "bread": 1 } },
     "visual": { "art": "bakery", "color": "#c46f3a", "height": 1.35 }
   },
@@ -99,6 +104,7 @@
     "cost": { "coins": 60, "goods": { "wood": 10, "planks": 5 } },
     "upkeepPerMinute": 4,
     "requiresRoad": true,
+    "staff": 4,
     "_placement": "Sheep need pasture: at least minTiles grass tiles within the radius.",
     "placement": { "terrainInRadius": { "terrain": "grass", "radius": 3, "minTiles": 16 } },
     "production": { "cycleSeconds": 20, "inputs": {}, "outputs": { "wool": 1 } },
@@ -113,6 +119,7 @@
     "cost": { "coins": 90, "goods": { "planks": 15 } },
     "upkeepPerMinute": 6,
     "requiresRoad": true,
+    "staff": 5,
     "production": { "cycleSeconds": 20, "inputs": { "wool": 2 }, "outputs": { "cloth": 1 } },
     "visual": { "art": "weaver", "color": "#6f5fa8", "height": 1.3 }
   },

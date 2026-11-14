@@ -3,11 +3,13 @@
 import { MILLI } from './rules.js';
 import { incomeRates } from './economy.js';
 import { countAtLeast, countResidents } from './population.js';
+import { staffing } from './staff.js';
 
 export function getSummary(game) {
   const { rules, state } = game;
   const rates = incomeRates(game);
   const residents = countResidents(game);
+  const staff = staffing(game);
 
   const housing = {};
   for (const id of Object.keys(rules.tiers)) housing[id] = 0;
@@ -30,6 +32,9 @@ export function getSummary(game) {
     storageCap: state.storageCap,
     residents,
     housing,
+    // Staff for the producing buildings: how many are needed, how many the
+    // town has, and the speed production runs at as a result (100 is full).
+    staff: { on: staff.on, needed: staff.needed, available: staff.available, percent: Math.floor(staff.ratioMilli / 10), short: staff.ratioMilli < 1000 },
     win: {
       tier: rules.win.tier,
       target: rules.win.residents,

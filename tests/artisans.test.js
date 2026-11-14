@@ -9,22 +9,13 @@ import { createAdvisor } from '../src/ui/advice.js';
 import { currentGoal, milestoneMessage, reasonText, upgradePathText, winMessage } from '../src/ui/text.js';
 import { runBot } from '../tools/bot/bot.js';
 import { loadOrder } from '../tools/tune.mjs';
-import { buildMarket, fillHouse, HOUSE_SITES, line, place, richGame, road, run, runSeconds, snapshot, testGame } from './helpers.js';
+import { buildMarket, dataBefore, fillHouse, HOUSE_SITES, line, place, richGame, road, run, runSeconds, snapshot, testGame } from './helpers.js';
 
 const throughText = (value) => JSON.parse(JSON.stringify(value));
 
-// The data files as they were before wool, cloth and Artisans were added.
-function olderData() {
-  const data = loadData();
-  const added = data.config.addedLater;
-  for (const id of added.goods) delete data.goods[id];
-  for (const id of added.buildings) delete data.buildings[id];
-  for (const id of added.tiers) delete data.population.tiers[id];
-  for (const id of added.upgradesFrom) delete data.population.tiers[id].upgrade;
-  for (const key of added.config) delete data.config[key];
-  delete data.config.addedLater;
-  return data;
-}
+// The data files as they were before wool, cloth and Artisans were added
+// (and so before everything added after them, too).
+const olderData = () => dataBefore(0);
 
 // ---- the new chain ---------------------------------------------------------------
 
@@ -308,10 +299,10 @@ test('the second act also works on other islands', () => {
 
 test('the stamp of the data without the later additions is the stamp older saves carry', () => {
   const now = compileRules(loadData());
-  assert.notEqual(now.olderStamp, null);
-  assert.notEqual(now.olderStamp, now.stamp);
-  assert.equal(rulesStamp(olderData()), now.olderStamp);
-  assert.equal(compileRules(olderData()).olderStamp, null, 'data with no additions listed has no older stamp');
+  assert.ok(now.olderStamps.length >= 1);
+  assert.notEqual(now.olderStamps[0].stamp, now.stamp);
+  assert.equal(rulesStamp(olderData()), now.olderStamps[0].stamp);
+  assert.deepEqual(compileRules(olderData()).olderStamps, [], 'data with no additions listed has no older stamps');
 });
 
 test('a game saved before Artisans existed can be continued, and plays on as it would have', () => {
@@ -322,6 +313,7 @@ test('a game saved before Artisans existed can be continued, and plays on as it 
   const save = throughText(saveGame(before));
   delete save.state.milestones; // a save that old has no such list at all
   delete save.state.undo;
+  delete save.state.staffClock;
 
   const loaded = loadGame(loadData(), save);
   assert.equal(loaded.ok, true, `${loaded.reason}: ${loaded.detail}`);
@@ -400,8 +392,10 @@ test('mistakes in the new parts of the data files are refused with a clear messa
     [(d) => { d.config.milestones[0].tier = 'noble'; }, /milestones\[0\]\.tier names an unknown tier "noble"/],
     [(d) => { d.config.milestones[0].residents = 0; }, /milestones\[0\]\.residents/],
     [(d) => { d.config.milestones[0].title = 5; }, /title must be text/],
-    [(d) => { d.config.addedLater.spells = ['fire']; }, /addedLater has an unknown entry "spells"/],
-    [(d) => { d.config.addedLater.goods = 'wool'; }, /addedLater\.goods must be a list of names/],
+    [(d) => { d.config.addedLater[0].spells = ['fire']; }, /addedLater\[0\] has an unknown entry "spells"/],
+    [(d) => { d.config.addedLater[0].goods = 'wool'; }, /addedLater\[0\]\.goods must be a list of names/],
+    [(d) => { d.config.addedLater = { spells: ['fire'] }; }, /addedLater has an unknown entry "spells"/],
+    [(d) => { d.config.addedLater = [5]; }, /addedLater\[0\] must be an object/],
     [(d) => { d.population.tiers.artisan.upgrade = { to: 'farmer', cost: { coins: 1, goods: {} } }; }, /upgrades in a circle|must not hold fewer/],
     [(d) => { d.population.tiers.artisan.needs.silk = 0.1; }, /unknown good "silk"/],
     [(d) => { d.buildings.weaver.production.inputs = { yarn: 1 }; }, /unknown good "yarn"/],

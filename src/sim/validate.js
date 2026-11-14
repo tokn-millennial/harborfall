@@ -136,6 +136,10 @@ export function validateData(data) {
     }
     cost(b.cost, `${where}.cost`);
     number(b.upkeepPerMinute, `${where}.upkeepPerMinute`);
+    if (b.staff !== undefined) {
+      number(b.staff, `${where}.staff`, { integer: true });
+      if (b.category !== 'producer' && b.staff !== 0) err(`${where}.staff: only producers need staff`);
+    }
 
     if (b.category === 'road' && (b.size?.[0] !== 1 || b.size?.[1] !== 1)) err(`${where} is a road and must be size [1, 1]`);
     if (b.category === 'storage') number(b.storagePerGood, `${where}.storagePerGood`, { min: 1, integer: true });
@@ -234,14 +238,24 @@ export function validateData(data) {
       });
     }
   }
-  if (config.addedLater !== undefined) {
-    if (!isObject(config.addedLater)) err('config.addedLater must be an object');
+  if (config.workforce !== undefined) {
+    if (!isObject(config.workforce)) err('config.workforce must be an object');
     else {
-      for (const [key, list] of Object.entries(config.addedLater)) {
-        if (!['goods', 'buildings', 'tiers', 'upgradesFrom', 'config'].includes(key)) err(`config.addedLater has an unknown entry "${key}"`);
-        else if (!Array.isArray(list) || !list.every((id) => typeof id === 'string')) err(`config.addedLater.${key} must be a list of names`);
-      }
+      // At least one to start with, so a town with no residents still works a little.
+      number(config.workforce.base, 'config.workforce.base', { min: 1, integer: true });
+      number(config.workforce.perResident, 'config.workforce.perResident');
     }
+  }
+  if (config.addedLater !== undefined) {
+    const steps = Array.isArray(config.addedLater) ? config.addedLater : [config.addedLater];
+    steps.forEach((step, i) => {
+      const where = Array.isArray(config.addedLater) ? `config.addedLater[${i}]` : 'config.addedLater';
+      if (!isObject(step)) { err(`${where} must be an object`); return; }
+      for (const [key, list] of Object.entries(step)) {
+        if (!['goods', 'buildings', 'tiers', 'upgradesFrom', 'config', 'buildingSettings'].includes(key)) err(`${where} has an unknown entry "${key}"`);
+        else if (!Array.isArray(list) || !list.every((id) => typeof id === 'string')) err(`${where}.${key} must be a list of names`);
+      }
+    });
   }
   // An upgrade path must end. Farmer to Worker to Farmer would go round for ever.
   for (const id of Object.keys(tiers)) {

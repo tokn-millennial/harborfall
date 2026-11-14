@@ -4,7 +4,7 @@
 // the step can be afforded, then does it. It records what it waited for, so a
 // run shows exactly where a build order slows down or gets stuck.
 
-import { execute, canUpgrade, getSummary, step as simStep } from '../../src/sim/index.js';
+import { execute, canUpgrade, getSummary, staffing, step as simStep } from '../../src/sim/index.js';
 import { createPlanner } from './planner.js';
 import { createRng } from '../../src/sim/rng.js';
 
@@ -51,6 +51,8 @@ export function runBot(game, order, options = {}) {
   let waiting = null;    // { since, reasons: { reason: count } } for the current step
   let zeroCoinTicks = 0;
   let lossTicks = 0;
+  let shortStaffTicks = 0;      // time spent with too few staff
+  let lowestStaffPercent = 100; // the slowest production ever ran
   let roadsBuilt = 0;
 
   // A person's hands: after each action, a random time passes before the next.
@@ -66,6 +68,12 @@ export function runBot(game, order, options = {}) {
     readyAtTick = state.tick + ticks;
   }
 
+  // How many connected producers of each kind there are.
+  const producerCounts = () => {
+    const counts = {};
+    for (const b of state.buildings) if (b.production && b.connected) counts[b.type] = (counts[b.type] ?? 0) + 1;
+    return counts;
+  };
   const sample = () => {
     const s = getSummary(game);
     samples.push({
@@ -76,6 +84,8 @@ export function runBot(game, order, options = {}) {
       worker: s.residents[rules.win.tier] ?? 0,
       residents: s.residents,
       goods: s.goods,
+      staff: s.staff,
+      producers: producerCounts(),
     });
   };
 
@@ -171,6 +181,11 @@ export function runBot(game, order, options = {}) {
     simStep(game);
     if (state.coinsMilli === 0) zeroCoinTicks++;
     if (state.lastIncome && state.lastIncome.netMilli < 0) lossTicks++;
+    const staffRatio = staffing(game).ratioMilli;
+    if (staffRatio < 1000) {
+      shortStaffTicks++;
+      lowestStaffPercent = Math.min(lowestStaffPercent, Math.floor(staffRatio / 10));
+    }
     if (state.tick % rules.ticksPerMinute === 0) sample();
   }
 
@@ -209,5 +224,7 @@ export function runBot(game, order, options = {}) {
     thinkingMinutes: thinkingTicks / rules.ticksPerMinute,
     zeroCoinMinutes: zeroCoinTicks / rules.ticksPerMinute,
     lossMinutes: lossTicks / rules.ticksPerMinute,
+    shortStaffMinutes: shortStaffTicks / rules.ticksPerMinute,
+    lowestStaffPercent,
   };
 }

@@ -238,7 +238,7 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 - The game saves itself. It saves about every 10 seconds, whenever the page is hidden or closed, and when you go back to the title screen. There is no save button and nothing to remember.
 - There is one saved game, kept in the browser you played in. It is not shared with other browsers or computers, and clearing the browser's stored data removes it.
 - Starting a new game replaces the saved one, so the button must be pressed twice.
-- A saved game cannot be continued if a rule in the data files has changed since it was saved. The title screen says so. Changing the rule back brings the game back. Changes to names, colors, shortcut keys and notes do not matter.
+- A saved game cannot be continued if a rule in the data files has changed since it was saved. The title screen says so. (Things added to the game in later phases do not count: see sections 13 and 16.) Changing the rule back brings the game back. Changes to names, colors, shortcut keys and notes do not matter.
 - A random island is one of a million. The ? panel shows the island's number. The balance was tuned on the standard island.
 - The ? panel has a "Save and go to the title screen" button.
 
@@ -390,3 +390,57 @@ Added in Phase 14. All three are looks only. No rule changed, and nothing in the
   - The numbers over houses, the warning marks, the outlines and the building you are placing stay at full brightness, so the game reads the same at night.
   - It follows game time, so it stops when the game is paused and runs faster at 4x.
   - The ? panel has a "Day and night" box to switch it off. The choice is remembered.
+
+## 16. Staff
+
+Added in Phase 15. This is the first rule that makes residents matter for more than taxes.
+
+**The rule**
+- Every building that makes something needs staff to run it. The number is set per building in `data/buildings.json` (`staff`).
+- The town's staff are its people. It has 12 to begin with, and every 2 residents add 1 more, whatever kind of resident they are. Both numbers are in `data/config.json` (`workforce`).
+- If the town has as many staff as its buildings need, nothing changes: everything works at full speed.
+- If it has fewer, **every producing building works slower, by the same share.** A town with 30 staff where 40 are needed makes everything at 75% speed.
+- Nothing ever stands idle because of staff, and nothing stops. So a town that is short can always get out of it.
+
+| Building | Staff |
+|---|---|
+| Lumberjack | 2 |
+| Sawmill | 3 |
+| Fisherman | 3 |
+| Farm | 4 |
+| Sheep farm | 4 |
+| Bakery | 5 |
+| Weaver | 5 |
+| House, market, warehouse, road | 0 |
+
+**What counts**
+- Only a producer that is linked to a warehouse by road needs staff. One with no road needs none: it is not working.
+- A producer that is waiting, for grain or for room in the stockpile, still holds its staff.
+- Demolishing a producer frees its staff at once.
+- Half a person does not count: 7 residents add 3 staff.
+- Only making things is slowed. Houses eat at their usual pace, upkeep is paid in full, and taxes are unchanged.
+
+**The way out of a shortage** is more residents: build houses, or upgrade them so they hold more. Demolishing a workshop you do not need also works.
+
+**What you see**
+- The top bar shows a staff count beside the residents: "13 spare", or "10 short" in amber. Hover over it for the full sum and the speed your buildings are working at.
+- After 30 game seconds short of staff, the tip line says: "Your buildings are short of staff and work at 88% speed. Build more houses." This comes before any tip about a good running out, because a good running out may only be a sign of it, and another workshop would make it worse.
+- The build menu says how many staff each producer needs. A producer's panel says the same, and when the town is short it adds the speed.
+- The ? panel explains the rule in two sentences.
+- Tips are now also shown after the win, for as long as a goal is still ahead. Before this phase they stopped at the win, so the tips about wool and cloth from Phase 12 could never be seen.
+
+**How it plays, measured by the bot** (Normal; Easy and Hard give the same staff figures)
+
+| Town | With no staff rule | With it | Short of staff |
+|---|---|---|---|
+| Standard build order | wins at 28.6 min | 28.6 min | never. 51 needed, 64 in town at the win. |
+| Careless order | 30.4 min | 30.4 min | never. 49 needed, 64 in town. |
+| Bread first (workshops before houses) | 52.9 min | 58.7 min | 7.8 minutes, down to 46% speed |
+| Second act, to 100 Artisans | goal at 49.8 min | 50.5 min | about 14 minutes after the win, down to 78% speed |
+
+- A sensible first game never meets the rule. A town that builds workshops before houses is held back by it.
+- In the second act the rule is felt: the bot's town ends needing 102 staff with 84. The bot does not react, and still reaches the goal. A person would build houses.
+
+**Saved games.** A game saved before this phase can still be continued. It is played under the staff rule from then on. A large town from before may find itself short of staff the moment it loads: it is told so, and it keeps working.
+
+**Not in this phase:** staff are not people you can see walking to work, a building cannot be closed to free its staff, the kinds of resident do not differ as staff, and no difficulty changes the staff numbers.

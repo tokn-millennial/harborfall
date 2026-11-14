@@ -63,6 +63,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .hud-good.empty .hud-cap { color: #8fa1a8; }
 .hud-good.full .hud-value { color: var(--warn); }
 .hud-good.empty .hud-value { color: #8fa1a8; }
+.hud-staff.short .hud-value { color: var(--warn); }
 .hud-time { color: var(--text-soft); font-variant-numeric: tabular-nums; }
 .progress { width: 90px; height: 9px; background: rgba(0, 0, 0, 0.35); border-radius: 5px; overflow: hidden; border: 1px solid rgba(201, 165, 90, 0.5); }
 .progress-fill { height: 100%; background: linear-gradient(180deg, #a6efba, #5fbf7c); }
@@ -236,6 +237,14 @@ body.title-open #game { cursor: default; }
   .hud-pop { gap: 11px; }
   #hud-main { gap: 6px 14px; }
   .progress { width: 60px; }
+}
+/* The staff count joined the row in Phase 15: a little tighter still. */
+@media (max-width: 1380px) {
+  .hud-goods { gap: 9px; }
+  .hud-pop { gap: 9px; }
+  #hud-main { gap: 6px 11px; }
+  .progress { width: 40px; }
+  .hud-good { gap: 3px; }
 }
 /* Fifteen tools must fit one row at 1280 wide, so they slim down in two steps. */
 @media (max-width: 1600px) {

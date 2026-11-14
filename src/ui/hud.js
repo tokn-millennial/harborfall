@@ -1,7 +1,7 @@
 // The bar across the top: coins and income, goods, population, and the clock.
 
 import { el, setText } from './dom.js';
-import { clock, currentGoal } from './text.js';
+import { clock, currentGoal, staffText } from './text.js';
 import { goodIcon, icon } from './icons.js';
 
 export function createHud(root, rules) {
@@ -32,6 +32,11 @@ export function createHud(root, rules) {
       icon('person', { fill: tier.visual?.color ?? '#d9bf6a' }), el('span', 'hud-label', `${tier.name}s`), value,
     ]));
   }
+  // Staff for the producing buildings: how many are spare, or how many short.
+  const staffValue = el('span', 'hud-value');
+  const staffBox = el('span', { class: 'hud-good hud-staff' }, [icon('staff'), el('span', 'hud-label', 'Staff'), staffValue]);
+  staffBox.hidden = !rules.workforce;
+  popRow.append(staffBox);
   const bar = el('div', 'progress');
   const fill = el('div', 'progress-fill');
   bar.append(fill);
@@ -69,6 +74,13 @@ export function createHud(root, rules) {
         goods[id].box.classList.toggle('empty', summary.goods[id] === 0);
       }
       for (const id of Object.keys(tiers)) setText(tiers[id], `${summary.residents[id]} / ${summary.housing[id]}`);
+
+      if (summary.staff.on) {
+        const staff = staffText(rules, summary.staff);
+        setText(staffValue, staff.value);
+        staffBox.title = staff.title;
+        staffBox.classList.toggle('short', staff.short);
+      }
 
       const { target, current, tier } = currentGoal(rules, summary);
       const tierName = `${rules.tiers[tier].name}s`;
