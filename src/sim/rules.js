@@ -266,6 +266,9 @@ export function compileRules(rawData) {
     carts: config.carts
       ? { ticksPerTile: config.carts.ticksPerTile, load: config.carts.load, yard: config.carts.yard, reachTiles: config.carts.reachTiles }
       : null,
+    // Materials: how much of each material a workshop's store holds. null:
+    // workshops take their materials straight from the stockpile.
+    materials: config.materials && config.carts ? { store: config.materials.store } : null,
     // Trade: how often the ship calls and how much it carries per harbour.
     // null switches trade off. Prices are per good, for the goods that have them.
     trade: config.trade

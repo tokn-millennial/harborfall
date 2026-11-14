@@ -165,7 +165,7 @@ Phase 2 replaced the paper estimates with measurements. A bot played about 500 f
 |---|---|---|
 | One fisherman feeds about 20 residents | Exactly 20 | A fisherman makes 4 fish a minute and a resident eats 0.2. In play, 20 Farmers stayed fed for 30 minutes. |
 | A healthy 100-resident city earns about +40 a minute | +42.2 | Measured at the moment the bot won, with 100 Workers and 4 Farmers. |
-| A full win takes 25 to 40 minutes at 1x | 29.3 minutes since carts (Phase 19); 28.6 before | Standard build order on the shipped island. On 12 different islands, before carts: 25.9 to 28.6. |
+| A full win takes 25 to 40 minutes at 1x | 28.9 minutes since materials travel (Phase 20); 29.3 in Phase 19; 28.6 before carts | Standard build order on the shipped island. On 12 different islands, before carts: 25.9 to 28.6. |
 | A new player should not get stuck | No dead end found | Three bad openings all still win. See below. |
 
 ### The winning town
@@ -569,7 +569,7 @@ Added in Phase 19. Until now, what a building made appeared in the stockpile the
 - A cart never goes out for goods the stockpile has no room for. Such goods wait in the yard, and the building says "Storage is full", as before. If the store fills while a cart is on the road anyway (the trade ship bought some, say), the cart unloads what fits and the rest is lost. A cart is never stuck.
 
 **What does not travel**
-- Materials a workshop uses still come straight from the stockpile.
+- Materials a workshop uses still came straight from the stockpile in this phase. Since Phase 20 they travel too: section 21.
 - Houses still buy from markets as before. The trade ship still buys and sells from the stockpile.
 
 **Where you build now matters**
@@ -608,3 +608,43 @@ Times quoted in earlier sections of this spec were measured before carts.
 **Saved games.** A game saved before this phase still loads: every warehouse gets its carts at home and every yard starts empty, and from then on it plays under the cart rule.
 
 **Not in this phase:** materials carried to workshops, carts that can be told where to go, more carts for a warehouse, roads of different speeds, and a way to see the 30-tile reach on the map.
+
+## 21. Materials travel too
+
+Added in Phase 20. This finishes "goods carried along roads".
+
+**The rule**
+- A **workshop** is a building that turns one good into another: the sawmill (wood), the bakery (grain) and the weaver (wool).
+- Each workshop keeps its own **store of materials**, with room for 6 of each. It works only from that store, never straight from the stockpile.
+- A cart going to a workshop **takes materials with it** from the stockpile, enough to fill the store (up to the 4 a cart carries), and **comes back with what the workshop made**. One trip does both jobs.
+- **A workshop that has run out is served first**, before any other building, as long as the stockpile has the materials.
+- The materials leave the stockpile when the cart sets out. If the workshop is demolished on the way, the cart turns back and returns them.
+- A closed workshop is sent nothing.
+- Houses still buy from markets, building costs still come straight from the stockpile, and the trade ship still sells and buys from it.
+
+**What you see**
+- A workshop's panel shows "Materials: 4 wood (room for 6)".
+- A workshop waiting for its materials says "Waiting for a cart to bring wood." if the stockpile has wood, and "Waiting for wood." if it does not.
+- A cart on its way to a workshop now carries a load on the way out too, in the colour of the material.
+- The tip "Your carts cannot keep up. Build another warehouse near your workshops." now also counts workshops waiting for materials the stockpile has.
+
+**A bigger town needs more warehouses.** Each warehouse's 3 carts now do twice the work. A compact first act still manages with one warehouse, or two near the end. A second-act town needs two or three. The tip line says when.
+
+**How it plays, measured by the bot.** The bot now does what the tip asks: when 3 or more buildings are waiting on carts, it builds a warehouse beside the worst served of them, if it can pay for one at once, at most every 3 minutes. It also avoids building a workshop more than 24 tiles from every warehouse without building a warehouse near it first.
+
+| Build order | Phase 19 | Phase 20 |
+|---|---|---|
+| Standard | 29.3 | 28.9 |
+| Careless | 30.6 | 31.9 |
+| Bread first | 58.7 | 58.7 |
+| Merchant | 31.2 | 31.9 |
+| Second act: 100 Artisans after the win | +22.4 | +26.3 |
+| Standard, Hard | 37.0 | 37.0 |
+| Second act, Hard | +35.9 | +41.3 |
+| Standard, Easy | 29.1 | 28.5 |
+| Second act on islands 42, 7 and 2025 | +24.8, +25.1, +21.6 (no materials) | +22.4, +22.5, +23.4 |
+| Fishing village, guild, short-handed | gold, gold, gold | gold, gold, gold |
+
+**Saved games.** A game saved before this phase loads with every workshop's store empty. The first cart to each fills it. A big town from before carts, especially one with workshops out of reach, will need another warehouse or two: left alone it slowly loses residents, and the tip line says what to do.
+
+**Not in this phase:** carts that serve another warehouse's buildings, a choice of which materials a workshop is sent, and stores of different sizes for different workshops.

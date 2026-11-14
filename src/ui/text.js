@@ -110,7 +110,7 @@ export function buildingBlurb(rules, id) {
   if (def.category === 'road') lines.push('Links buildings to a warehouse. Drag to lay a line.');
   if (def.category === 'storage') lines.push(`Adds room for ${def.storagePerGood} more of each good.`);
   if (def.category === 'storage' && rules.carts && def.carts > 0) {
-    lines.push(`Keeps ${plural(def.carts, 'cart')} that collect goods within ${rules.carts.reachTiles} tiles by road.`);
+    lines.push(`Keeps ${plural(def.carts, 'cart')} that collect goods${rules.materials ? ' and deliver materials' : ''} within ${rules.carts.reachTiles} tiles by road.`);
   }
   if (def.production) {
     const p = def.production;

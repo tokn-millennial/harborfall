@@ -7,10 +7,17 @@
 // The planner only reads the game. It uses the same public checks a player's
 // mouse would (siteReason), so it cannot cheat.
 
-import { siteReason } from '../../src/sim/index.js';
+import { buildingIssue, siteReason } from '../../src/sim/index.js';
 
 const CELL = 3; // a 2-tile building cell plus a 1-tile lane
 const OFF_LANE_COST = 4; // a road tile off the lanes is allowed but discouraged
+// With carts, a producer farther than this from every warehouse, in a straight
+// line, gets a warehouse of its own first (see farFromWarehouses). 24 is about
+// the carts' reach of 30 road tiles: in effect the bot will not build out of reach.
+const FAR_FROM_WAREHOUSE = 24;
+// With carts, when at least this many producers are waiting on carts at once,
+// the bot builds another warehouse near the worst served of them (see cartsStruggling).
+const STRUGGLING_PRODUCERS = 3;
 const DIRS4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const mod = (n, m) => ((n % m) + m) % m;
 
@@ -117,7 +124,8 @@ export function createPlanner(game) {
   }
 
   // Picks a site for `type`. Returns { x, y, roads } or { reason } when there is none.
-  function plan(type) {
+  // `near`, a tile [x, y], asks for a site as close to it as can be joined by road.
+  function plan(type, near = null) {
     const def = rules.buildings[type];
     if (!def) return { reason: 'unknown_building' };
     if (def.w > 2 || def.h > 2) return { reason: 'too_big_for_the_bot_layout' };
@@ -139,7 +147,7 @@ export function createPlanner(game) {
       return best ? { x: best.x, y: best.y, roads: [] } : { reason: 'no_site_in_market_range' };
     }
 
-    if (!def.requiresRoad) {
+    if (!def.requiresRoad && !near) {
       const [x, y] = sites.reduce((a, b) => (distToOrigin(b) < distToOrigin(a) ? b : a));
       return { x, y, roads: [] };
     }
@@ -168,7 +176,7 @@ export function createPlanner(game) {
         }
       }
       if (entry === -1) continue;
-      let score = roadCost + distToOrigin([x, y]) * 0.01;
+      let score = near ? roadCost + Math.hypot(x - near[0], y - near[1]) * 2 : roadCost + distToOrigin([x, y]) * 0.01;
       if (houseSites) {
         const m = { cx: x + def.w / 2, cy: y + def.h / 2, radius: def.marketRadius };
         const covered = houseSites.filter((s) => inRange(m, s.hx, s.hy, s.w, s.h)).length;
@@ -180,5 +188,47 @@ export function createPlanner(game) {
     return { x: best.x, y: best.y, roads: routeTo(field, best.entry) };
   }
 
-  return { plan, candidateSites };
+  // True when carts are on and a producer planned at this site would be far from
+  // every warehouse: a player would build a warehouse near it first.
+  function farFromWarehouses(type, site) {
+    if (!rules.carts || !rules.buildings[type].production || site.reason) return false;
+    const def = rules.buildings[type];
+    const cx = site.x + def.w / 2;
+    const cy = site.y + def.h / 2;
+    let nearest = Infinity;
+    for (const b of state.buildings) {
+      const w = rules.buildings[b.type];
+      if (w.category === 'storage') nearest = Math.min(nearest, Math.hypot(b.x + w.w / 2 - cx, b.y + w.h / 2 - cy));
+    }
+    return nearest > FAR_FROM_WAREHOUSE;
+  }
+
+  // With carts: the producer to build a warehouse beside when the carts are
+  // struggling, or null. Struggling means several producers waiting on carts at
+  // once: a full yard nobody fetches, or a workshop out of materials the
+  // stockpile has. This is what the tip line asks a player to do.
+  function cartsStruggling() {
+    if (!rules.carts) return null;
+    const waiting = [];
+    for (const b of state.buildings) {
+      const p = b.production;
+      if (!p || !b.connected || !p.haul) continue;
+      if (buildingIssue(game, b) === 'yard_full') waiting.push(b);
+      else if (rules.materials && p.status === 'missing_input') {
+        const inputs = Object.entries(rules.buildings[b.type].production.inputs);
+        if (inputs.every(([good, n]) => state.goods[good] >= n)) waiting.push(b);
+      }
+    }
+    if (waiting.length < STRUGGLING_PRODUCERS) return null;
+    // Only if a warehouse can be paid for now: a player would not stop building
+    // the town to save up for one.
+    const storage = Object.values(rules.buildings).find((d) => d.category === 'storage');
+    if (state.coinsMilli < storage.cost.coinsMilli + 10 * rules.buildings.road.cost.coinsMilli) return null;
+    if (!Object.entries(storage.cost.goods).every(([good, n]) => state.goods[good] >= n)) return null;
+    // The worst served: the farthest from its warehouse, the oldest on a tie.
+    const worst = waiting.reduce((a, b) => (b.production.haul.tiles > a.production.haul.tiles ? b : a));
+    return [worst.x, worst.y];
+  }
+
+  return { plan, candidateSites, farFromWarehouses, cartsStruggling };
 }

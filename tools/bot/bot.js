@@ -46,6 +46,10 @@ export function runBot(game, order, options = {}) {
   const maxTicks = maxMinutes * rules.ticksPerMinute;
   const roadCost = rules.buildings.road.cost.coinsMilli;
   const marketType = Object.values(rules.buildings).find((b) => b.marketRadius > 0)?.id ?? null;
+  const storageType = Object.values(rules.buildings).find((b) => b.category === 'storage')?.id ?? null;
+  // When the bot last built a warehouse because carts were struggling: at most one every three minutes.
+  const WAREHOUSE_REST_TICKS = 3 * rules.ticksPerMinute;
+  let struggleWarehouseAt = -Infinity;
 
   const log = [];        // one entry per finished step
   const samples = [];    // one entry per game minute
@@ -57,6 +61,7 @@ export function runBot(game, order, options = {}) {
   let shortStaffTicks = 0;      // time spent with too few staff
   let lowestStaffPercent = 100; // the slowest production ever ran
   let cartWaitTicks = 0;        // producer-ticks spent with a full yard, waiting for a cart
+  let materialWaitTicks = 0;    // workshop-ticks spent out of materials that the stockpile had
   let roadsBuilt = 0;
 
   // A person's hands: after each action, a random time passes before the next.
@@ -95,9 +100,20 @@ export function runBot(game, order, options = {}) {
 
   // Tries the current step. Returns null when it was done, or the reason it must wait.
   function attempt(current) {
+    // Each time it tries a step, and so every second while it waits: if the carts
+    // are struggling, a warehouse where they struggle first, as the tip line asks.
+    if (state.tick - struggleWarehouseAt >= WAREHOUSE_REST_TICKS) {
+      const spot = planner.cartsStruggling();
+      if (spot) {
+        struggleWarehouseAt = state.tick;
+        steps.splice(index, 0, { kind: 'build', building: storageType, near: spot, label: `build ${storageType} (added by the bot: carts struggling)` });
+        return RETRY;
+      }
+    }
+
     if (current.kind === 'build') {
       const def = rules.buildings[current.building];
-      const plan = (current.plan ??= planner.plan(current.building));
+      const plan = (current.plan ??= planner.plan(current.building, current.near ?? null));
       if (plan.reason) {
         current.plan = null; // look again next time, the map may have changed
         // No room left near any market: do what a player would, and add a market first.
@@ -107,6 +123,13 @@ export function runBot(game, order, options = {}) {
           return RETRY;
         }
         return plan.reason;
+      }
+      // With carts, a workshop far from every warehouse gets one built near it first, as a player would.
+      if (!current.warehouseAdded && planner.farFromWarehouses(current.building, plan)) {
+        current.warehouseAdded = true;
+        current.plan = null;
+        steps.splice(index, 0, { kind: 'build', building: storageType, near: [plan.x, plan.y], label: `build ${storageType} (added by the bot: near a far ${current.building})` });
+        return RETRY;
       }
       if (state.coinsMilli < def.cost.coinsMilli + plan.roads.length * roadCost) return 'not_enough_coins';
       for (const [good, amount] of Object.entries(def.cost.goods)) {
@@ -193,6 +216,14 @@ export function runBot(game, order, options = {}) {
     if (state.lastIncome && state.lastIncome.netMilli < 0) lossTicks++;
     // Waiting for a cart, not for room in the stockpile: only more carts would help.
     for (const b of state.buildings) if (b.production?.status === 'yard_full' && buildingIssue(game, b) === 'yard_full') cartWaitTicks++;
+    // Out of materials while the stockpile has them: waiting for a cart to bring them.
+    if (rules.materials) {
+      for (const b of state.buildings) {
+        if (b.production?.status !== 'missing_input') continue;
+        const inputs = Object.entries(rules.buildings[b.type].production.inputs);
+        if (inputs.every(([good, n]) => state.goods[good] >= n)) materialWaitTicks++;
+      }
+    }
     const staffRatio = staffing(game).ratioMilli;
     if (staffRatio < 1000) {
       shortStaffTicks++;
@@ -239,6 +270,8 @@ export function runBot(game, order, options = {}) {
     shortStaffMinutes: shortStaffTicks / rules.ticksPerMinute,
     // Producer-minutes lost waiting for a cart: 3 means, for example, three producers idle for a minute each.
     cartWaitMinutes: cartWaitTicks / rules.ticksPerMinute,
+    // Workshop-minutes lost waiting for a cart to bring materials the stockpile had.
+    materialWaitMinutes: materialWaitTicks / rules.ticksPerMinute,
     lowestStaffPercent,
   };
 }

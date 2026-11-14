@@ -15,7 +15,7 @@
 import { staffWorksThisTick } from './staff.js';
 
 export function createProductionState() {
-  return { status: 'no_road', active: false, progress: 0, yard: {} };
+  return { status: 'no_road', active: false, progress: 0, yard: {}, store: {} };
 }
 
 // Keeps the status honest right after roads change, even while paused.
@@ -47,14 +47,19 @@ export function stepProduction(game) {
       continue;
     }
 
-    // Start a cycle: inputs are taken from the stockpile up front.
+    // Start a cycle: inputs are taken up front, from the stockpile, or, when
+    // carts bring materials, from the workshop's own store.
     if (!p.active) {
       const inputs = Object.entries(def.inputs);
-      if (!inputs.every(([good, amount]) => goods[good] >= amount)) {
+      const from = rules.materials ? p.store : goods;
+      if (!inputs.every(([good, amount]) => (from[good] ?? 0) >= amount)) {
         p.status = 'missing_input';
         continue;
       }
-      for (const [good, amount] of inputs) goods[good] -= amount;
+      for (const [good, amount] of inputs) {
+        from[good] -= amount;
+        if (rules.materials && from[good] === 0) delete from[good];
+      }
       p.active = true;
       p.progress = 0;
     }

@@ -305,6 +305,19 @@ export function validateData(data) {
       }
     }
   }
+  if (config.materials !== undefined) {
+    if (!isObject(config.materials)) err('config.materials must be an object');
+    else {
+      number(config.materials.store, 'config.materials.store', { min: 1, integer: true });
+      if (config.carts === undefined) err('config.materials needs config.carts: carts bring the materials');
+      // A store too small for one cycle would never let a workshop start.
+      for (const [id, b] of Object.entries(buildings)) {
+        for (const [good, n] of Object.entries(isObject(b?.production?.inputs) ? b.production.inputs : {})) {
+          if (isNumber(config.materials.store) && isNumber(n) && n > config.materials.store) err(`buildings.${id} uses ${n} ${good} a cycle, more than config.materials.store holds`);
+        }
+      }
+    }
+  }
   if (config.trade !== undefined) {
     if (!isObject(config.trade)) err('config.trade must be an object');
     else {

@@ -1,15 +1,15 @@
 # Harborfall: Handoff Guide
 
-Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 19. Phases 0 to 17 by Claude Fable 5.2; Phases 18 and 19 by Claude Opus 5.5.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 20. Phases 0 to 17 by Claude Fable 5.2; Phases 18 to 20 by Claude Opus 5.5.
 
 This is the one document to read when you come back to the project, or when you hand it to a new helper, human or AI. It says what exists, how to run and check it, how we worked, and what is still unproven. `ROADMAP.md` says what could come next.
 
 ## 1. The project in a minute
 
-- **What it is:** a small Anno-style city builder that runs in a desktop browser. One island, 11 buildings, 7 goods, three kinds of resident. You win at 100 Workers, in about 30 minutes, and can play on to 100 Artisans in about 20 more. Workshops need staff, who come from your residents, and can be closed for a while. Three scenarios offer other goals, with medals for speed. A harbour brings a trade ship to sell surplus and buy what is short. Carts carry goods by road to the warehouses, so where you build matters. The game saves itself.
+- **What it is:** a small Anno-style city builder that runs in a desktop browser. One island, 11 buildings, 7 goods, three kinds of resident. You win at 100 Workers, in about 30 minutes, and can play on to 100 Artisans in about 20 more. Workshops need staff, who come from your residents, and can be closed for a while. Three scenarios offer other goals, with medals for speed. A harbour brings a trade ship to sell surplus and buy what is short. Carts carry goods by road to the warehouses and materials to the workshops, so where you build matters. The game saves itself.
 - **How it is made:** plain JavaScript, with no framework, no build step and nothing to install except Node. All game rules are in five data files. All art is drawn by code.
-- **Size:** about 18,700 lines of code, tests, tools and data. The whole project is 180 files, counting documents and screenshots.
-- **State:** Phases 0 to 19 are done. 533 automated tests pass.
+- **Size:** about 19,200 lines of code, tests, tools and data. The whole project is 182 files, counting documents and screenshots.
+- **State:** Phases 0 to 20 are done. 551 automated tests pass.
 - **Where:** the folder `Harborfall` in your Documents, and the private GitHub repository `tokn-millennial/harborfall`, branch `main`.
 
 ## 2. What to read, in order
@@ -22,12 +22,12 @@ This is the one document to read when you come back to the project, or when you 
 | `docs/BRIEF.md` | Your original brief, word for word. The working rules come from here. | A helper is new to the project. |
 | `docs/SPEC.md` | Every rule of the game in plain words, with the data file each number lives in. | You want to know how something works, or tune it. |
 | `docs/ARCHITECTURE.md` | How the code is put together, folder by folder, and the test plan. | A helper is about to change code. |
-| `docs/DECISIONS.md` | Every choice made, numbered Q1 to Q5 (yours) and D1 to D269 (mine), with the reason and how to change it. | You wonder "why is it like this?" |
+| `docs/DECISIONS.md` | Every choice made, numbered Q1 to Q5 (yours) and D1 to D283 (mine), with the reason and how to change it. | You wonder "why is it like this?" |
 | `docs/TESTLOG.md` | Per phase: what was built, tested, broken and fixed, and what is weak. | You want the honest history. |
 | `docs/PLAYTEST.md` | The 73-point checklist from Phase 5 and the ranked problem list. | Planning a playtest. |
 | `docs/FINAL_REPORT.md` | The scorecard for the original test, as written at the end of Phase 5, with short notes for Phases 6 and 7. | You want the verdict on the original brief. |
 | `CLAUDE.md` (top folder) | Standing instructions that an AI helper reads on its own at the start of a session. | You never need to. It is for the helper. |
-| `docs/screenshots/` | Pictures from Phases 3 to 19. | You want to see how it looked at each stage. |
+| `docs/screenshots/` | Pictures from Phases 3 to 20. | You want to see how it looked at each stage. |
 
 ## 3. How to run it
 
@@ -43,23 +43,23 @@ These are typed in a terminal opened in the project folder. A helper runs them f
 
 | Command | What it does | A good result |
 |---|---|---|
-| `node --test` | Runs all 533 automated tests. A few seconds. | `pass 533`, `fail 0` |
-| `node tools/bot.mjs` | A bot plays a whole game with no screen and prints a report. | Wins in 29.3 minutes, no long waits. |
-| `node tools/bot.mjs careless` | The same, with a sloppier build order. | Wins in 30.6 minutes. |
+| `node --test` | Runs all 551 automated tests. A few seconds. | `pass 551`, `fail 0` |
+| `node tools/bot.mjs` | A bot plays a whole game with no screen and prints a report. | Wins in 28.9 minutes, no long waits. |
+| `node tools/bot.mjs careless` | The same, with a sloppier build order. | Wins in 31.9 minutes. |
 | `node tools/bot.mjs bread-first` | The same, with a reckless opening. | Wins in 58.7 minutes. Slower than the target, which is a known open issue. The point is that it recovers. |
 | `node tools/bot.mjs standard --seed 42` | The standard order on a different island. | Wins in 25.9 minutes. |
-| `node tools/bot.mjs artisans` | Plays past the win to the goal after it. | Wins at 29.3 minutes, then 100 Artisans at 51.7. |
+| `node tools/bot.mjs artisans` | Plays past the win to the goal after it. | Wins at 28.9 minutes, then 100 Artisans at 55.2. |
 | `node tools/bot.mjs standard --difficulty hard` | The standard order on Hard. Also `easy`. | Wins in 37.0 minutes. |
-| `node tools/bot.mjs merchant` | The standard order with a harbour, selling wood and fish. | Wins in 31.2 minutes. |
-| `node tools/bot.mjs village` | The Fishing village scenario, with the build order written for it. Also `guild`. | Wins in 10.7 minutes, gold medal. `guild`: 20.7, gold. |
-| `node tools/bot.mjs standard --scenario short-handed` | Any build order in any scenario. | Wins in 29.8 minutes, gold medal. |
+| `node tools/bot.mjs merchant` | The standard order with a harbour, selling wood and fish. | Wins in 31.9 minutes. |
+| `node tools/bot.mjs village` | The Fishing village scenario, with the build order written for it. Also `guild`. | Wins in 11.0 minutes, gold medal. `guild`: 21.1, gold. |
+| `node tools/bot.mjs standard --scenario short-handed` | Any build order in any scenario. | Wins in 30.5 minutes, gold medal. |
 | `node tools/pace.mjs` | Estimates how long a person takes, by adding human delays. | All games inside 25 to 40 minutes. |
 | `node tools/tune.mjs` | Tries changed numbers side by side without editing the data files. | A table to compare. |
 | `node tools/print-map.mjs` | Prints the island as text. | A map. |
 
 Two more checks run inside the browser. Open the test page `http://localhost:5173/?fresh`, which starts a new game with no title screen and never saves, so the checks cannot harm your saved game. Press F12, click Console, and paste:
 
-- **A whole game through the real buttons and clicks.** Reload the test page first. The result should show `won: true` at about 29.3 minutes.
+- **A whole game through the real buttons and clicks.** Reload the test page first. The result should show `won: true` at about 28.9 minutes.
 
   `const { playThroughUi } = await import('/tools/ui-playthrough.js'); await playThroughUi(window.harborfall);`
 
@@ -94,6 +94,7 @@ Every number is in a file in the `data` folder. Open one in any text editor, cha
 | A scenario's island, start, goal or medal times | `config.json` | `scenarios`. Medal times, names and descriptions are safe to change. Anything else affects only saved games of that scenario. |
 | How carts work: speed, load, yard, reach | `config.json` | `carts`. Remove it to switch carts off: goods then reach the stockpile at once. |
 | How many carts a warehouse keeps | `buildings.json` | `carts` on the warehouse. |
+| How much a workshop's store holds | `config.json` | `materials`. Remove it and workshops take straight from the stockpile, as in Phase 19. |
 | Trade prices | `goods.json` | `trade` on each good: what the ship pays (`sell`) and charges (`buy`). Buy must be the higher. |
 | How often the ship calls, and how much it carries | `config.json` | `trade`. Remove it to switch trade off. |
 | A scenario of your own | `config.json` | Add an entry under `scenarios`, copying one that is there. Then run the bot in it. |
@@ -152,10 +153,10 @@ If the helper starts in a different folder, tell it the project is in `Documents
 
 | Claim | Status | Evidence |
 |---|---|---|
-| The rules work as the spec says | **Proven** | 533 automated tests. |
+| The rules work as the spec says | **Proven** | 551 automated tests. |
 | A saved game comes back exactly | **Proven** | Saved, loaded and played-on games end identical to never-saved ones, in tests and in the browser. |
 | The game cannot leave you permanently stuck | **Proven** for the cases tested | Tests for zero coins, and bot wins from three bad openings. |
-| A win takes 25 to 40 minutes | **Proven for a bot,** estimated for a person | Bot: 29.3 minutes since carts (28.6 before). With guessed human delays, before carts: 29 to 35. |
+| A win takes 25 to 40 minutes | **Proven for a bot,** estimated for a person | Bot: 28.9 minutes since materials travel (29.3 in Phase 19, 28.6 before carts). With guessed human delays, before carts: 29 to 35. |
 | Every button and click does what it should | **Strong evidence** | A script won through the real UI and ended in exactly the bot's game. Random input found no errors. |
 | A person can play it by hand | **Confirmed by you** | You played for about 40 minutes on 2026-11-12. You have not said whether you won or how long a win took. |
 | It is fun and clear | **Unknown** | No script can tell. |
@@ -174,6 +175,7 @@ If the helper starts in a different folder, tell it the project is in `Documents
 | Carts leave a sensible town alone, and slow a spread-out one | **Proven for a bot,** and on a hand-made island | Every build order wins within a minute of its time without carts. Far workshops deliver about a fifth less, and a warehouse beside them restores it. |
 | Carts can never get stuck | **Proven** | A test fills the store and checks no cart goes out; another fills it while a cart is on the road. |
 | Players notice carts and know to build a warehouse | **Unknown** | Nobody has played with it. |
+| A bigger town with materials travelling reaches the second goal | **Proven for a bot** | On four islands, 22 to 27 minutes after the win, with the bot building warehouses where carts struggle, as the tip asks. |
 | Every difficulty can be won | **Proven for a bot** | Two sensible build orders win on all three. On Hard a reckless opening needs a demolish to recover. |
 | Dust, smoke and night look right in motion | **Unknown** | I have seen them only in still screenshots. |
 | The first-game guide helps a new player | **Unknown** | The steps are my guess. Nobody new to the game has tried it. |

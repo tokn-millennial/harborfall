@@ -558,3 +558,18 @@ All of it is in `src/sim/carts.js`.
 - **Tests.** `testGame` and `richGame` in `tests/helpers.js` now switch carts off unless asked (`{ carts: true }`), so a test of another rule sees goods arrive at once, as it was written to. Games made with `createGame(loadData())`, which includes every bot test and every whole-game test, have carts, as players do. `withoutCarts(data)` gives the data of Phase 18 exactly.
 - **On the map.** `src/render/life.js` draws each cart that is on the road at its true place: it finds the road route between the cart's warehouse and its producer, and places the cart the share of the way the game says it has come. Routes are kept until a road or building changes. With the rule off, the old carts for show are drawn instead.
 - **The bot** reports `cartWaitMinutes`: producer-minutes spent waiting for a cart, not counting waits for room in the stockpile, which more carts would not cure.
+
+## 23. Materials, and the bot's warehouses
+
+**Materials** are an extension of `src/sim/carts.js`, switched on by `config.materials` (which needs `config.carts`).
+- Each producer's record gains `store`: the materials it holds. Production takes a cycle's inputs from `store` instead of the stockpile when `rules.materials` is on.
+- **Dispatch.** A producer is a candidate if it has goods to collect (as in Phase 19) or if `runOut` says it cannot start its next cycle and a cart could bring enough. Candidates that have run out go first. When a cart sets out for a workshop, `materialsFor` takes materials from the stockpile onto the cart: as much as fits in the store and on the cart.
+- **Arrival.** The cart drops its materials into the store, then loads finished goods, now also only as much as the stockpile has room for, counting other carts on their way home. This replaced Phase 19's "pick up everything, lose what will not fit at home" and means goods are almost never lost.
+- **Demolish.** A cart on its way out with materials turns back and returns them.
+- **Saves.** A fifth round in `addedLater`: `{ "config": ["materials"] }`. Phase 19's stamp `c7dd0d43d8d2ffb8` is named in `tests/staff.test.js`. Loading checks that a store holds only that workshop's own materials, no more than 6 of each, and that a cart on its way out carries only materials its workshop uses.
+
+**The bot** (`tools/bot/planner.js`, `tools/bot/bot.js`) gained two habits, both mirrored in `tools/ui-playthrough.js` so that a game played through the real buttons still ends identical to the bot's:
+- `farFromWarehouses`: before building a producer more than 24 tiles, in a straight line, from every warehouse, it builds a warehouse near it first.
+- `cartsStruggling`: each time it tries a step, and so every second while it waits, if 3 or more producers are waiting on carts (a full yard, or a workshop out of materials the stockpile has), and it can pay for a warehouse now, and it has not built one for this reason in the last 3 minutes, it builds one beside the worst served of them.
+
+Without these the bot's second act stalled on some islands: it kept building beyond reach and never added a warehouse, which a player warned by the red marks and the tip line would not do.

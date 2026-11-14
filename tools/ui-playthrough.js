@@ -30,7 +30,7 @@ export async function playThroughUi({ game, camera, renderer, ui }, orderName = 
   const planner = createPlanner(game);
   const canvas = document.getElementById('game');
   const maxTicks = maxMinutes * rules.ticksPerMinute;
-  const counts = { menuClicks: 0, mapClicks: 0, roadDrags: 0, upgradeClicks: 0, tradeClicks: 0, marketsAdded: 0 };
+  const counts = { menuClicks: 0, mapClicks: 0, roadDrags: 0, upgradeClicks: 0, tradeClicks: 0, marketsAdded: 0, warehousesAdded: 0 };
   const roadPrice = rules.buildings.road.cost.coinsMilli;
 
   // ---- acting like a player --------------------------------------------------
@@ -73,23 +73,44 @@ export async function playThroughUi({ game, camera, renderer, ui }, orderName = 
     button.click();
     counts.menuClicks++;
   };
+  // While it waits it checks the carts every second, as the bot does (see checkCarts).
   const wait = (ready, label) => {
     while (!ready()) {
       if (state.tick >= maxTicks) throw new Error(`Ran out of time waiting for: ${label}`);
       if (state.won) return false;
       for (let i = 0; i < rules.ticksPerSecond; i++) step(game);
+      checkCarts();
     }
     return true;
   };
 
   // ---- the actions -----------------------------------------------------------
-  function build(building) {
+  // As the bot does: before each step, a warehouse where the carts are struggling.
+  const WAREHOUSE_REST_TICKS = 3 * rules.ticksPerMinute;
+  let struggleWarehouseAt = -Infinity;
+  function checkCarts() {
+    if (state.won) return;
+    const spot = state.tick - struggleWarehouseAt >= WAREHOUSE_REST_TICKS ? planner.cartsStruggling() : null;
+    if (!spot) return;
+    struggleWarehouseAt = state.tick;
+    counts.warehousesAdded++;
+    build(Object.values(rules.buildings).find((b) => b.category === 'storage').id, spot);
+  }
+
+  // `near`: build as close to this tile as can be joined by road (see planner.js).
+  function build(building, near = null) {
     const def = rules.buildings[building];
-    let plan = planner.plan(building);
+    let plan = planner.plan(building, near);
     if (plan.reason === 'no_site_in_market_range') {
       counts.marketsAdded++;
       build(Object.values(rules.buildings).find((b) => b.marketRadius > 0).id);
-      plan = planner.plan(building);
+      plan = planner.plan(building, near);
+    }
+    // As the bot does: a workshop far from every warehouse gets one built near it first.
+    if (planner.farFromWarehouses(building, plan)) {
+      counts.warehousesAdded++;
+      build(Object.values(rules.buildings).find((b) => b.category === 'storage').id, [plan.x, plan.y]);
+      plan = planner.plan(building, near);
     }
     if (plan.reason) throw new Error(`No site for ${building}: ${plan.reason}`);
     const affordable = () =>
@@ -183,6 +204,8 @@ export async function playThroughUi({ game, camera, renderer, ui }, orderName = 
   while (state.tick % rules.ticksPerSecond !== 0) step(game);
 
   for (const s of steps) {
+    if (state.won) break;
+    checkCarts();
     if (state.won) break;
     if (s.kind === 'build') build(s.building);
     else if (s.kind === 'trade') tradeOrder(s);

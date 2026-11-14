@@ -72,10 +72,13 @@ export function loadGame(rawData, save) {
   if (state !== null && typeof state === 'object' && state.undo === undefined) state.undo = null;
   // A save from before carts existed: empty yards, and every warehouse's carts at home.
   const beforeCarts = older !== null && older.configAdded.includes('carts');
+  const beforeMaterials = older !== null && older.configAdded.includes('materials');
   let addCarts = false;
   if (state !== null && typeof state === 'object' && Array.isArray(state.buildings)) {
     for (const b of state.buildings) {
       if (b?.production && typeof b.production === 'object' && (beforeCarts || b.production.yard === undefined)) b.production.yard = {};
+      // A save from before materials travelled: every workshop's store starts empty.
+      if (b?.production && typeof b.production === 'object' && (beforeMaterials || b.production.store === undefined)) b.production.store = {};
     }
     if (beforeCarts || state.carts === undefined) addCarts = true;
   }

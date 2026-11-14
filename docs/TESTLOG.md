@@ -1292,7 +1292,7 @@ The standard game: the bot still wins at 28.6 minutes.
 **What I would change**
 - When Phase 12 let a build order name its upgrade, I taught the bot and not the test tool that mirrors it. The two should have been changed together. A tool that silently does something else is worse than one that refuses.
 
-**After the gate:** committed as `67cdc4e` on your "Proceed, do an amazing job!". Not pushed.
+**After the gate:** committed as `67cdc4e` on your "Proceed, do an amazing job!". Pushed with Phases 18 to 20 on your "Push to GitHub".
 
 ## Phase 18: The harbour and the trade ship
 
@@ -1374,7 +1374,7 @@ No way of trading beat the standard order, so trade is not a money machine. A ch
 **What I would change**
 - Write the check on paper first. It found the wood price in a second, where the bot runs took minutes and did not.
 
-**After the gate:** committed as `5b18a13` when you chose the next phase. Not pushed.
+**After the gate:** committed as `5b18a13` when you chose the next phase. Pushed with Phases 17 to 20 on your "Push to GitHub".
 
 ## Phase 19: Carts: goods travel by road
 
@@ -1448,3 +1448,73 @@ Date: 2026-11-14. Status: approved by Colin with no changes ("Approved and proce
 
 **What I would change**
 - I would have run the bot before writing anything else. Its first run found the stuck-cart trap in seconds; a player would have found it after twenty minutes of play.
+
+**After the gate:** committed as `e11fa80` on your "Approved and proceed". Pushed with Phases 17 to 20 on your "Push to GitHub".
+
+## Phase 20: Materials travel too
+
+Date: 2026-11-14. Status: approved by Colin with no changes (he asked to push it: "Push to GitHub").
+
+**Turns used:** 1 (your "Approved and proceed"). Built by Claude Opus 5.5.
+
+**What was built**
+- **Workshop stores.** The sawmill, bakery and weaver keep their own store of materials, room for 6 of each, and work only from it (`SPEC.md` section 21).
+- **One trip, both jobs.** A cart to a workshop takes materials out and brings finished goods back. A workshop that has run out is served first.
+- **Carts load only what the stockpile has room for**, so goods are no longer lost at a full warehouse.
+- **On screen:** a Materials line in the panel, "Waiting for a cart to bring wood.", and the carts tip counts starved workshops.
+- **The bot builds warehouses** where carts struggle, and before building far from every warehouse, as the tip line asks a player to. The click-through test tool does the same.
+
+**Automated tests: 551 pass, 0 fail.** That is 533 from before plus 18 new ones in `tests/materials.test.js`. Older tests changed: 4 loosened (D280), 2 rewritten to what now happens (D281, D282), 2 updated for new figures (the stamp list, the fishing village's time).
+
+**Did the tests mean anything?** I broke materials on purpose in seven ways.
+
+| Break | Tests that failed |
+|---|---|
+| Workshops take from the stockpile after all | 11 |
+| A workshop that has run out is not served first | 2 |
+| Carts take no materials with them | 13 |
+| Materials on a cart turned back are thrown away | 1 |
+| Closed workshops are sent materials | 1 |
+| Loading accepts any store | 1 |
+| The bot never answers struggling carts | 2 |
+
+**What the bot found, and what I did about it.** This phase was mostly balance.
+
+1. **The second act broke.** With materials travelling, a town of 100 Artisans needs its carts both ways. The bot's took 35.6 minutes after the win instead of 22, and on island 2025 it never got there: wool piled up in the stockpile (96) while both weavers sat idle.
+2. **Bigger carts fixed it but spoiled Phase 19.** Four carts carrying 6 brought the second act back, but far workshops then lost almost nothing, so distance stopped mattering. Not used (D277).
+3. **The real cause was the bot.** It kept building farms and fishermen beyond the carts' reach, up to 56 road tiles away, and never built a second warehouse. A player sees the red marks and the tip. I taught the bot both: build a warehouse before placing far from every warehouse, and build one where carts struggle (D278, D279).
+4. **Getting the bot's habits right took six tries.** One of my experiments was invalid: all its rows came out the same because the threshold was read only once, and I caught that before drawing conclusions. Reacting to 2 waiting buildings made it over-build and broke the bread-first town. Checking only when a step started missed a town stuck waiting on an upgrade. Saving up for a warehouse cost Hard 5 minutes. The final rule reacts to 3, checks every second, and only when it can pay at once.
+5. **The rule for loading at a producer changed** (D276). One effect: the weavers' guild without Farmer houses now wins, slowly, where before it never did (D281).
+
+**Balance, by the bot.** All in `SPEC.md` section 21. All four islands reach 100 Artisans 22 to 27 minutes after the win. Every scenario still earns gold. The standard game wins at 28.9 minutes.
+
+**Browser checks** (on the test page and the demo, which never save)
+
+| Check | How | Result |
+|---|---|---|
+| A whole game through the real buttons matches the bot | UI playthrough, then the bot's game stepped to the same tick | Pass. Both won at tick 17351 (28.9 minutes), both added the same market and warehouse, and the games are identical. |
+| A sawmill's panel | Clicked a sawmill at 12 minutes | Pass, read from the page: "Waiting here: 1 plank (room for 6)", "Materials: 4 wood (room for 6)", "Warehouse: 6 road tiles · 3 s by cart". |
+| A cart bringing wood | Paused the town as a cart drove to the sawmill | Pass by my eye: a cart with a load of wood on the road. See `docs/screenshots/phase20-cart-bringing-wood.jpg`. |
+| Random input | 20,000 actions on the demo town | Pass. No errors. It ended with 15 carts across its warehouses. |
+| The error console | Read it | Empty. |
+
+**A limit of my checking.** The browser pane moved to a display that scales by 1.5, and its screenshots then showed only the top-left part of the page. So there is no picture of the sawmill's panel; I checked it by reading the page's text.
+
+**Bugs found:** none in the game rules themselves. The balance problems above, two habits the bot lacked, one invalid experiment of mine, and these test mistakes: forgetting a sawmill costs 5 wood, sawmills placed across their own road, escape characters written into a test file by mistake, and a claim that the first act never needs a second warehouse (it needs one, at 25.9 minutes).
+
+**Decisions made:** 14 (D270 to D283).
+
+**Weak or unfinished**
+- **Nobody has played it.** Whether a player notices that workshops need deliveries, and builds warehouses when told, I cannot tell.
+- **The bot now plays better than its build orders say.** Its warehouses are its own choice, made the way I think a player would. The figures depend on that.
+- **Hard's second act is slower:** 41.3 minutes after the win, where the limit was 40.
+- **A big town from an older save will need another warehouse or two** after loading. Left alone it slowly loses residents.
+- **Four tests were loosened** (D280).
+- **Carts of one warehouse never help another's buildings**, even when idle.
+- **Phases 17 to 20 were pushed together** at the end of this gate.
+- **Not done:** your notes from playing, and a Mac test.
+
+**What I would change**
+- I would have run every build order on several islands at the very start of the phase, not just the standard one on the shipped island. The second-act failure was there from the first change, and the standard game hid it.
+
+**After the gate:** committed and pushed to GitHub, with Phases 17 to 19, on your "Push to GitHub".

@@ -65,7 +65,7 @@ console.log(`Residents: ${Object.entries(result.summary.residents).map(([tier, n
 console.log(`Buildings: ${Object.entries(result.counts).map(([t, n]) => `${n} ${t}`).join(', ')}, ${result.roadsBuilt} road tiles.`);
 console.log(`Time at zero coins: ${result.zeroCoinMinutes.toFixed(1)} min. Time losing money: ${result.lossMinutes.toFixed(1)} min.`);
 if (result.summary.carts.on) {
-  console.log(`Carts: ${result.summary.carts.total}. Producer-minutes spent waiting for a cart: ${result.cartWaitMinutes.toFixed(1)}.`);
+  console.log(`Carts: ${result.summary.carts.total}. Producer-minutes spent waiting for a cart: ${result.cartWaitMinutes.toFixed(1)}.${game.rules.materials ? ` Workshop-minutes waiting for materials: ${result.materialWaitMinutes.toFixed(1)}.` : ''}`);
 }
 if (result.summary.staff.on) {
   const st = result.summary.staff;

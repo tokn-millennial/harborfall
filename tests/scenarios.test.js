@@ -187,17 +187,20 @@ test('short-handed is short of staff for much of the game, as its name says', ()
   assert.equal(runBot(standard, loadOrder('standard')).shortStaffMinutes, 0);
 });
 
-test('the weavers\' guild stalls without Farmer houses to staff it, and houses set it going again', () => {
+// Until Phase 20 the guild with no Farmer houses never won at all. Since carts
+// stopped losing goods they could not unload, it gets there, short of staff all
+// the way and too late for gold.
+test('the weavers\' guild without Farmer houses to staff it is short of staff for most of the game, and too slow for gold', () => {
   const order = loadOrder('guild');
   const bare = { ...order, steps: order.steps.filter((s) => !(s.build === 'house' && s.count === 4)) };
   assert.equal(bare.steps.length, order.steps.length - 1);
+  const full = runBot(createGame(loadData(), { scenario: 'weavers-guild' }), order);
   const game = createGame(loadData(), { scenario: 'weavers-guild' });
-  const stalled = runBot(game, bare, { maxMinutes: 45 });
-  assert.equal(stalled.won, false, 'the guild won with no one to staff it');
-  assert.equal(getSummary(game).staff.short, true);
-  // Not a dead end: four more houses, and the upgrades it could not make before, and the town reaches its goal.
-  const rescued = runBot(game, { name: 'rescue', steps: [{ build: 'house', count: 4 }, { upgrade: 2, to: 'artisan' }] }, { maxMinutes: 75 });
-  assert.equal(rescued.won, true, `still stuck with ${getSummary(game).win.current} Artisans`);
+  const result = runBot(game, bare, { maxMinutes: 60 });
+  assert.ok(result.shortStaffMinutes >= 15, `short of staff for only ${result.shortStaffMinutes.toFixed(1)} minutes`);
+  assert.ok(result.lowestStaffPercent <= 65, `production only fell to ${result.lowestStaffPercent}%`);
+  assert.ok(!result.won || result.wonAtMinutes > full.wonAtMinutes + 2, `without the houses it won at ${result.wonAtMinutes?.toFixed(1)}, with them at ${full.wonAtMinutes.toFixed(1)}`);
+  assert.notEqual(result.summary.win.medal, 'gold');
 });
 
 // ---- saved games -----------------------------------------------------------------------
@@ -330,7 +333,7 @@ test('the win screen names the medal in a scenario, and has none in the standard
   const { game } = play('fishing-village');
   const message = winMessage(game.rules, getSummary(game), game.state.buildings.length);
   assert.equal(message.title, 'You win!');
-  assert.match(message.detail, /^120 Farmers live on your island\. It took 10:\d\d of game time\.$/);
+  assert.match(message.detail, /^120 Farmers live on your island\. It took 1[01]:\d\d of game time\.$/);
   assert.deepEqual(message.medal, { kind: 'gold', text: 'Gold medal. Gold within 13 minutes, silver within 20.' });
   assert.equal(message.next, null, 'this scenario has no goal after the win');
 

@@ -65,6 +65,7 @@ export function testGame({ change, coins, goods, rows = TEST_ISLAND, start = TES
 // Warehouses keep no carts either, so this is exactly the data of Phase 18.
 export function withoutCarts(data) {
   delete data.config.carts;
+  delete data.config.materials;
   for (const b of Object.values(data.buildings)) if (b !== null && typeof b === 'object') delete b.carts;
   return data;
 }
@@ -139,7 +140,8 @@ export function fillHouse(game, house) {
 // The data files as they were when only the first `rounds` rounds of
 // additions (config.addedLater) had been made. 0 is the game as first
 // released; 1 is with wool, cloth and Artisans but before staff; 2 is with
-// staff but before the harbour and trade; 3 is with trade but before carts.
+// staff but before the harbour and trade; 3 is with trade but before carts;
+// 4 is with carts that carry only finished goods, before materials travelled.
 export function dataBefore(rounds) {
   const data = loadData();
   const steps = data.config.addedLater;

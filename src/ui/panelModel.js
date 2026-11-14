@@ -48,11 +48,12 @@ export function panelModel(game, building, options = {}) {
   } else {
     // A producer the player has closed says so, unless something worse (no road) is wrong with it.
     const closed = Boolean(building.production?.closed) && !issue;
-    lines.push({
-      label: 'Status',
-      value: closed ? 'Closed. It makes nothing.' : issue ? reasonText(game, issue, { building: building.type }) : building.production ? 'Working.' : def.harbor ? 'Open to ships.' : 'Fine.',
-      level: closed ? 'warn' : issueLevel(issue),
-    });
+    let status = closed ? 'Closed. It makes nothing.' : issue ? reasonText(game, issue, { building: building.type }) : building.production ? 'Working.' : def.harbor ? 'Open to ships.' : 'Fine.';
+    const inputs = Object.keys(def.production?.inputs ?? {});
+    if (issue === 'missing_input' && rules.materials && inputs.every((g) => state.goods[g] >= def.production.inputs[g])) {
+      status = `Waiting for a cart to bring ${inputs.map((g) => rules.goods[g].name.toLowerCase()).join(' and ')}.`;
+    }
+    lines.push({ label: 'Status', value: status, level: closed ? 'warn' : issueLevel(issue) });
   }
 
   // Carts: what waits in the yard, and how far the nearest warehouse is.
@@ -60,6 +61,12 @@ export function panelModel(game, building, options = {}) {
     const yard = building.production.yard;
     const waiting = rules.goodIds.filter((g) => yard[g] > 0).map((g) => amountText(rules, g, yard[g])).join(', ');
     lines.push({ label: 'Waiting here', value: `${waiting || 'Nothing'} (room for ${rules.carts.yard})` });
+    // A workshop's own store of materials, which carts keep topped up.
+    if (rules.materials && Object.keys(def.production.inputs).length > 0) {
+      const store = building.production.store;
+      const held = Object.keys(def.production.inputs).map((g) => amountText(rules, g, store[g] ?? 0)).join(', ');
+      lines.push({ label: 'Materials', value: `${held} (room for ${rules.materials.store})` });
+    }
     const haul = building.production.haul;
     if (haul && haul.tiles <= rules.carts.reachTiles) {
       // Short, so it stays on one line beside its label: "7 road tiles · 3.5 s by cart".

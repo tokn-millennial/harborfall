@@ -44,6 +44,8 @@ export function createAdvisor(rules, { patienceSeconds = 30 } = {}) {
         for (const good in b.house.met) if (!b.house.met[good] && state.goods[good] === 0) note(good, 0);
       }
       if (b.production?.status === 'missing_input') {
+        // (With materials carried, a workshop waits on its own store. Only a good
+        // the stockpile lacks too is short; the rest is the carts' job.)
         for (const [good, n] of Object.entries(rules.buildings[b.type].production.inputs)) {
           if (state.goods[good] < n) note(good, 1);
         }
@@ -106,7 +108,12 @@ export function createAdvisor(rules, { patienceSeconds = 30 } = {}) {
         const found = { too_far: null, yard_full: null };
         for (const b of game.state.buildings) {
           if (!b.production) continue;
-          const issue = buildingIssue(game, b);
+          let issue = buildingIssue(game, b);
+          // A workshop out of materials the stockpile holds is waiting for a cart too.
+          if (issue === 'missing_input' && rules.materials) {
+            const inputs = Object.entries(rules.buildings[b.type].production.inputs);
+            if (inputs.every(([good, n]) => game.state.goods[good] >= n)) issue = 'yard_full';
+          }
           if (issue in found && !found[issue]) found[issue] = b;
         }
         for (const issue of Object.keys(found)) {

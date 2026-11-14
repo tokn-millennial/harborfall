@@ -73,6 +73,11 @@
     "reachTiles": 30
   },
 
+  "_materials": "Carts bring materials to workshops too. A workshop (a building whose production takes inputs) keeps its own store of them, room for 'store' of each, and works only from that. A cart going to a workshop takes materials from the stockpile to fill the store, and comes back with what the workshop made. Needs 'carts'. Remove this entry and workshops take their materials straight from the stockpile.",
+  "materials": {
+    "store": 6
+  },
+
   "_trade": "The trade ship. While the island has a Harbour linked to a warehouse, a ship calls every 'shipEverySeconds' of game time. On each call it carries at most 'unitsPerHarbor' units for each such Harbour, sold and bought together. What it sells and buys is set by the player in the Harbour's panel. Prices are in goods.json. Remove this whole entry to switch trade off.",
   "trade": {
     "shipEverySeconds": 120,
@@ -111,6 +116,9 @@
     {
       "buildingSettings": ["carts"],
       "config": ["carts"]
+    },
+    {
+      "config": ["materials"]
     }
   ]
 }

@@ -15,8 +15,13 @@
 // warehouse. If the stockpile fills while a cart is on the road anyway (the
 // trade ship, a refund), the cart unloads what fits and the rest is lost.
 //
-// Only finished goods travel. Materials a workshop uses still come straight
-// from the stockpile, and houses still buy from markets as before.
+// Materials travel too, when config.json has "materials": a workshop (one
+// whose production takes inputs) keeps its own small store of them and works
+// only from that. A cart setting out for a workshop takes materials from the
+// stockpile to top the store up, and comes back with what the workshop made,
+// so one trip does both jobs. A workshop that has run out is served first.
+// Houses still buy from markets, and building costs still come straight from
+// the stockpile.
 
 import { DIRS4, inBounds, perimeter, tileIndex } from './grid.js';
 
@@ -144,13 +149,16 @@ export function stepCarts(game) {
     if (c.left > 0) c.left--;
     if (c.left > 0) continue;
     if (c.phase === 'out') {
-      // At the producer: load as much as the cart takes, in the order goods are listed.
-      const yard = byId.get(c.target)?.production?.yard;
+      const p = byId.get(c.target)?.production;
+      // At the workshop: drop off the materials. Room for them was kept when the cart set out.
+      for (const [good, n] of Object.entries(c.load)) change(p.store, good, n);
+      c.load = {};
+      // Then load what it made, as much as the cart takes and the stockpile has room for.
       let room = rules.carts.load;
       for (const good of rules.goodIds) {
-        const take = Math.min(room, yard?.[good] ?? 0);
+        const take = Math.min(room, p.yard[good] ?? 0, spareRoom(state, good, c));
         if (take <= 0) continue;
-        change(yard, good, -take);
+        change(p.yard, good, -take);
         change(c.load, good, take);
         room -= take;
       }
@@ -171,11 +179,12 @@ export function stepCarts(game) {
 
   // Send idle carts out. The fullest yard is collected first, then the nearest.
   if (!state.carts.some((c) => c.phase === 'home')) return;
-  // What is already on its way to the stockpile, or soon will be.
+  // What is already on its way to the stockpile, or soon will be. (A cart on
+  // its way out carries materials away from the stockpile, not to it.)
   const targeted = new Set();
   const coming = {};
   for (const c of state.carts) {
-    for (const [good, n] of Object.entries(c.load)) coming[good] = (coming[good] ?? 0) + n;
+    if (c.phase === 'back') for (const [good, n] of Object.entries(c.load)) coming[good] = (coming[good] ?? 0) + n;
     if (c.phase !== 'out') continue;
     targeted.add(c.target);
     const yard = byId.get(c.target)?.production?.yard ?? {};
@@ -187,21 +196,69 @@ export function stepCarts(game) {
     const p = b.production;
     if (!p || targeted.has(b.id) || !servedByCarts(rules, b)) continue;
     const units = unitsIn(p.yard);
-    if (units > 0 && Object.keys(p.yard).every(room)) waiting.push({ b, units });
+    const collect = units > 0 && Object.keys(p.yard).every(room);
+    const urgent = runOut(rules, state, b);
+    if (collect || urgent) waiting.push({ b, units, urgent });
   }
   if (waiting.length === 0) return;
-  waiting.sort((a, z) => z.units - a.units || a.b.production.haul.tiles - z.b.production.haul.tiles || a.b.id - z.b.id);
-  for (const { b } of waiting) {
+  // A workshop that has run out of materials first, then the fullest yard, then the nearest.
+  waiting.sort((a, z) => z.urgent - a.urgent || z.units - a.units || a.b.production.haul.tiles - z.b.production.haul.tiles || a.b.id - z.b.id);
+  for (const { b, urgent } of waiting) {
     const cart = state.carts.find((c) => c.phase === 'home' && c.home === b.production.haul.from);
     if (!cart) continue;
-    // Room may have run out with the carts sent so far this tick.
-    if (!Object.keys(b.production.yard).every(room)) continue;
-    for (const [good, n] of Object.entries(b.production.yard)) coming[good] = (coming[good] ?? 0) + Math.min(n, rules.carts.load);
+    // Things may have changed with the carts sent so far this tick.
+    const collect = unitsIn(b.production.yard) > 0 && Object.keys(b.production.yard).every(room);
+    if (!collect && !(urgent && runOut(rules, state, b))) continue;
+    if (collect) for (const [good, n] of Object.entries(b.production.yard)) coming[good] = (coming[good] ?? 0) + Math.min(n, rules.carts.load);
+    // Materials to top the workshop's store up, taken from the stockpile now.
+    for (const [good, n] of Object.entries(materialsFor(rules, state, b))) {
+      state.goods[good] -= n;
+      change(cart.load, good, n);
+    }
     cart.phase = 'out';
     cart.target = b.id;
     cart.trip = b.production.haul.tiles * rules.carts.ticksPerTile;
     cart.left = cart.trip;
   }
+}
+
+// Room in the stockpile for a good, counting what other carts are already bringing home.
+function spareRoom(state, good, except) {
+  let coming = 0;
+  for (const c of state.carts) if (c !== except && c.phase === 'back') coming += c.load[good] ?? 0;
+  return Math.max(0, state.storageCap - state.goods[good] - coming);
+}
+
+// The materials a workshop takes for one cycle, or {} for a producer that takes none.
+const inputsOf = (rules, building) => rules.buildings[building.type].production.inputs;
+
+// The materials a cart should take to a workshop to fill its store: as much as
+// the store has room for, the stockpile holds, and the cart carries.
+export function materialsFor(rules, state, building) {
+  if (!rules.materials) return {};
+  const store = building.production.store;
+  let room = rules.carts.load;
+  const out = {};
+  for (const good of rules.goodIds) {
+    if (!(good in inputsOf(rules, building))) continue;
+    const n = Math.min(room, rules.materials.store - (store[good] ?? 0), state.goods[good]);
+    if (n <= 0) continue;
+    out[good] = n;
+    room -= n;
+  }
+  return out;
+}
+
+// True when a workshop cannot start its next cycle for want of materials, and
+// a cart could bring enough of them from the stockpile.
+export function runOut(rules, state, building) {
+  if (!rules.materials) return false;
+  const p = building.production;
+  if (p.active || p.closed) return false;
+  const inputs = Object.entries(inputsOf(rules, building));
+  if (inputs.length === 0 || inputs.every(([good, n]) => (p.store[good] ?? 0) >= n)) return false;
+  const bring = materialsFor(rules, state, building);
+  return inputs.every(([good, n]) => (p.store[good] ?? 0) + (bring[good] ?? 0) >= n);
 }
 
 // A read-only picture of the carts for the screen and the bot.
@@ -235,6 +292,13 @@ export function cartsProblem(rules, state) {
     if (!amounts(b.production.yard)) return `building ${b.id} has a wrong yard`;
     const cap = rules.carts ? rules.carts.yard : 0;
     if (unitsIn(b.production.yard) > cap) return `building ${b.id} has more in its yard than it holds`;
+    const store = b.production.store;
+    if (!amounts(store)) return `building ${b.id} has a wrong store of materials`;
+    const inputs = rules.buildings[b.type].production.inputs;
+    for (const [good, n] of Object.entries(store)) {
+      if (!(good in inputs)) return `building ${b.id} keeps ${good}, which it does not use`;
+      if (!rules.materials || n > rules.materials.store) return `building ${b.id} keeps more ${good} than its store holds`;
+    }
   }
   if (!Array.isArray(state.carts)) return 'the carts are missing';
   const ids = new Map(state.buildings.map((b) => [b.id, b]));
@@ -250,7 +314,12 @@ export function cartsProblem(rules, state) {
     if (c.target !== null && !ids.get(c.target)?.production) return 'a cart is going to something that is not a producer';
     if (c.phase === 'home' && (c.target !== null || c.trip !== 0 || c.left !== 0 || unitsIn(c.load) !== 0)) return 'a cart at home is not at rest';
     if (c.phase === 'back' && c.left === 0) return 'a cart has arrived but not unloaded';
-    if (c.phase === 'out' && (c.target === null || unitsIn(c.load) !== 0)) return 'a cart on its way out is wrong';
+    if (c.phase === 'out' && c.target === null) return 'a cart on its way out is going nowhere';
+    if (c.phase === 'out' && unitsIn(c.load) > 0) {
+      // On its way out a cart carries only materials for the workshop it is going to.
+      const inputs = rules.buildings[ids.get(c.target).type].production.inputs;
+      if (!rules.materials || !Object.keys(c.load).every((good) => good in inputs)) return 'a cart on its way out carries something its workshop does not use';
+    }
   }
   for (const b of state.buildings) {
     const want = rules.carts ? rules.buildings[b.type].carts : 0;

@@ -230,8 +230,10 @@ test('the stamps that saved games out in the world carry are still recognised', 
   const rules = compileRules(loadData());
   // Phase 18 added a third: games saved in Phases 15 to 17, before trade.
   // Phase 19 a fourth: games saved in Phase 18, before carts.
-  assert.deepEqual(rules.olderStamps.map((o) => o.stamp), ['6fe08f1bee9bb754', 'b16fd0a9142282c9', '10d0dc80671f7e66', 'fc1b9e1dd0f19bb7']);
-  assert.deepEqual(rules.olderStamps.map((o) => o.configAdded), [['milestones', 'workforce', 'trade', 'carts'], ['workforce', 'trade', 'carts'], ['trade', 'carts'], ['carts']]);
+  // Phase 20 a fifth: games saved in Phase 19, before materials travelled.
+  assert.deepEqual(rules.olderStamps.map((o) => o.stamp), ['6fe08f1bee9bb754', 'b16fd0a9142282c9', '10d0dc80671f7e66', 'fc1b9e1dd0f19bb7', 'c7dd0d43d8d2ffb8']);
+  assert.deepEqual(rules.olderStamps.map((o) => o.configAdded), [['milestones', 'workforce', 'trade', 'carts', 'materials'], ['workforce', 'trade', 'carts', 'materials'], ['trade', 'carts', 'materials'], ['carts', 'materials'], ['materials']]);
+  assert.equal(createGame(dataBefore(4)).rules.stamp, 'c7dd0d43d8d2ffb8');
   assert.equal(createGame(dataBefore(2)).rules.stamp, '10d0dc80671f7e66');
   assert.equal(createGame(dataBefore(3)).rules.stamp, 'fc1b9e1dd0f19bb7');
   assert.equal(createGame(withoutCarts(loadData())).rules.stamp, 'fc1b9e1dd0f19bb7', 'with carts taken out, the data is that of Phase 18');
@@ -305,9 +307,13 @@ test('a finished game from before staff keeps its win, its Artisans goal and its
   const staff = getSummary(game).staff;
   assert.equal(staff.short, true);
   assert.ok(staff.percent >= 70, `production fell to ${staff.percent}%`);
+  // Since Phase 20 a big town from before carts needs another warehouse to keep
+  // its Artisans. A player who answers the tip line, as the bot does, keeps them.
   const coins = game.state.coinsMilli;
-  run(game, 6000);
-  assert.ok(game.state.coinsMilli > coins, 'the town went on earning');
+  const start = game.state.tick / game.rules.ticksPerMinute;
+  const answered = runBot(game, { name: 'answer the tips', steps: [{ upgrade: 30, to: 'artisan' }] }, { pastWin: true, maxMinutes: start + 10 });
+  assert.ok(answered.log.some((e) => /warehouse/.test(e.label)), 'no warehouse was built where the carts struggled');
+  assert.ok(game.state.coinsMilli > coins || getSummary(game).income.net > 0, 'the town stopped earning');
   assert.ok(getSummary(game).milestones[0].current >= 100, 'the Artisans left');
 });
 
