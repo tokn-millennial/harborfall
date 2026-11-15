@@ -23,9 +23,10 @@ export function hasSecondIsland(game) {
   return Boolean(game.state.map.second);
 }
 
-// The second island can be built on once the game is won.
+// The second island can be built on once the game is won, or from the start
+// in a scenario that opens it (config.json, a scenario's "secondIslandOpen").
 export function secondIsOpen(game) {
-  return hasSecondIsland(game) && game.state.won;
+  return hasSecondIsland(game) && (game.state.won || game.rules.secondIslandOpenAtStart);
 }
 
 // Where an island's goods are kept: an object with goods and storageCap.

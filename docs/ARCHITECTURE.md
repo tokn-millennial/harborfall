@@ -618,3 +618,9 @@ Phase 21 changed only `src/render/`, two files in `src/ui/` and `ui.css`. No rul
 - `roadReach(game)` in `src/sim/carts.js` is the road search the carts already used, now shared: for every road tile, the distance to the nearest warehouse and which one. `recomputeHauls` uses it.
 - `cartReachMap` and `haulIfPlaced` in `src/ui/tools.js` turn it into tints and a distance for the building being placed; `haulText` in `src/ui/text.js` says it. `gameUi.js` draws them each frame while placing; working it out takes about 0.2 ms on the demo town.
 - **Measuring the top bar:** call `window.harborfall.ui.frame(0)` first. A hidden pane may not have drawn a frame yet, and then the bar is empty and seems to fit.
+
+## 29. A scenario that opens the second island
+
+- `withScenario` copies a scenario's `secondIslandOpen` into `config.secondIslandOpen`; the rules carry it as `secondIslandOpenAtStart`.
+- `secondIsOpen(game)` in `src/sim/islands.js` is now the one test for "may the second island be used": the win, or that setting. `siteReason`, `needCounts`, the advisor and the bot's founding step all ask it.
+- The bot's `tools/bot/orders/vintners.json` settles the island first and sets levels to keep back.

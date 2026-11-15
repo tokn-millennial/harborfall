@@ -12,7 +12,7 @@
   },
   "defaultDifficulty": "normal",
 
-  "_scenarios": "Games with their own island, start and goal, offered on the title screen. A scenario may set: seed (the island), startCoins, startGoods, baseIncomePerMinute, win (tier and residents), milestones (goals after the win; an empty list means none), workforce (base and perResident), and medals (gold and silver, in game minutes: finish within the time to earn the medal, and any later finish is bronze). Anything left out stays as in the standard game. Scenarios never change the standard game or its saved games.",
+  "_scenarios": "Games with their own island, start and goal, offered on the title screen. A scenario may set: seed (the island), startCoins, startGoods, baseIncomePerMinute, win (tier and residents), milestones (goals after the win; an empty list means none), workforce (base and perResident), secondIslandOpen (true: the second island is open from the start, not only after the win), and medals (gold and silver, in game minutes: finish within the time to earn the medal, and any later finish is bronze). Anything left out stays as in the standard game. Scenarios never change the standard game or its saved games.",
   "scenarios": {
     "fishing-village": {
       "name": "Fishing village",
@@ -30,6 +30,16 @@
       "win": { "tier": "artisan", "residents": 60 },
       "milestones": [],
       "medals": { "gold": 24, "silver": 32 }
+    },
+    "vintners": {
+      "name": "The vintners",
+      "about": "The second island is open from the start, and the town wants wine: without it an Artisan house holds only 8. Settle early, ship the grapes home, and keep some wood and planks back for the town.",
+      "secondIslandOpen": true,
+      "startCoins": 1500,
+      "startGoods": { "wood": 80, "planks": 80 },
+      "win": { "tier": "artisan", "residents": 60 },
+      "milestones": [],
+      "medals": { "gold": 45, "silver": 58 }
     },
     "short-handed": {
       "name": "Short-handed",

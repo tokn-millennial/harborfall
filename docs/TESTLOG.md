@@ -1800,3 +1800,37 @@ Date: 2026-11-15. Status: approved by Colin with no changes ("Commit and proceed
 - **Nobody has played it.**
 
 **After the gate:** committed on your "Commit and proceed". Not pushed.
+
+## Phase 26: The vintners, a fourth scenario
+
+Date: 2026-11-15. Status: approved by Colin with no changes ("Yes").
+
+**Turns used:** 1 (your "Commit and proceed"). Built by Claude Opus 5.5.
+
+**What was built** (`SPEC.md` section 27)
+- **The vintners:** the second island open from the start, 60 Artisans to win, medals at 45 and 58 minutes.
+- **A scenario setting** that opens the second island from the start.
+- A bot build order for it.
+
+**Automated tests: 600 pass, 0 fail.** 598 from before plus 2 new: the vintners open the island and want wine from the start (and no other game does), and the bot's town cannot win it in an hour without the island's wine. Older scenario tests now expect four scenarios, and the scenario-mistakes test checks the new setting. The main scenario test now also wins the vintners: gold at a brisk and a typical pace, silver at a slow one.
+
+**Did the tests mean anything?** Two breaks, each caught: the setting ignored (3 tests failed), and every scenario opening the island (3 tests failed).
+
+**Balance.** The standard game and the other scenarios are unchanged: standard 28.9, merchant 31.9, 100 Artisans 30.5 minutes after the win, and every scenario still gold.
+
+**Browser checks** (my own copy on port 5174, since your server on 5173 was still down; a different address, so it never saw your saved game)
+
+| Check | How | Result |
+|---|---|---|
+| The title screen | Opened at 1280 by 800 | Pass: four scenarios listed with goals and medal times, and the card fits without scrolling. |
+| Building on the second island in the first minute | Started the vintners on the paused test page, picked Warehouse, clicked on the island | Pass: placed. |
+| The error console | Read it | Empty. |
+
+**Decisions made:** 5 (D338 to D342).
+
+**Weak or unfinished**
+- **Medal times come from a bot.** Nobody has played the vintners.
+- **The click-through test does not play island steps,** so the vintners were checked through the real buttons only for building on the island, not for a whole game.
+- **Phase 25 is committed but not pushed.**
+
+**After the gate:** committed on your "Yes". Not pushed.

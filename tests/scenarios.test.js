@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { loadData } from '../src/platform/loadData.node.js';
 import { createRecords } from '../src/platform/records.js';
-import { createGame, getSummary, loadGame, medalFor, saveGame, staffing } from '../src/sim/index.js';
+import { createGame, getSummary, loadGame, medalFor, needCounts, saveGame, secondIsOpen, siteReason, staffing } from '../src/sim/index.js';
 import { compileRules, rulesStamp, withScenario } from '../src/sim/rules.js';
 import { currentGoal, medalTimesText, scenarioGoalText, staffSourceText, winMessage } from '../src/ui/text.js';
 import { savedGameLine, titleModel } from '../src/ui/titleModel.js';
@@ -15,9 +15,9 @@ import { run, snapshot, testGame } from './helpers.js';
 
 const throughText = (value) => JSON.parse(JSON.stringify(value));
 const paces = JSON.parse(readFileSync(new URL('../tools/bot/paces.json', import.meta.url), 'utf8'));
-const IDS = ['fishing-village', 'weavers-guild', 'short-handed'];
+const IDS = ['fishing-village', 'weavers-guild', 'vintners', 'short-handed'];
 // The build order written for each scenario.
-const ORDER = { 'fishing-village': 'village', 'weavers-guild': 'guild', 'short-handed': 'standard' };
+const ORDER = { 'fishing-village': 'village', 'weavers-guild': 'guild', vintners: 'vintners', 'short-handed': 'standard' };
 const play = (scenario, options = {}) => {
   const game = createGame(loadData(), { scenario });
   const result = runBot(game, loadOrder(ORDER[scenario]), options);
@@ -32,7 +32,7 @@ function fakeStorage(initial = {}) {
 
 // ---- what a scenario is ------------------------------------------------------------
 
-test('three scenarios are offered, each with a name, a goal and medal times', () => {
+test('four scenarios are offered, each with a name, a goal and medal times', () => {
   const { rules } = createGame(loadData());
   assert.deepEqual(rules.scenarios.map((s) => s.id), IDS);
   for (const s of rules.scenarios) {
@@ -41,7 +41,7 @@ test('three scenarios are offered, each with a name, a goal and medal times', ()
     assert.ok(s.medals.goldTicks > 0 && s.medals.silverTicks > s.medals.goldTicks, `${s.id} needs medal times`);
     assert.doesNotMatch(`${s.name} ${s.about}`, /undefined|null|_/);
   }
-  assert.deepEqual(rules.scenarios.map((s) => scenarioGoalText(rules, s)), ['120 Farmers', '60 Artisans', '100 Workers']);
+  assert.deepEqual(rules.scenarios.map((s) => scenarioGoalText(rules, s)), ['120 Farmers', '60 Artisans', '60 Artisans', '100 Workers']);
   // The standard game is not a scenario and has no medals.
   assert.equal(rules.scenario, null);
   assert.equal(rules.medals, null);
@@ -117,7 +117,7 @@ test('the standard game is the same game with or without the scenarios in the da
 
 test('each scenario is played under rules of its own, and its looks do not count', () => {
   const stamps = [null, ...IDS].map((scenario) => createGame(loadData(), { scenario }).rules.stamp);
-  assert.equal(new Set(stamps).size, 4, 'two of the four games share a rules stamp');
+  assert.equal(new Set(stamps).size, 5, 'two of the five games share a rules stamp');
   // Names, descriptions and medal times can change without touching a saved game.
   const looks = loadData();
   looks.config.scenarios['fishing-village'].name = 'Herring town';
@@ -287,6 +287,7 @@ test('mistakes in a scenario are refused with a clear message, even if that scen
     [(d) => { at(d).medals = { gold: 0, silver: 10 }; }, /medals\.gold/],
     [(d) => { at(d).medals = 'shiny'; }, /medals must be an object/],
     [(d) => { at(d).taxMultiplier = 2; }, /has an unknown setting "taxMultiplier"/],
+    [(d) => { at(d).secondIslandOpen = 'yes'; }, /secondIslandOpen must be true or false/],
   ];
   for (const [change, pattern] of bad) assert.throws(() => testGame({ change }), pattern, String(change));
   // A note inside a scenario is allowed, and a scenario with no medals has none.
@@ -303,6 +304,7 @@ test('the title screen lists the scenarios with their goals and medal times', ()
   assert.deepEqual(model.scenarios.map((s) => [s.id, s.name, s.goal, s.medals, s.best, s.confirm]), [
     ['fishing-village', 'Fishing village', 'Goal: 120 Farmers.', 'Gold within 13 minutes, silver within 20.', null, null],
     ['weavers-guild', 'The weavers\' guild', 'Goal: 60 Artisans.', 'Gold within 24 minutes, silver within 32.', null, null],
+    ['vintners', 'The vintners', 'Goal: 60 Artisans.', 'Gold within 45 minutes, silver within 58.', null, null],
     ['short-handed', 'Short-handed', 'Goal: 100 Workers.', 'Gold within 35 minutes, silver within 45.', null, null],
   ]);
   // The usual buttons are as they were.
@@ -318,7 +320,7 @@ test('the title screen shows the best time in each scenario, and warns before re
   records.report('short-handed', 26000, 'silver');
   const saved = { ok: true, game: createGame(loadData()) };
   const model = titleModel({ saved, canSave: true, rules, records });
-  assert.deepEqual(model.scenarios.map((s) => s.best), ['Your best: 10:32, gold.', null, 'Your best: 43:20, silver.']);
+  assert.deepEqual(model.scenarios.map((s) => s.best), ['Your best: 10:32, gold.', null, null, 'Your best: 43:20, silver.']);
   for (const s of model.scenarios) assert.equal(s.confirm, 'Press again. This replaces your saved game.');
 });
 
@@ -386,4 +388,30 @@ test('records survive a browser that will not store, and stored nonsense', () =>
   for (const [id, ticks] of [[5, 100], ['a', -1], ['a', 1.5], ['a', 'fast'], [null, 100]]) assert.equal(records.report(id, ticks, 'gold'), false);
   assert.equal(records.best('constructor'), null);
   assert.equal(records.best('toString'), null);
+});
+
+test('the vintners: the second island is open from the start, and Artisans want wine from the start', () => {
+  const game = createGame(loadData(), { scenario: 'vintners' });
+  assert.equal(game.rules.secondIslandOpenAtStart, true);
+  assert.equal(game.state.won, false);
+  assert.equal(secondIsOpen(game), true, 'open before any win');
+  const box = game.state.map.second;
+  let open = 0;
+  for (let y = box.y; y < box.y + box.height; y++) for (let x = box.x; x < box.x + box.width; x++) if (siteReason(game, 'road', x, y) === null) open++;
+  assert.ok(open > 300, 'the second island can be built on at once');
+  assert.equal(needCounts(game, 'wine'), true, 'wine is wanted from the start');
+  assert.equal(game.rules.win.tier, 'artisan');
+  // Every other game keeps the island shut until its win.
+  for (const scenario of [null, 'fishing-village', 'weavers-guild', 'short-handed']) {
+    const other = createGame(loadData(), { scenario });
+    assert.equal(secondIsOpen(other), false, String(scenario));
+  }
+});
+
+test('the vintners need the island: without its wine the bot cannot reach 60 Artisans in an hour', () => {
+  const order = loadOrder('vintners');
+  const isIsland = (step) => step.found || step.ship || step.island || step.build === 'winery';
+  const game = createGame(loadData(), { scenario: 'vintners' });
+  const result = runBot(game, { ...order, steps: order.steps.filter((step) => !isIsland(step)) }, { maxMinutes: 60 });
+  assert.equal(result.won, false, 'won without wine');
 });

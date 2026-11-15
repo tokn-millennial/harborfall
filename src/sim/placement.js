@@ -2,7 +2,7 @@
 
 import { footprint, footprintCenter, inBounds, perimeter, terrainAt, tileIndex, tilesInRadius } from './grid.js';
 import { affordReason } from './economy.js';
-import { SECOND, islandAt, paysFrom } from './islands.js';
+import { SECOND, islandAt, paysFrom, secondIsOpen } from './islands.js';
 
 // Checks the site only (terrain, overlap, placement rules). Ignores cost.
 // Returns null when the site is fine, otherwise a reason code.
@@ -16,7 +16,7 @@ export function siteReason(game, type, x, y) {
   const tiles = footprint(x, y, def.w, def.h);
   if (!tiles.every(([tx, ty]) => inBounds(map, tx, ty))) return 'out_of_bounds';
   // The second island opens after the win.
-  if (!state.won && tiles.some(([tx, ty]) => islandAt(map, tx, ty) === SECOND)) return 'island_locked';
+  if (!secondIsOpen(game) && tiles.some(([tx, ty]) => islandAt(map, tx, ty) === SECOND)) return 'island_locked';
   if (!tiles.every(([tx, ty]) => rules.map.terrain[terrainAt(map, tx, ty)].buildable)) return 'not_buildable';
   for (const [tx, ty] of tiles) {
     const i = tileIndex(map, tx, ty);

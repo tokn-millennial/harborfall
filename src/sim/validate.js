@@ -275,7 +275,7 @@ export function validateData(data) {
   if (config.scenarios !== undefined) {
     if (!isObject(config.scenarios)) err('config.scenarios must be an object');
     else {
-      const ALLOWED = ['name', 'about', 'seed', 'startCoins', 'startGoods', 'baseIncomePerMinute', 'win', 'milestones', 'workforce', 'medals'];
+      const ALLOWED = ['name', 'about', 'seed', 'startCoins', 'startGoods', 'baseIncomePerMinute', 'win', 'milestones', 'workforce', 'medals', 'secondIslandOpen'];
       for (const [id, s] of Object.entries(config.scenarios)) {
         const where = `config.scenarios.${id}`;
         if (!isObject(s)) { err(`${where} must be an object`); continue; }
@@ -285,6 +285,7 @@ export function validateData(data) {
         if (s.startCoins !== undefined) number(s.startCoins, `${where}.startCoins`, { integer: true });
         if (s.startGoods !== undefined) goodAmounts(s.startGoods, `${where}.startGoods`);
         if (s.baseIncomePerMinute !== undefined) number(s.baseIncomePerMinute, `${where}.baseIncomePerMinute`);
+        if (s.secondIslandOpen !== undefined && typeof s.secondIslandOpen !== 'boolean') err(`${where}.secondIslandOpen must be true or false`);
         if (s.win !== undefined) {
           if (!isObject(s.win)) err(`${where}.win must be an object`);
           else {

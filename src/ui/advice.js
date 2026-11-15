@@ -9,14 +9,14 @@
 //
 // No page code here, so it is tested in Node. It only reads the game.
 
-import { SECOND, buildingIssue, hasSecondIsland, islandOf, shipSummary, staffing, stockOfBuildingFor } from '../sim/index.js';
+import { SECOND, buildingIssue, hasSecondIsland, secondIsOpen, islandOf, shipSummary, staffing, stockOfBuildingFor } from '../sim/index.js';
 
 const article = (word) => (/^[aeiou]/i.test(word) ? 'an' : 'a');
 
 // After the win, while nothing else needs saying: how to get going on the
 // second island, until your ship is sailing.
 function islandTip(game) {
-  if (!game.state.won || !hasSecondIsland(game) || !game.rules.fleet) return null;
+  if (!secondIsOpen(game) || !game.rules.fleet) return null;
   if (shipSummary(game).route) return null;
   const settled = game.state.buildings.some((b) => islandOf(game, b) === SECOND);
   if (!settled) return 'The second island, to the east, is open. Build a warehouse and a harbour on its shore. The first of each is paid from home.';

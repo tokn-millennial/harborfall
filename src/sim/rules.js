@@ -74,6 +74,8 @@ export function withScenario(rawData, id = null) {
   if (s.win !== undefined) config.win = { ...s.win };
   if (s.milestones !== undefined) config.milestones = Array.isArray(s.milestones) ? s.milestones.map((m) => ({ ...m })) : s.milestones;
   if (s.workforce !== undefined) config.workforce = s.workforce !== null && typeof s.workforce === 'object' ? { ...s.workforce } : s.workforce;
+  // The second island open from the first minute, not only after the win.
+  if (s.secondIslandOpen === true) config.secondIslandOpen = true;
   const map = s.seed !== undefined ? { ...rawData.map, seed: s.seed } : rawData.map;
   return { ...rawData, config, map };
 }
@@ -279,6 +281,8 @@ export function compileRules(rawData) {
     // Materials: how much of each material a workshop's store holds. null:
     // workshops take their materials straight from the stockpile.
     materials: config.materials && config.carts ? { store: config.materials.store } : null,
+    // The second island is open from the start (a scenario may say so), not only after the win.
+    secondIslandOpenAtStart: config.secondIslandOpen === true,
     // Coins granted at the win to settle the second island, or null.
     // and coins a minute once that island has a warehouse and a harbour.
     settlers: config.settlers ? { grantMilli: toMilli(config.settlers.grantCoins), incomeMilliPerMinute: toMilli(config.settlers.incomePerMinute ?? 0) } : null,

@@ -234,7 +234,7 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 **Starting and saving**
 - The game opens on a title screen, with the island behind it. It offers Continue (if there is a saved game), New game on the standard island, and New game on a random island. A link shows a finished town built by the bot.
 - Continue shows the time played, the Workers so far and the coins. It puts you back where you were, looking at the same spot.
-- Below the usual buttons the title screen offers three scenarios, each with its own goal and medal times. See section 18.
+- Below the usual buttons the title screen offers four scenarios, each with its own goal and medal times. See sections 18 and 27.
 - A new game can be Easy, Normal or Hard, picked on the title screen. Normal is what it starts on. See section 14.
 - The game saves itself. It saves about every 10 seconds, whenever the page is hidden or closed, and when you go back to the title screen. There is no save button and nothing to remember.
 - There is one saved game, kept in the browser you played in. It is not shared with other browsers or computers, and clearing the browser's stored data removes it.
@@ -763,3 +763,14 @@ Added in Phase 25. Nothing in the rules changed.
 - While you place a **producer, a warehouse or a road**, every road is tinted: **green** where a cart from a warehouse comes that far (30 road tiles), **red** where it is too far, or joined to no warehouse at all.
 - Placing a producer beside a road, the tip beside the pointer says how far it would be: "Sawmill: 40 coins, 5 wood. 20 road tiles from a warehouse." Too far, it says "Too far for carts: 41 road tiles. They come 30." in the warning colour.
 - The distance counts the roads as they are. Road you lay afterwards can shorten it.
+
+## 27. The vintners: a fourth scenario
+
+Added in Phase 26.
+
+- **The second island is open from the start**, and so Artisans want wine from the start: without it an Artisan house holds only 8.
+- **Goal: 60 Artisans.** A well-off start: 1500 coins, 80 wood, 80 planks. The standard island.
+- **Medals:** gold within 45 minutes, silver within 58.
+- With wine, 60 Artisans need 5 Artisan houses; without, 8. The bot's town without the island's wine does not get there in an hour.
+- The bot wins in 40.1 minutes, 38.6 at a typical person's pace and 43.7 at a slow one. It keeps 30 wood and 20 planks back from the ship (`SPEC.md` section 25); shipping everything cost it 4 to 7 minutes.
+- A scenario may now say `"secondIslandOpen": true` in `config.json`. The other scenarios and the standard game keep the island shut until their win.

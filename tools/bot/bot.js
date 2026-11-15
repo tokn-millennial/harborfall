@@ -4,7 +4,7 @@
 // the step can be afforded, then does it. It records what it waited for, so a
 // run shows exactly where a build order slows down or gets stuck.
 
-import { HOME, SECOND, buildingIssue, execute, canUpgrade, getSummary, islandAt, paysFrom, siteReason, staffing, stockOf, step as simStep } from '../../src/sim/index.js';
+import { HOME, SECOND, secondIsOpen, buildingIssue, execute, canUpgrade, getSummary, islandAt, paysFrom, siteReason, staffing, stockOf, step as simStep } from '../../src/sim/index.js';
 import { createPlanner } from './planner.js';
 import { createRng } from '../../src/sim/rng.js';
 
@@ -243,7 +243,7 @@ export function runBot(game, order, options = {}) {
     if (state.buildings.some((b) => rules.buildings[b.type].category === 'storage' && islandAt(state.map, b.x, b.y) === SECOND)) return null;
     const box = state.map.second;
     if (!box) return 'no_second_island';
-    if (!state.won) return 'island_locked';
+    if (!secondIsOpen(game)) return 'island_locked';
     const harbourType = Object.values(rules.buildings).find((b) => b.category === 'harbor')?.id;
     // First a harbour at home, on the coast facing the island, so the crossing is short.
     const homeHarbour = state.buildings.some((b) => b.type === harbourType && islandAt(state.map, b.x, b.y) === HOME);
