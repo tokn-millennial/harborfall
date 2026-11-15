@@ -15,7 +15,31 @@ const MODES = ['sell', 'buy'];
 export const MAX_TRADE_LEVEL = 999;
 
 export function createTradeState() {
-  return { timer: 0, orders: {}, last: null };
+  return { timer: 0, orders: {}, last: null, pressure: {} };
+}
+
+// The pull on a good's price once the next call has cut it, as it will be
+// when that call sets its prices. state.trade.pressure holds, per good, the
+// units sold to the ship less those bought (config.json, "tradePrices").
+function pullAtNextCall(game, good) {
+  const n = game.state.trade.pressure?.[good] ?? 0;
+  return Math.trunc((n * game.rules.tradePrices.keepPerCallMilli) / 1000);
+}
+
+// The price factor of a good at the next call, in thousandths: 1000 is the normal price.
+export function priceFactorMilli(game, good) {
+  const p = game.rules.tradePrices;
+  if (!p) return 1000;
+  return Math.max(p.lowestMilli, Math.min(p.highestMilli, 1000 - pullAtNextCall(game, good) * p.perUnitMilli));
+}
+
+// The price of a good at the next call, in thousandths of a coin: what the ship
+// pays for one, and what it charges for one. The harbour panel shows this.
+export function currentPrice(game, good) {
+  const base = game.rules.prices[good];
+  if (!base) return null;
+  const f = priceFactorMilli(game, good);
+  return { sellMilli: Math.floor((base.sellMilli * f) / 1000), buyMilli: Math.ceil((base.buyMilli * f) / 1000), factorMilli: f };
 }
 
 // How many harbours are linked to a warehouse right now.
@@ -43,6 +67,19 @@ export function stepTrade(game) {
   if (trade.timer < rules.trade.shipTicks) return;
   trade.timer = 0;
 
+  // This call's prices, fixed before anything is sold or bought: the ones the
+  // panel showed. Then the pull on each price fades, toward the normal price.
+  const prices = {};
+  for (const good of rules.goodIds) if (rules.prices[good]) prices[good] = currentPrice(game, good);
+  if (rules.tradePrices) {
+    const next = {};
+    for (const good of Object.keys(trade.pressure)) {
+      const kept = pullAtNextCall(game, good);
+      if (kept !== 0) next[good] = kept;
+    }
+    trade.pressure = next;
+  }
+
   let room = harbors * rules.trade.unitsPerHarbor;
   const sold = {};
   const bought = {};
@@ -50,7 +87,7 @@ export function stepTrade(game) {
   let spentMilli = 0;
   for (const good of rules.goodIds) {
     const order = trade.orders[good];
-    const price = rules.prices[good];
+    const price = prices[good];
     if (!order || order.mode !== 'sell' || !price) continue;
     const amount = Math.min(room, state.goods[good] - order.level);
     if (amount <= 0) continue;
@@ -62,7 +99,7 @@ export function stepTrade(game) {
   }
   for (const good of rules.goodIds) {
     const order = trade.orders[good];
-    const price = rules.prices[good];
+    const price = prices[good];
     if (!order || order.mode !== 'buy' || !price) continue;
     const wanted = Math.min(order.level, state.storageCap) - state.goods[good];
     const amount = Math.min(room, wanted, Math.floor(state.coinsMilli / price.buyMilli));
@@ -72,6 +109,16 @@ export function stepTrade(game) {
     spentMilli += amount * price.buyMilli;
     bought[good] = amount;
     room -= amount;
+  }
+  // What was sold pulls the price down for next time; what was bought, up.
+  if (rules.tradePrices) {
+    for (const good of rules.goodIds) {
+      const n = (trade.pressure[good] ?? 0) + (sold[good] ?? 0) - (bought[good] ?? 0);
+      if (n === 0) delete trade.pressure[good];
+      else trade.pressure[good] = n;
+    }
+    // Kept in the order the goods are listed, so equal games stay equal.
+    trade.pressure = Object.fromEntries(rules.goodIds.filter((g) => g in trade.pressure).map((g) => [g, trade.pressure[g]]));
   }
   trade.last = { tick: state.tick, sold, bought, earnedMilli, spentMilli };
 }
@@ -112,6 +159,10 @@ export function tradeProblem(rules, state) {
     if (order === null || typeof order !== 'object' || !MODES.includes(order.mode)) return `the trade order for ${good} is not an order`;
     if (!isCount(order.level) || order.level > MAX_TRADE_LEVEL) return `the trade order for ${good} has a wrong level`;
   }
+  if (t.pressure === null || typeof t.pressure !== 'object' || Array.isArray(t.pressure)) return 'the trade prices are missing';
+  for (const [good, n] of Object.entries(t.pressure)) {
+    if (!Object.hasOwn(rules.prices, good) || !Number.isInteger(n) || n === 0) return `the trade price of ${good} is wrong`;
+  }
   if (t.last !== null) {
     const amounts = (m) => m !== null && typeof m === 'object' && !Array.isArray(m) && Object.entries(m).every(([good, n]) => rules.goodIds.includes(good) && isCount(n));
     if (typeof t.last !== 'object' || !isCount(t.last.tick) || !amounts(t.last.sold) || !amounts(t.last.bought) || !isCount(t.last.earnedMilli) || !isCount(t.last.spentMilli)) {
@@ -132,6 +183,7 @@ export function tradeSummary(game) {
     capacity: harbors * rules.trade.unitsPerHarbor,
     secondsToShip: harbors > 0 ? (rules.trade.shipTicks - state.trade.timer) / rules.ticksPerSecond : null,
     orders: JSON.parse(JSON.stringify(state.trade.orders)),
+    prices: Object.fromEntries(rules.goodIds.filter((g) => rules.prices[g]).map((g) => [g, currentPrice(game, g)])),
     last: state.trade.last ? JSON.parse(JSON.stringify(state.trade.last)) : null,
   };
 }import { HOME, islandOf } from './islands.js';

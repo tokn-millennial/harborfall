@@ -107,6 +107,14 @@
     "incomePerMinute": 10
   },
 
+  "_tradePrices": "Prices that move. Each good the trade ship deals in has a price factor, normally 1. Every unit sold to the ship lowers it by 'perUnit', and every unit bought raises it by as much, but it stays between 'lowest' and 'highest'. At each call the pull on the price is first cut to 'keepPerCall' of what it was, so prices drift back to normal. The factor of a call is the one it starts with. Remove this entry for fixed prices.",
+  "tradePrices": {
+    "perUnit": 0.005,
+    "lowest": 0.6,
+    "highest": 1.4,
+    "keepPerCall": 0.5
+  },
+
   "_win": "The win: this many residents of this tier, or of any tier above it.",
   "win": {
     "tier": "worker",
@@ -153,6 +161,9 @@
       "tierNeeds": ["artisan:wine"],
       "tierSettings": ["capacityWithout"],
       "config": ["settlers"]
+    },
+    {
+      "config": ["tradePrices"]
     }
   ]
 }

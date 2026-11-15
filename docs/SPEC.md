@@ -774,3 +774,13 @@ Added in Phase 26.
 - With wine, 60 Artisans need 5 Artisan houses; without, 8. The bot's town without the island's wine does not get there in an hour.
 - The bot wins in 40.1 minutes, 38.6 at a typical person's pace and 43.7 at a slow one. It keeps 30 wood and 20 planks back from the ship (`SPEC.md` section 25); shipping everything cost it 4 to 7 minutes.
 - A scenario may now say `"secondIslandOpen": true` in `config.json`. The other scenarios and the standard game keep the island shut until their win.
+
+## 28. Prices that move
+
+Added in Phase 27 (`config.json`, "tradePrices").
+
+- Every good the trade ship deals in has a price factor, normally 1. **Each unit you sell lowers it by 0.005, and each unit you buy raises it by as much.** It never goes below 0.6 or above 1.4. Both the selling and the buying price of the good follow it.
+- **At every call the pull on the price is first halved**, so prices drift back to normal when you stop trading. Selling 30 a call, a good settles at about 0.7 of its price.
+- A call trades at the prices it starts with, and those are the prices the harbour panel shows beforehand, with ↓ when below normal and ↑ when above.
+- However far prices move, buying a good back always costs more than selling it earned: at the lowest price, buying is still dearer than selling at the highest. The data checks refuse settings that would break this.
+- A game saved before this phase loads with every price at normal.

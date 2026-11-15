@@ -15,7 +15,7 @@ A small Anno-style city builder that runs in a desktop browser. Settle one islan
 - **Plain JavaScript and Canvas.** No framework, no build step, nothing to install besides Node, and no image or sound files. The art is drawn by code and the sounds are made by code.
 - **Three separate layers.** The simulation (`src/sim/`) holds every rule and has no screen or browser code. The renderer (`src/render/`) draws it. The UI (`src/ui/`) turns clicks into commands.
 - **All rules in data.** Every cost, speed and tax is in five JSON files in `data/`. Change a number, refresh, and the game changes.
-- **Tested without a browser.** 600 automated tests, and a bot that plays whole games to check the balance.
+- **Tested without a browser.** 605 automated tests, and a bot that plays whole games to check the balance.
 
 ## Check it
 
@@ -46,6 +46,6 @@ The first runs every test. The second has a bot play a full game and print a rep
 
 ## Status
 
-Phases 0 to 26 are complete: the full Version 1 game, a polish pass, drawn art, saving with a title screen, people, carts and boats on the map, sound, undo, a guide for a first game, a second act after the win, three difficulties, day and night, staff for the workshops, which can be closed for a while, four scenarios with medals, a harbour with a trade ship, carts that carry goods and materials by road, an art and design pass, a second island with your own ship, and grapes and wine grown there. It has been tested heavily by scripts and lightly by people. See section 8 of the handoff guide for what is proven and what is not.
+Phases 0 to 27 are complete: the full Version 1 game, a polish pass, drawn art, saving with a title screen, people, carts and boats on the map, sound, undo, a guide for a first game, a second act after the win, three difficulties, day and night, staff for the workshops, which can be closed for a while, four scenarios with medals, a harbour with a trade ship, carts that carry goods and materials by road, an art and design pass, a second island with your own ship, and grapes and wine grown there. It has been tested heavily by scripts and lightly by people. See section 8 of the handoff guide for what is proven and what is not.
 
 Built in November 2026 with Claude Fable 5.2, and from partway through Phase 18 with Claude Opus 5.5, as a test of how well an AI model builds a complete, playable game.

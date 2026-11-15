@@ -233,10 +233,12 @@ test('the stamps that saved games out in the world carry are still recognised', 
   // Phase 20 a fifth: games saved in Phase 19, before materials travelled.
   // Phase 22 a sixth: games saved in Phases 20 and 21, before the second island.
   // Phase 23 a seventh: games saved in Phase 22, before grapes and wine.
-  assert.deepEqual(rules.olderStamps.map((o) => o.stamp), ['6fe08f1bee9bb754', 'b16fd0a9142282c9', '10d0dc80671f7e66', 'fc1b9e1dd0f19bb7', 'c7dd0d43d8d2ffb8', 'e6ebd7221f59fd55', '57f32b31a0a7ccda']);
-  const later = ['fleet', 'settlers'];
-  assert.deepEqual(rules.olderStamps.map((o) => o.configAdded), [['milestones', 'workforce', 'trade', 'carts', 'materials', ...later], ['workforce', 'trade', 'carts', 'materials', ...later], ['trade', 'carts', 'materials', ...later], ['carts', 'materials', ...later], ['materials', ...later], later, ['settlers']]);
-  assert.deepEqual(rules.olderStamps.map((o) => o.mapAdded), [['second'], ['second'], ['second'], ['second'], ['second'], ['second'], []]);
+  // Phase 27 an eighth: games saved in Phases 23 to 26, before prices moved.
+  assert.deepEqual(rules.olderStamps.map((o) => o.stamp), ['6fe08f1bee9bb754', 'b16fd0a9142282c9', '10d0dc80671f7e66', 'fc1b9e1dd0f19bb7', 'c7dd0d43d8d2ffb8', 'e6ebd7221f59fd55', '57f32b31a0a7ccda', '4ee7c364766b8ba6']);
+  const later = ['fleet', 'settlers', 'tradePrices'];
+  assert.deepEqual(rules.olderStamps.map((o) => o.configAdded), [['milestones', 'workforce', 'trade', 'carts', 'materials', ...later], ['workforce', 'trade', 'carts', 'materials', ...later], ['trade', 'carts', 'materials', ...later], ['carts', 'materials', ...later], ['materials', ...later], later, ['settlers', 'tradePrices'], ['tradePrices']]);
+  assert.deepEqual(rules.olderStamps.map((o) => o.mapAdded), [['second'], ['second'], ['second'], ['second'], ['second'], ['second'], [], []]);
+  assert.equal(createGame(dataBefore(7)).rules.stamp, '4ee7c364766b8ba6');
   assert.equal(createGame(dataBefore(6)).rules.stamp, '57f32b31a0a7ccda');
   assert.equal(createGame(dataBefore(5)).rules.stamp, 'e6ebd7221f59fd55');
   assert.equal(createGame(dataBefore(4)).rules.stamp, 'c7dd0d43d8d2ffb8');

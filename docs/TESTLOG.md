@@ -1799,7 +1799,7 @@ Date: 2026-11-15. Status: approved by Colin with no changes ("Commit and proceed
 - **The distance ignores road you have yet to lay.**
 - **Nobody has played it.**
 
-**After the gate:** committed on your "Commit and proceed". Not pushed.
+**After the gate:** committed on your "Commit and proceed". Pushed with Phase 26 on your "push.".
 
 ## Phase 26: The vintners, a fourth scenario
 
@@ -1833,4 +1833,46 @@ Date: 2026-11-15. Status: approved by Colin with no changes ("Yes").
 - **The click-through test does not play island steps,** so the vintners were checked through the real buttons only for building on the island, not for a whole game.
 - **Phase 25 is committed but not pushed.**
 
-**After the gate:** committed on your "Yes". Not pushed.
+**After the gate:** committed on your "Yes". Pushed with Phase 25 on your "push.".
+
+## Phase 27: Prices that move
+
+Date: 2026-11-15. Status: approved by Colin with no changes ("Keep going, just keep going.", taken as approval as at D254).
+
+**Turns used:** 1 (your "Keep building"). Built by Claude Opus 5.5.
+
+**What was built** (`SPEC.md` section 28)
+- Trade prices fall as you sell a good and rise as you buy it, within 0.6 to 1.4 of normal, and drift back between calls.
+- The harbour panel shows the next call's prices, with ↓ or ↑.
+
+**Automated tests: 605 pass, 0 fail.** 600 from before plus 5 new in `tests/trade.test.js`: selling lowers the price and the pull halves each call; a call trades at the price the panel showed; buying raises it and the bounds hold; buying back always costs more than selling earned (and bad settings are refused); older and broken saves. Older tests changed: the helper that rebuilds Phase 18's data drops the new entry, an older-save test expects the new empty price record, and the stamp list gained the stamp of Phases 23 to 26.
+
+**Did the tests mean anything?** Five breaks, each caught:
+
+| Break | Tests that failed |
+|---|---|
+| Prices never move | 2 |
+| The pull never fades | 2 |
+| No floor or ceiling | 1 |
+| Buying pulls the price down | 1 |
+| The data check against a money machine gone | 1 |
+
+**Balance.** The standard game and the second act do not trade: 28.9 and 30.5 minutes after the win, unchanged. The merchant order, which sells wood and fish, now earns about 14% less a call for its wood (10.3 coins against 12.0) yet wins at 31.5 instead of 31.9: having a little less money at some moments changed the order of its steps. The test that no trading order beats the standard one still passes. Every scenario still earns gold.
+
+**Browser checks** (my own copy on port 5174 again; your server on 5173 was still down)
+
+| Check | How | Result |
+|---|---|---|
+| A whole merchant game through the real buttons | UI playthrough on `?fresh&paused` | Pass: tick 0, won at 31.54, as the bot. 4 clicks on trade buttons. |
+| The harbour panel | Clicked the harbour after the win | Pass after a fix (D345): "Wood sells 0.34 · buys 1.71 ↓", fish at its normal price. |
+| The error console | Read it | Empty. |
+
+**Found along the way:** the panel first showed a price lower than the next call would pay (D345). A test now checks the next call pays exactly what the panel showed.
+
+**Decisions made:** 4 (D343 to D346).
+
+**Weak or unfinished**
+- **The numbers are a first guess,** measured only by the bot's merchant order. Nobody has traded by hand.
+- **The ship's call message does not say prices moved.** The panel does.
+
+**After the gate:** committed on your "Keep going, just keep going." Not pushed.

@@ -270,7 +270,7 @@ test('a game saved before trade existed loads, with no orders and no ship on its
   assert.equal(save.rulesStamp, '10d0dc80671f7e66');
   const loaded = loadGame(withoutCarts(loadData()), save);
   assert.equal(loaded.ok, true, `${loaded.reason}: ${loaded.detail}`);
-  assert.deepEqual(loaded.game.state.trade, { timer: 0, orders: {}, last: null });
+  assert.deepEqual(loaded.game.state.trade, { timer: 0, orders: {}, last: null, pressure: {} });
   assert.ok(loaded.game.rules.buildings.harbor, 'the continued game can build a harbour');
   // With no harbour it runs on exactly as the old game does.
   run(before, 3000);
@@ -531,3 +531,115 @@ test('compiled rules know the prices in thousandths of a coin', () => {
   assert.deepEqual(rules.prices.wood, { sellMilli: 400, buyMilli: 2000 });
   assert.deepEqual(rules.prices.cloth, { sellMilli: 6000, buyMilli: 18000 });
 });
+
+// ---- Phase 27: prices that move ------------------------------------------------------
+
+// A port as above, with prices that move as in the shipped data.
+function movingPort(options = {}) {
+  const prices = loadData().config.tradePrices;
+  const game = richGame({ change: (d) => {
+    d.config.economy.baseIncomePerMinute = 0;
+    for (const b of Object.values(d.buildings)) if (b && typeof b === 'object' && 'upkeepPerMinute' in b) b.upkeepPerMinute = 0;
+    d.config.tradePrices = { ...prices };
+  } });
+  harbor(game);
+  game.state.coinsMilli = (options.coins ?? 1000) * 1000;
+  for (const good of game.rules.goodIds) game.state.goods[good] = options.goods?.[good] ?? 0;
+  game.state.undo = null;
+  return game;
+}
+
+test('selling lowers a good\'s price for the next call, and the pull halves at every call', () => {
+  const game = movingPort({ goods: { fish: 100 } });
+  const base = game.rules.prices.fish;
+  order(game, 'fish', 'sell', 70);
+  toShip(game);
+  // All 30 sold at the normal price.
+  assert.equal(game.state.trade.last.earnedMilli, 30 * base.sellMilli);
+  assert.deepEqual(game.state.trade.pressure, { fish: 30 });
+  // The next call starts by halving the pull to 15: 1 - 15 x 0.005 = 0.925 of the price.
+  order(game, 'fish', 'off');
+  toShip(game);
+  assert.deepEqual(game.state.trade.pressure, { fish: 15 });
+  toShip(game);
+  assert.deepEqual(game.state.trade.pressure, { fish: 7 });
+  for (let i = 0; i < 4; i++) toShip(game);
+  assert.deepEqual(game.state.trade.pressure, {}, 'back to normal');
+});
+
+test('a call sells everything at the price it starts with, and that price is what the panel shows', () => {
+  const game = movingPort({ goods: { fish: 100 } });
+  game.state.trade.pressure = { fish: 40 }; // halved to 20 at the call: 0.9 of the price
+  const base = game.rules.prices.fish;
+  order(game, 'fish', 'sell', 70);
+  toShip(game);
+  const each = Math.floor((base.sellMilli * 900) / 1000);
+  assert.equal(game.state.trade.last.earnedMilli, 30 * each);
+  assert.deepEqual(game.state.trade.pressure, { fish: 50 }, '20 left of the pull, and 30 more sold');
+  // Before the next call the panel says the price that call will pay (the pull
+  // of 50 halved to 25: 0.875), and that it is down.
+  const row = panelModel(game, game.state.buildings.find((b) => b.type === 'harbor')).trade.find((r) => r.good === 'fish');
+  assert.match(row.prices, /↓$/);
+  const summary = getSummary(game).trade.prices.fish;
+  assert.equal(summary.factorMilli, 875);
+  // And the next call pays exactly that.
+  const shown = summary.sellMilli;
+  game.state.goods.fish = 100; // 30 more to sell above the level of 70
+  toShip(game);
+  assert.equal(game.state.trade.last.earnedMilli, 30 * shown);
+});
+
+test('buying raises the price, and prices stay between the lowest and the highest', () => {
+  const game = movingPort({ coins: 100000 });
+  game.state.trade.pressure = { bread: -400 };
+  toShip(game);
+  const summary = getSummary(game).trade.prices.bread;
+  assert.equal(summary.factorMilli, 1400, 'never above the highest');
+  const row = panelModel(game, game.state.buildings.find((b) => b.type === 'harbor')).trade.find((r) => r.good === 'bread');
+  assert.match(row.prices, /↑$/);
+  game.state.trade.pressure = { bread: 900 };
+  assert.equal(getSummary(game).trade.prices.bread.factorMilli, 600, 'never below the lowest');
+  // Buying pushes it up.
+  const buy = movingPort({ coins: 100000 });
+  order(buy, 'bread', 'buy', 30);
+  toShip(buy);
+  assert.deepEqual(buy.state.trade.pressure, { bread: -30 });
+});
+
+test('however far prices move, buying a good back costs more than selling it earned', () => {
+  const { rules } = createGame(loadData());
+  const p = rules.tradePrices;
+  for (const [good, price] of Object.entries(rules.prices)) {
+    const cheapest = Math.ceil((price.buyMilli * p.lowestMilli) / 1000);
+    const dearest = Math.floor((price.sellMilli * p.highestMilli) / 1000);
+    assert.ok(cheapest > dearest, `${good}: buying at ${cheapest} against selling at ${dearest}`);
+  }
+  // And the data checks refuse settings that would allow it.
+  assert.throws(() => testGame({ change: (d) => { d.config.tradePrices = { perUnit: 0.01, lowest: 0.3, highest: 1.6, keepPerCall: 0.5 }; } }), /narrow config\.tradePrices/);
+  assert.throws(() => testGame({ change: (d) => { d.config.tradePrices = { perUnit: 0.01, lowest: 1.2, highest: 1.6, keepPerCall: 0.5 }; } }), /tradePrices\.lowest/);
+});
+
+test('a game saved before prices moved loads at normal prices, and a broken price record is refused', () => {
+  const game = movingPort({ goods: { fish: 100 } });
+  order(game, 'fish', 'sell', 70);
+  toShip(game);
+  const old = throughText(saveGame(game));
+  delete old.state.trade.pressure;
+  const loaded = loadGame(movingData(), old);
+  assert.equal(loaded.ok, true, `${loaded.reason}: ${loaded.detail}`);
+  assert.deepEqual(loaded.game.state.trade.pressure, {});
+  for (const bad of [{ fish: 1.5 }, { fish: 0 }, { gold: 3 }, null]) {
+    const save = throughText(saveGame(game));
+    save.state.trade.pressure = bad;
+    assert.equal(loadGame(movingData(), save).reason, 'damaged', JSON.stringify(bad));
+  }
+});
+
+// The data as movingPort plays it, for loading its saves.
+function movingData() {
+  const d = withoutCarts(loadData());
+  d.config.economy.baseIncomePerMinute = 0;
+  for (const b of Object.values(d.buildings)) if (b && typeof b === 'object' && 'upkeepPerMinute' in b) b.upkeepPerMinute = 0;
+  d.config.tradePrices = { ...loadData().config.tradePrices };
+  return d;
+}

@@ -624,3 +624,10 @@ Phase 21 changed only `src/render/`, two files in `src/ui/` and `ui.css`. No rul
 - `withScenario` copies a scenario's `secondIslandOpen` into `config.secondIslandOpen`; the rules carry it as `secondIslandOpenAtStart`.
 - `secondIsOpen(game)` in `src/sim/islands.js` is now the one test for "may the second island be used": the win, or that setting. `siteReason`, `needCounts`, the advisor and the bot's founding step all ask it.
 - The bot's `tools/bot/orders/vintners.json` settles the island first and sets levels to keep back.
+
+## 30. Prices that move
+
+- `state.trade.pressure`: per good, units sold to the ship less units bought, kept only when not 0 and in the order the goods are listed.
+- `priceFactorMilli` and `currentPrice` in `src/sim/trade.js` give the price at the next call: the pull is cut by `keepPerCall` first, as the call will cut it. `stepTrade` takes those prices, then cuts the pull, then trades, then adds what it sold and bought.
+- `rules.tradePrices` is null when the entry is gone, and prices are then fixed as before.
+- A ninth round in `addedLater`: `{ "config": ["tradePrices"] }`. The stamp of Phases 23 to 26 is `4ee7c364766b8ba6`.

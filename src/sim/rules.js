@@ -283,6 +283,15 @@ export function compileRules(rawData) {
     materials: config.materials && config.carts ? { store: config.materials.store } : null,
     // The second island is open from the start (a scenario may say so), not only after the win.
     secondIslandOpenAtStart: config.secondIslandOpen === true,
+    // Prices that move with trade (see trade.js), or null for fixed prices. In thousandths.
+    tradePrices: config.tradePrices
+      ? {
+          perUnitMilli: Math.round(config.tradePrices.perUnit * 1000),
+          lowestMilli: Math.round(config.tradePrices.lowest * 1000),
+          highestMilli: Math.round(config.tradePrices.highest * 1000),
+          keepPerCallMilli: Math.round(config.tradePrices.keepPerCall * 1000),
+        }
+      : null,
     // Coins granted at the win to settle the second island, or null.
     // and coins a minute once that island has a warehouse and a harbour.
     settlers: config.settlers ? { grantMilli: toMilli(config.settlers.grantCoins), incomeMilliPerMinute: toMilli(config.settlers.incomePerMinute ?? 0) } : null,

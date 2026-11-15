@@ -371,6 +371,24 @@ export function validateData(data) {
       number(config.fleet.loadSeconds, 'config.fleet.loadSeconds', { min: 0 });
     }
   }
+  if (config.tradePrices !== undefined) {
+    const p = config.tradePrices;
+    if (!isObject(p)) err('config.tradePrices must be an object');
+    else {
+      number(p.perUnit, 'config.tradePrices.perUnit', { min: 0 });
+      number(p.lowest, 'config.tradePrices.lowest', { min: 0, minExclusive: true, max: 1 });
+      number(p.highest, 'config.tradePrices.highest', { min: 1 });
+      number(p.keepPerCall, 'config.tradePrices.keepPerCall', { min: 0, max: 1 });
+      // However far prices move, buying a good back must cost more than selling it
+      // earned, or trade would be a machine that prints coins.
+      if (isNumber(p.lowest) && isNumber(p.highest)) {
+        for (const [id, g] of Object.entries(goods)) {
+          if (!isObject(g) || !isObject(g.trade) || !isNumber(g.trade.buy) || !isNumber(g.trade.sell)) continue;
+          if (g.trade.buy * p.lowest <= g.trade.sell * p.highest) err(`goods.${id}: at the lowest price it would cost no more to buy than it earned to sell at the highest; narrow config.tradePrices`);
+        }
+      }
+    }
+  }
   // Prices: a good may be traded if it has both. Buying must cost more than
   // selling earns, or the ship would be a machine that prints coins.
   for (const [id, g] of Object.entries(goods)) {

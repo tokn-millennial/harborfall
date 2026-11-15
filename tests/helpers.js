@@ -76,6 +76,8 @@ export function withoutCarts(data) {
   delete data.population.tiers.artisan.needs.wine;
   delete data.population.tiers.artisan.capacityWithout;
   delete data.config.settlers;
+  // And prices that move (Phase 27).
+  delete data.config.tradePrices;
   for (const b of Object.values(data.buildings)) if (b !== null && typeof b === 'object') delete b.carts;
   return data;
 }

@@ -6,7 +6,7 @@ import { MAX_KEEP } from '../sim/ship.js';
 import { SECOND, buildingIssue, canUpgrade, hasSecondIsland, houseCapacity, housesInRangeOf, islandOf, needCounts, paysFrom, shipSummary, staffing, stockOfBuildingFor } from '../sim/index.js';
 import { MILLI } from '../sim/rules.js';
 import { SHIP_WAY_TEXT, amountText, cartTimeText, clock, costText, issueLevel, reasonText, refundText, shipStatusText, tradeCallText, tradeOrderText } from './text.js';
-import { MAX_TRADE_LEVEL } from '../sim/trade.js';
+import { MAX_TRADE_LEVEL, currentPrice } from '../sim/trade.js';
 import { previewDemolish } from './tools.js';
 
 // options.confirmDemolish: the Demolish button has been pressed once and is waiting for a second press.
@@ -213,6 +213,13 @@ function shipRows(game, ship) {
   });
 }
 
+// "sells 0.34 · buys 1.7 ↓": today's prices, rounded to two places, and which way they have moved.
+function priceText(price) {
+  const coins = (milli) => String(Math.round(milli / 10) / 100);
+  const arrow = price.factorMilli < 1000 ? ' ↓' : price.factorMilli > 1000 ? ' ↑' : '';
+  return `sells ${coins(price.sellMilli)} · buys ${coins(price.buyMilli)}${arrow}`;
+}
+
 // The harbour's standing orders, one row per good that can be traded. Each
 // button carries the whole command it gives, as "trade:good:mode:level".
 const TRADE_STEP = 10;
@@ -224,7 +231,7 @@ function tradeRows(game) {
   const command = (good, mode, level) => `trade:${good}:${mode}:${level}`;
   return rules.goodIds.filter((good) => rules.prices[good]).map((good) => {
     const order = state.trade.orders[good] ?? null;
-    const price = rules.prices[good];
+    const today = currentPrice(game, good);
     // The order button goes round: off, sell, buy, off.
     const next = !order ? command(good, 'sell', Math.min(FIRST_SELL_LEVEL, top))
       : order.mode === 'sell' ? command(good, 'buy', Math.min(FIRST_BUY_LEVEL, top))
@@ -236,8 +243,9 @@ function tradeRows(game) {
       good,
       name: rules.goods[good].name,
       stock: state.goods[good],
-      // Short, so a row stays two lines: "sells 0.4 · buys 2" (coins).
-      prices: `sells ${price.sellMilli / 1000} · buys ${price.buyMilli / 1000}`,
+      // Short, so a row stays two lines: "sells 0.4 · buys 2" (coins), today's
+      // prices, with an arrow when they are below or above normal.
+      prices: priceText(today),
       order: tradeOrderText(order),
       mode: order?.mode ?? 'off',
       next,

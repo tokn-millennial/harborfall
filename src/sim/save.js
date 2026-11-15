@@ -87,6 +87,8 @@ export function loadGame(rawData, save) {
   }
   // A save from before trade existed has no orders and no ship on its way.
   if (state !== null && typeof state === 'object' && state.trade === undefined) state.trade = createTradeState();
+  // A save from before prices moved: every price at normal.
+  if (state?.trade !== null && typeof state?.trade === 'object' && state.trade.pressure === undefined) state.trade.pressure = {};
   // A save from before the second island: the island is added across the
   // water, and the map grows to hold it. The home island keeps every tile,
   // building and road where it was. Nothing is built there and it has no goods.
