@@ -2222,3 +2222,58 @@ Date: 2026-11-15. Status: approved by Colin with no changes ("Commit, push, and 
 - **Fertile land** is still as it was (D366).
 
 **After the gate:** committed and pushed on your "Commit, push, and continue".
+
+## Phase 34: Errands, and street lamps
+
+Date: 2026-11-15. Status: approved by Colin with no changes ("Commit and push. Keep going").
+
+**Turns used:** 1 (your "Commit, push, and continue"). Built by Claude Opus 5.5.
+
+**How I chose.** Two leftovers that need no choice from you: walkers with real errands (C1) and street lamps (C3, the last item there) (D383).
+
+**What was built** (`SPEC.md` section 35)
+- Errands: about half the walkers go the shortest way by road to a workshop or the market and go in.
+- Street lamps along the streets in town, lit from dusk, shining at night with a halo and a pool of light, hidden with their light behind nearer buildings.
+- Pictures: `docs/screenshots/phase34-before-after-night.jpg`, `-night-close.jpg`, and `phase34-street-lamps-by-day.png`.
+
+**Automated tests: 639 pass, 0 fail.** 635 from before plus 4 new: in `tests/life.test.js`, about half the walkers run errands and each goes in beside a workshop or market, and an errand walker never loops (the shortest way); in `tests/art.test.js`, lamps stand on every third road tile beside a building at its side and not on open road, and a lamp's glass is warm only when lit and it shines only at night. No older test changed.
+
+**Did the tests mean anything?** Seven breaks, each caught at the first try:
+
+| Break | Tests that failed |
+|---|---|
+| Nobody runs errands | 2 |
+| Errand walkers wander at random | 2 |
+| Errands go to the warehouse | 1 |
+| A lamp on every road tile | 1 |
+| Lamps along the country roads too | 1 |
+| Lamps always lit | 1 |
+| Lamps shining by day | 1 |
+
+**Not tested automatically:** hiding a lamp's light behind a nearer building happens in the renderer, in the browser only. I checked it in night pictures.
+
+**Balance.** Nothing in the rules changed. The click-through game still wins at 28.92.
+
+**Browser checks** (my own copy on port 5174)
+
+| Check | How | Result |
+|---|---|---|
+| Errands | Five game minutes of the demo town | 7 of the first 20 walkers on errands; 35 errand walkers in all. |
+| Lamps by day and at night | Pictures | Lamps along the town's streets, none on country roads; lit at night. |
+| A lamp behind a building | Night picture | First, its light shone through the warehouse roof; then a box outline hid a lamp in plain view; with a roof-shaped outline both are right (D387). |
+| Frame times | Phase 33's code and this phase's in turns, by day and at night | Overlapping; perhaps one to three milliseconds slower, mostly at night. |
+| A whole game through the real buttons | UI playthrough on `?fresh&paused` | Pass: tick 0, won at 28.92. |
+| Random input | 2500 actions on `?fresh` and `?demo` | No errors. |
+| The error console | Read it | Empty. |
+
+**Found along the way:** the lamp shining through a roof, and the box outline that hid a visible lamp (D387); too few errands with one try (D385, found by a test).
+
+**Decisions made:** 5 (D383 to D387).
+
+**Weak or unfinished**
+- **Walkers on errands do not come back out**; new walkers keep the numbers up.
+- **The roof outline is an approximation:** a lamp just behind a building may now and then be lit or unlit a moment too early as you scroll past.
+- **Possibly one to three milliseconds slower a frame**, within the noise of the hidden pane.
+- **Fertile land** is still as it was (D366).
+
+**After the gate:** committed and pushed on your "Commit and push. Keep going".

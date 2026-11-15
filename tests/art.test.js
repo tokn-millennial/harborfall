@@ -13,7 +13,8 @@ import { lightsOnly, sharpnessFor } from '../src/render/art/sprites.js';
 import { paintBox } from '../src/render/art/box.js';
 import { ROUND, WARMTH_LEVELS, createForestPainter, createRoadPainter, createTerrainPainter, grassWarmth, gridLines, groundShade, paintGrid, paintTree, paintTrees, paintWater, shorePieces, treesOnTile, waterBackground } from '../src/render/art/terrain.js';
 import { buildingVisual } from '../src/render/visuals.js';
-import { paintActors } from '../src/render/art/actors.js';
+import { paintActors, paintLampLights } from '../src/render/art/actors.js';
+import { LAMP_SPACING, lampSpots } from '../src/render/lamps.js';
 import { paintDust } from '../src/render/art/dust.js';
 import { tileToWorld } from '../src/render/iso.js';
 import { boxSilhouette } from '../src/render/iso.js';
@@ -1047,4 +1048,45 @@ test('the lights picture paints everything but the lights black, keeping how see
   assert.deepEqual(set, [['fillStyle', '#ffe6a0'], ['fillStyle', '#000000'], ['strokeStyle', 'rgba(0, 0, 0, 0.18)'], ['fillStyle', '#000000'], ['lineWidth', 3]]);
   // Its drawing calls reach the real canvas.
   assert.equal(typeof dark.fill, 'function');
+});
+
+// ---- street lamps (Phase 34) ------------------------------------------------------
+
+test('street lamps stand on every third road tile beside a building, at the edge on its side', () => {
+  const game = richGame();
+  road(game, line(12, 9, 16, 9));
+  place(game, 'house', 12, 10);
+  const { state } = game;
+  const spots = lampSpots(state);
+  assert.ok(spots.length >= 1, 'no lamps beside a house');
+  for (const { x, y } of spots) {
+    const tx = Math.floor(x);
+    const ty = Math.floor(y);
+    assert.equal(state.roads[ty * state.map.width + tx], 1, 'a lamp off the road');
+    assert.equal((tx + ty) % LAMP_SPACING, 0);
+    // At the edge of its tile, toward a building beside it.
+    const toward = [Math.sign(Math.round((x - tx - 0.5) * 10)), Math.sign(Math.round((y - ty - 0.5) * 10))];
+    assert.notEqual(state.occupancy[(ty + toward[1]) * state.map.width + tx + toward[0]], 0, 'a lamp not on the building side');
+  }
+  // The open road beyond the house has none.
+  for (const { x } of spots) assert.ok(x < 14.5, 'a lamp on the open road beyond the house');
+  assert.deepEqual(lampSpots(state), spots, 'lamps move about');
+});
+
+test('a lamp is drawn with warm glass when lit, and shines at night over the dark', () => {
+  const lamp = (lit) => {
+    const r = recorder();
+    paintActors(r.ctx, [{ kind: 'lamp', x: 10, y: 10, lit }], {}, 0);
+    return r.colors;
+  };
+  assert.ok(lamp(true).includes('#f2d68a'), 'a lit lamp has no warm glass');
+  assert.ok(!lamp(false).includes('#f2d68a'), 'an unlit lamp glows');
+  const night = recorder();
+  const drawn = [];
+  const ctx = new Proxy(night.ctx, { get: (t, key) => (key === 'drawImage' ? (...args) => drawn.push(args) : t[key]) });
+  paintLampLights(ctx, [{ x: 10, y: 10 }, { x: 12, y: 10 }], {}, 0.8);
+  assert.equal(drawn.length, 4, 'a pool and a halo for each lamp');
+  drawn.length = 0;
+  paintLampLights(ctx, [{ x: 10, y: 10 }], {}, 0);
+  assert.equal(drawn.length, 0, 'lamps shine by day');
 });

@@ -18,14 +18,15 @@
 // where and in what order.
 
 import { islandAt, seaPath, shipHarbour } from '../sim/index.js';
-import { TILE_H, boxSilhouette, depthOf, footprintCorners, mapBounds, tileToWorld } from './iso.js';
+import { TILE_H, boxSilhouette, depthOf, footprintCorners, mapBounds, pointInPolygon, tileToWorld } from './iso.js';
 import { visibleTileRange } from './camera.js';
 import { buildingVisual } from './visuals.js';
 import { createKit } from './art/kit.js';
 import { BUILDING_ART, LIVE_ART, artIdFor, artStateKey, houseLook, isLight, showsLight } from './art/buildings.js';
 import { paintBox } from './art/box.js';
 import { createSpriteCache, lightsOnly, sharpnessFor } from './art/sprites.js';
-import { paintActors } from './art/actors.js';
+import { paintActors, paintLampLights } from './art/actors.js';
+import { lampSpots } from './lamps.js';
 import { paintDust } from './art/dust.js';
 import { createBuildEffects, popScale } from './effects.js';
 import { nightAmount } from './daylight.js';
@@ -70,6 +71,8 @@ const GLOW_SIZE = 96;
 const LIGHTS_ON = 0.3;
 // How strongly the lights picture is added over the darkened town.
 const LIGHTS_STRENGTH = 0.85;
+// How high a street lamp's lantern is, in pixels, for seeing whether a building hides it.
+const LAMP_LANTERN_RISE = 15;
 const TREE_REACH = 2; // trees this close to a building are drawn in order with it
 const ACTOR_MIN_ZOOM = 0.5; // walkers, carts and boats are too small to see below this
 
@@ -90,6 +93,7 @@ export function createRenderer(canvas, rules) {
   let dayAndNight = true;
   let nightNow = 0;
   let glow = null; // a soft round light, drawn once and reused for every house
+  let lamps = { stamp: null, state: null, spots: [] }; // where the street lamps stand, worked out when roads or buildings change
 
   const terrainColor = {};
   for (const [id, t] of Object.entries(rules.map.terrain)) terrainColor[id] = t.color;
@@ -195,6 +199,35 @@ export function createRenderer(canvas, rules) {
     }
     ctx.globalAlpha = 1;
     if (size !== 1) ctx.restore();
+  }
+
+  // Roughly what a building covers on screen: its walls, and its roof up to a
+  // ridge across the middle. Closer than a box, whose top corners stand above
+  // the roof's sloping ends.
+  function roofOutline(building, def) {
+    const visual = buildingVisual(rules, building);
+    const wall = visual.risePx * 0.55;
+    const [, e, s, wst] = footprintCorners(building.x, building.y, def.w, def.h);
+    const ridgeFrom = tileToWorld(building.x, building.y + def.h / 2);
+    const ridgeTo = tileToWorld(building.x + def.w, building.y + def.h / 2);
+    return [
+      { x: wst.x, y: wst.y - wall },
+      { x: ridgeFrom.x, y: ridgeFrom.y - visual.topPx },
+      { x: ridgeTo.x, y: ridgeTo.y - visual.topPx },
+      { x: e.x, y: e.y - wall },
+      e,
+      s,
+      wst,
+    ];
+  }
+
+  // The street lamps, worked out again only when a road or building is added or removed.
+  function lampsFor(state) {
+    let roads = 0;
+    for (let i = 0; i < state.roads.length; i++) if (state.roads[i]) roads = (Math.imul(roads, 31) + i + 1) | 0;
+    const stamp = `${roads}|${state.buildings.length}|${state.nextId}`;
+    if (stamp !== lamps.stamp || state !== lamps.state) lamps = { stamp, state, spots: lampSpots(state) };
+    return lamps.spots;
   }
 
   // What a building's drawing is told: see src/render/art/buildings.js.
@@ -398,7 +431,16 @@ export function createRenderer(canvas, rules) {
     const things = [];
     for (const b of buildings) things.push({ depth: b.depth, kind: 0, x: b.building.x, building: b.building });
     for (const tree of treesNear(map, buildings)) things.push({ depth: tree.depth, kind: 1, x: tree.x, tree });
+    // Street lamps in view, drawn in order with everything else like the people.
+    const lampsInView = [];
     if (zoom >= ACTOR_MIN_ZOOM) {
+      const lit = !dayAndNight || nightNow >= LIGHTS_ON;
+      for (const spot of lampsFor(state)) {
+        if (spot.x < range.x0 - 1 || spot.x > range.x1 + 2 || spot.y < range.y0 - 1 || spot.y > range.y1 + 2) continue;
+        const lamp = { kind: 'lamp', x: spot.x, y: spot.y, lit };
+        lampsInView.push(lamp);
+        things.push({ depth: lamp.x + lamp.y + 1, kind: 2, x: lamp.x, actor: lamp });
+      }
       for (const a of actors) {
         if (a.x < range.x0 - 1 || a.x > range.x1 + 2 || a.y < range.y0 - 1 || a.y > range.y1 + 2) continue;
         things.push({ depth: a.x + a.y + 1, kind: 2, x: a.x, actor: a });
@@ -448,6 +490,19 @@ export function createRenderer(canvas, rules) {
       for (const { building } of buildings) if (drawLights(building, sharpness, time)) lit.add(building);
       ctx.globalAlpha = nightNow;
       const light = glowPicture();
+      if (nightNow >= LIGHTS_ON) {
+        // A lamp standing behind a nearer building is hidden by it, and so is its light.
+        const shining = lampsInView.filter((lamp) => {
+          const at = tileToWorld(lamp.x, lamp.y);
+          const depth = lamp.x + lamp.y + 1;
+          return !buildings.some(({ building, depth: d }) => {
+            if (d <= depth) return false;
+            const def = rules.buildings[building.type];
+            return pointInPolygon(at.x, at.y - LAMP_LANTERN_RISE, roofOutline(building, def));
+          });
+        });
+        paintLampLights(ctx, shining, light, nightNow * LIGHTS_STRENGTH);
+      }
       for (const { building } of buildings) {
         if (!lit.has(building)) continue;
         const def = rules.buildings[building.type];

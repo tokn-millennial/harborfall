@@ -356,6 +356,50 @@ function ship(ctx, a, time) {
   ctx.fill();
 }
 
+// A street lamp: a dark post with a lantern on top, its glass warm when lit.
+const LAMP = { post: '#3b342c', glass: '#e8e0c4', lit: '#f2d68a' };
+const LAMP_HEIGHT = 13;
+function lamp(ctx, a) {
+  const p = tileToWorld(a.x, a.y);
+  groundShadow(ctx, p.x, p.y, 1.8, 0.7);
+  ctx.strokeStyle = LAMP.post;
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y);
+  ctx.lineTo(p.x, p.y - LAMP_HEIGHT);
+  ctx.stroke();
+  ctx.fillStyle = LAMP.post;
+  ctx.fillRect(p.x - 1, p.y - 1.5, 2, 1.5);
+  ctx.fillRect(p.x - 1.6, p.y - LAMP_HEIGHT - 0.3, 3.2, 0.7);
+  ctx.fillStyle = a.lit ? LAMP.lit : LAMP.glass;
+  ctx.fillRect(p.x - 1.3, p.y - LAMP_HEIGHT - 3.4, 2.6, 3.1);
+  ctx.fillStyle = LAMP.post;
+  ctx.beginPath();
+  ctx.moveTo(p.x - 2.1, p.y - LAMP_HEIGHT - 3.3);
+  ctx.lineTo(p.x + 2.1, p.y - LAMP_HEIGHT - 3.3);
+  ctx.lineTo(p.x, p.y - LAMP_HEIGHT - 5.2);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// At night, over the darkened town: each lamp's glass at full brightness, a
+// soft halo round it, and a pool of light on the road below. `glow` is a
+// round soft light picture; `strength` is how dark it is, 0 to 1.
+export function paintLampLights(ctx, lamps, glow, strength) {
+  if (lamps.length === 0 || strength <= 0) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = strength;
+  for (const a of lamps) {
+    const p = tileToWorld(a.x, a.y);
+    ctx.drawImage(glow, p.x - 20, p.y - 8, 40, 18);
+    ctx.drawImage(glow, p.x - 8, p.y - LAMP_HEIGHT - 9.8, 16, 16);
+    ctx.fillStyle = LAMP.lit;
+    ctx.fillRect(p.x - 1.3, p.y - LAMP_HEIGHT - 3.4, 2.6, 3.1);
+  }
+  ctx.restore();
+}
+
 // Draws a list of actors, far to near as given. `goods` is rules.goods, for
 // the color of what a cart carries. `time` is in seconds, for bobbing.
 export function paintActors(ctx, actors, goods, time) {
@@ -366,6 +410,7 @@ export function paintActors(ctx, actors, goods, time) {
     else if (a.kind === 'cart') cart(ctx, a, a.good === null ? null : goods[a.good]?.color ?? '#b9a47a');
     else if (a.kind === 'boat') boat(ctx, a, time);
     else if (a.kind === 'ship') ship(ctx, a, time);
+    else if (a.kind === 'lamp') lamp(ctx, a);
   }
   ctx.restore();
 }

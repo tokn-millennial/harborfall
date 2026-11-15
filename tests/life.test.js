@@ -320,3 +320,63 @@ test('the life layer keeps to itself: no imports, no clock, no built-in random',
     assert.equal(pattern.test(code), false, `life.js uses ${label}`);
   }
 });
+
+// ---- errands and street lamps (Phase 34) ---------------------------------------------
+
+test('about half the walkers are on an errand, and each goes in at a workshop or the market', () => {
+  const game = town(20);
+  const life = createLife(game.rules);
+  const { state, rules } = game;
+  const placeIds = new Set(state.buildings.filter((b) => b.production || rules.buildings[b.type].category === 'market').map((b) => b.id));
+  const besidePlace = ([x, y]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => placeIds.has(state.occupancy[(y + dy) * state.map.width + x + dx]));
+  let last = new Map();
+  let errands = 0;
+  let strolls = 0;
+  const seen = new Set();
+  let arrived = 0;
+  live(game, life, 4000, (actors) => {
+    const now = new Map();
+    for (const a of of(actors, 'walker')) {
+      now.set(a.id, a);
+      if (!seen.has(a.id)) {
+        seen.add(a.id);
+        if (a.errand) errands++;
+        else strolls++;
+      }
+    }
+    // An errand walker who has gone has gone in beside a workshop or market.
+    for (const [id, a] of last) {
+      if (now.has(id) || !a.errand) continue;
+      // The tile it was walking toward when it went in.
+      const to = [Math.floor(a.x - a.dx * 0.5 + a.dx), Math.floor(a.y - a.dy * 0.5 + a.dy)];
+      assert.ok(besidePlace(tileOf(a)) || besidePlace(to), `walker ${id} on an errand went in at ${tileOf(a)}, away from any workshop or market`);
+      arrived++;
+    }
+    last = now;
+  });
+  const share = errands / (errands + strolls);
+  assert.ok(share > 0.25 && share < 0.75, `${Math.round(share * 100)}% of walkers were on errands`);
+  assert.ok(arrived >= 5, `only ${arrived} errands were finished`);
+});
+
+test('an errand walker takes the shortest way by road', () => {
+  const game = town(20);
+  const life = createLife(game.rules);
+  // Follow one errand walker from where it appears to where it goes in, and
+  // count its steps against a fresh search of the roads.
+  const first = new Set(of(life.update(game), 'walker').map((a) => a.id));
+  const paths = new Map();
+  live(game, life, 3000, (actors) => {
+    for (const a of of(actors, 'walker')) {
+      if (first.has(a.id) || !a.errand) continue;
+      const tile = tileOf(a).join();
+      const path = paths.get(a.id) ?? [];
+      if (path[path.length - 1] !== tile) path.push(tile);
+      paths.set(a.id, path);
+    }
+  });
+  const finished = [...paths.values()].filter((p) => p.length >= 4);
+  assert.ok(finished.length >= 3, 'too few errands to check');
+  // A route never visits a tile twice: the shortest way has no loops.
+  for (const path of finished) assert.equal(new Set(path).size, path.length, 'an errand walker went round in a loop');
+});

@@ -693,3 +693,12 @@ Phase 33 changed `src/render/art/buildings.js`, `src/render/art/sprites.js` and 
 - **The lights picture**: `lightsOnly(ctx, isLight)` in `sprites.js` wraps a canvas so that any fill or stroke color that is not a light becomes black, keeping its see-through amount. A building drawn through it gives a picture of only its lights, with anything in front of them still in front. `sprites.get` takes it as an optional last argument (`through`), and the picture is stored like any other, under its key plus "lights".
 - **At night** the renderer adds each lit building's lights picture over the tinted town with the "lighter" blend at `LIGHTS_STRENGTH` (0.85) times how dark it is, then the warm ground glow in front of each lit building.
 - **Measured** in the hidden test pane, Phase 32's code and this phase's in turns: frame times by day and at night the same within the noise.
+
+## 37. Errands and street lamps
+
+Phase 34 added `src/render/lamps.js` and changed `src/render/life.js`, `src/render/art/actors.js` and `src/render/renderer.js`.
+
+- **Errands** in `life.js`: `routeBetween(state, starts, goalIds)` is the road search carts already used, made general. When a walker is added, `errandFrom` gives it, half the time (`ERRAND_SHARE`), a route to a workshop or market, trying up to `ERRAND_TRIES` places; a route shorter than `ERRAND_MIN_TILES` is not used. A walker with a `route` follows it tile by tile and is gone at its end; others step as before. Walkers report `errand` in what they give to draw. `life.js` still imports nothing and uses its own random source.
+- **Lamps**: `lampSpots(state)` in `lamps.js` (no canvas, tested in Node) gives where lamps stand. The renderer keeps them until a road or building changes, as the road painter does, and puts each lamp in view among the people, so lamps and buildings overlap in the right order. `lamp` in `actors.js` draws one; `paintLampLights` adds the halo, glass and road light at night.
+- **A hidden lamp's light**: lamp light is added after the night tint, so it would show through a building in front. The renderer skips a lamp whose lantern lies inside `roofOutline` of a nearer building: its walls and its roof up to a ridge across the middle. A whole box was tried first and hid lamps that were plainly visible beside a roof's sloping end.
+- **Measured** in the hidden test pane, Phase 33's code and this phase's in turns: frame times overlap, though this phase may be one to three milliseconds slower, mostly at night.

@@ -841,3 +841,10 @@ Added in Phase 33. Only the look changed. No rule, number or data file changed, 
 - **From dusk** (once it is about a third of the way to night) the lamps are lit: lived-in houses light their windows, and the weaver and winery light theirs while they work. At dawn they go out at the same point. The bakery's oven glows while it bakes, day or night.
 - **At night the lights shine through the dark**: lit windows, the oven's mouth, the harbour's lantern and a new lantern at each market stall stay bright while the rest of the town goes blue and dim, and warm light spills onto the ground in front of every lit building, workshops and markets included, not only houses.
 - **With day and night switched off** (the box in the ? panel), the lamps are always lit, so the town looks as it did before.
+
+## 35. Errands, and street lamps
+
+Added in Phase 34. Only the look changed: walkers and lamps are decoration, and nothing in the game depends on them. No rule, number or data file changed, and saved games are untouched.
+
+- **Errands.** About half the people who step out of a house now have somewhere to go: a workshop or the market. They walk the shortest way there by road and go in. The rest stroll the streets as before. A town that has just been opened starts with some already on their way.
+- **Street lamps** stand along the streets: on every third road tile with a building beside it, at the edge of the road on the building's side. Roads across open country have none. By day the glass is pale; from dusk it is lit, and at night each lamp shines with a halo and a pool of light on the road. A lamp behind a nearer building is hidden by it, light and all. With day and night switched off the lamps are lit, like the windows.

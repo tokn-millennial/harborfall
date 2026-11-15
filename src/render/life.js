@@ -4,7 +4,9 @@
 // This is decoration. It reads the game and never changes it, and nothing in
 // the game depends on it: goods still move the instant they are made. The
 // little figures only show what the game already knows.
-//   - Walkers: more of them the more residents there are.
+//   - Walkers: more of them the more residents there are. About half are on
+//              an errand: they walk the shortest way by road from their house
+//              to a workshop or the market and go in. The rest stroll.
 //   - Carts:   with the cart rule on (config.json, "carts"), these are the real
 //              carts of the game, drawn where the game says they are. With it
 //              off, one sets out for show when a producer finishes a batch.
@@ -22,6 +24,9 @@ const WALK_SPEED = 0.07;           // tiles per tick, so 0.7 tiles a second at 1
 const WALKER_LIFE_TICKS = [300, 1100];
 const WALKER_SIDE_STEP = 0.2;      // how far from the middle of the road a walker keeps, in tiles
 const SPAWN_CHANCE_PER_TICK = 0.25; // while there are fewer walkers than the town calls for
+const ERRAND_SHARE = 0.5;          // of new walkers, the share with somewhere to go
+const ERRAND_MIN_TILES = 4;        // a shorter errand is not worth showing
+const ERRAND_TRIES = 3;            // places tried before a walker strolls instead
 
 const MAX_CARTS = 14;
 const CART_SPEED = 0.11;
@@ -143,10 +148,25 @@ export function createLife(rules, seed = 7, sea = null) {
     return isRoad(state, px, py) && (px !== x || py !== y) ? [px, py] : null;
   }
 
+  // Somewhere for a walker leaving `house` from `start` to go: a road route
+  // to a workshop or the market, or null to stroll instead.
+  // A few places are tried, since some are out of reach or too close.
+  function errandFrom(state, start, house, places) {
+    if (places.length === 0 || random() >= ERRAND_SHARE) return null;
+    for (let tries = 0; tries < ERRAND_TRIES; tries++) {
+      const goal = places[Math.floor(random() * places.length)];
+      if (house && goal.id === house.id) continue;
+      const route = routeBetween(state, [start], new Set([goal.id]));
+      if (route && route.length >= ERRAND_MIN_TILES) return route;
+    }
+    return null;
+  }
+
   // Adds one walker. Returns whether it could.
-  function addWalker(state, houses, anywhere) {
+  function addWalker(state, houses, anywhere, places = []) {
     let start = null;
     let tier = null;
+    let home = null;
     if (houses.length) {
       // A walker normally steps out of a house that has a road at its door.
       // Starting from a random house, the first one with a road is used.
@@ -159,17 +179,25 @@ export function createLife(rules, seed = 7, sea = null) {
         if (beside.length === 0) continue;
         start = beside[Math.floor(random() * beside.length)];
         tier = house.house.tier;
+        home = house;
       }
     }
     start ??= anyRoad(state);
     if (!start) return false;
-    const to = nextStep(state, start[0], start[1], start[0], start[1]);
+    // On an errand, the walker follows its route; to fill a town at once, it
+    // is put somewhere along the way.
+    const route = errandFrom(state, start, home, places);
+    const at = route && anywhere ? Math.floor(random() * (route.length - 1)) : 0;
+    const from = route ? route[at] : start;
+    const to = route ? route[at + 1] : nextStep(state, start[0], start[1], start[0], start[1]);
     if (!to) return false; // a single road tile with nowhere to go
     const [lo, hi] = WALKER_LIFE_TICKS;
     walkers.push({
       id: nextId++,
       tier,
-      fromX: start[0], fromY: start[1], toX: to[0], toY: to[1],
+      route,
+      routeAt: at,
+      fromX: from[0], fromY: from[1], toX: to[0], toY: to[1],
       t: anywhere ? random() : 0,
       sideX: (random() * 2 - 1) * WALKER_SIDE_STEP,
       sideY: (random() * 2 - 1) * WALKER_SIDE_STEP,
@@ -195,7 +223,16 @@ export function createLife(rules, seed = 7, sea = null) {
       w.steps++;
       // Arrived at the next tile. A walker whose time is up goes indoors at the first building it passes.
       if (w.life <= 0 && (nextToBuilding(state, w.toX, w.toY) || w.life < -MAX_CATCH_UP_TICKS)) return false;
-      const next = nextStep(state, w.toX, w.toY, w.fromX, w.fromY);
+      let next;
+      if (w.route) {
+        // On an errand: the next tile of the route, and in at the end of it.
+        w.routeAt++;
+        if (w.routeAt >= w.route.length - 1) return false;
+        next = w.route[w.routeAt + 1];
+        if (!isRoad(state, next[0], next[1])) return false;
+      } else {
+        next = nextStep(state, w.toX, w.toY, w.fromX, w.fromY);
+      }
       if (!next) return false;
       w.fromX = w.toX;
       w.fromY = w.toY;
@@ -206,13 +243,14 @@ export function createLife(rules, seed = 7, sea = null) {
     return true;
   }
 
-  // ---- carts ---------------------------------------------------------------------
-  // The shortest way by road from a producer to a warehouse, as a list of tiles.
-  function routeToStorage(state, building, storageIds) {
+  // ---- routes --------------------------------------------------------------------
+  // The shortest way by road from any of the `starts` tiles to a road tile
+  // beside one of the buildings in `goalIds`, as a list of tiles, or null.
+  function routeBetween(state, starts, goalIds) {
     const { width, height } = state.map;
     const cameFrom = new Int32Array(width * height).fill(-2);
     const queue = [];
-    for (const [x, y] of roadsBeside(state, building)) {
+    for (const [x, y] of starts) {
       cameFrom[y * width + x] = -1;
       queue.push(y * width + x);
     }
@@ -220,7 +258,7 @@ export function createLife(rules, seed = 7, sea = null) {
       const at = queue[head];
       const x = at % width;
       const y = Math.floor(at / width);
-      if (NEAR.some(([dx, dy]) => storageIds.has(buildingIdAt(state, x + dx, y + dy)))) {
+      if (NEAR.some(([dx, dy]) => goalIds.has(buildingIdAt(state, x + dx, y + dy)))) {
         const route = [];
         for (let i = at; i !== -1; i = cameFrom[i]) route.push([i % width, Math.floor(i / width)]);
         return route.reverse();
@@ -235,6 +273,10 @@ export function createLife(rules, seed = 7, sea = null) {
     }
     return null;
   }
+
+  // ---- carts ---------------------------------------------------------------------
+  // The shortest way by road from a producer to a warehouse, as a list of tiles.
+  const routeToStorage = (state, building, storageIds) => routeBetween(state, roadsBeside(state, building), storageIds);
 
   function moveCart(state, cart, ticks) {
     let left = ticks * CART_SPEED;
@@ -356,7 +398,9 @@ export function createLife(rules, seed = 7, sea = null) {
     const houses = [];
     const producers = [];
     const storageIds = new Set();
+    const places = []; // where errands go: workshops and markets
     for (const b of state.buildings) {
+      if (b.production || rules.buildings[b.type].category === 'market') places.push(b);
       if (b.house && b.house.residents > 0) {
         residents += b.house.residents;
         houses.push(b);
@@ -371,10 +415,10 @@ export function createLife(rules, seed = 7, sea = null) {
     const wanted = Math.min(MAX_WALKERS, Math.floor(residents / RESIDENTS_PER_WALKER));
     if (fresh) {
       // A town that already has people (a loaded game) is filled at once.
-      for (let tries = wanted * 4; tries > 0 && walkers.length < wanted; tries--) addWalker(state, houses, true);
+      for (let tries = wanted * 4; tries > 0 && walkers.length < wanted; tries--) addWalker(state, houses, true, places);
       fresh = false;
     } else if (walkers.length < wanted && ticks > 0 && random() < SPAWN_CHANCE_PER_TICK * ticks) {
-      addWalker(state, houses, false);
+      addWalker(state, houses, false, places);
     }
     // Too many (people moved out): the extra ones head indoors.
     for (let i = wanted; i < walkers.length; i++) walkers[i].life = Math.min(walkers[i].life, 0);
@@ -402,7 +446,7 @@ export function createLife(rules, seed = 7, sea = null) {
     actors = [];
     for (const w of walkers) {
       actors.push({
-        kind: 'walker', id: w.id, tier: w.tier, look: w.look,
+        kind: 'walker', id: w.id, tier: w.tier, look: w.look, errand: w.route !== null,
         x: w.fromX + (w.toX - w.fromX) * w.t + 0.5 + w.sideX,
         y: w.fromY + (w.toY - w.fromY) * w.t + 0.5 + w.sideY,
         dx: w.toX - w.fromX, dy: w.toY - w.fromY,
