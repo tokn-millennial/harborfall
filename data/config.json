@@ -84,6 +84,13 @@
     "unitsPerHarbor": 30
   },
 
+  "_fleet": "Your own ship, which carries goods between the home island and the second island. It sails once each island has a Harbour. It carries at most 'capacity' units a trip, sails one tile of sea every 'secondsPerTile', and spends 'loadSeconds' in each harbour. What it carries each way is set in a Harbour's panel. Remove this whole entry and the second island has no ship.",
+  "fleet": {
+    "capacity": 30,
+    "secondsPerTile": 0.8,
+    "loadSeconds": 10
+  },
+
   "_win": "The win: this many residents of this tier, or of any tier above it.",
   "win": {
     "tier": "worker",
@@ -95,7 +102,7 @@
     { "tier": "artisan", "residents": 100, "title": "A city of Artisans" }
   ],
 
-  "_addedLater": "What has been added to the game since saved games first existed, one entry per round of additions, oldest first. A game saved before any of them can still be continued: it simply has none of what came after. If you add a good, a building or a tier of your own, add an entry at the end and older saved games keep working. 'buildingSettings' names a setting added to buildings, such as 'staff', and 'goodSettings' one added to goods, such as 'trade'.",
+  "_addedLater": "What has been added to the game since saved games first existed, one entry per round of additions, oldest first. A game saved before any of them can still be continued: it simply has none of what came after. If you add a good, a building or a tier of your own, add an entry at the end and older saved games keep working. 'buildingSettings' names a setting added to buildings, such as 'staff', and 'goodSettings' one added to goods, such as 'trade', and 'mapSettings' one added to map.json, such as 'second'.",
   "addedLater": [
     {
       "goods": ["wool", "cloth"],
@@ -119,6 +126,10 @@
     },
     {
       "config": ["materials"]
+    },
+    {
+      "mapSettings": ["second"],
+      "config": ["fleet"]
     }
   ]
 }

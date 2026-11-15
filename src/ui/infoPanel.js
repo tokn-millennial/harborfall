@@ -58,6 +58,15 @@ export function createInfoPanel(root, { onAction, onClose }) {
         ])),
       ] : [];
 
+      // Your ship's orders: the good, its stock at home and here, and the order.
+      const ship = model.ship ? [
+        el('div', 'trade-head', [el('span', null, 'Your ship carries'), el('span', 'trade-hint', 'Click to change: stays, takes over, brings home.')]),
+        ...model.ship.map((row) => el('div', `trade-row ship-row ${row.way}`, [
+          el('div', 'trade-good', [el('span', 'trade-name', row.name), el('div', 'trade-prices', row.stocks)]),
+          el('button', { class: 'trade-order', type: 'button', 'data-action': row.next, title: 'Stays, then takes it over, then brings it home' }, row.order),
+        ])),
+      ] : [];
+
       root.replaceChildren(
         el('div', 'info-head', [
           el('h2', `info-title ${model.level}`, model.title),
@@ -65,6 +74,7 @@ export function createInfoPanel(root, { onAction, onClose }) {
         ]),
         ...rows,
         ...trade,
+        ...ship,
         ...actions,
       );
     },

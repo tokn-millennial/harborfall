@@ -78,6 +78,24 @@ export function validateData(data) {
     }
     number(map.guarantees.startMaxDistance, 'map.guarantees.startMaxDistance', { min: 1 });
   }
+  if (map.second !== undefined) {
+    const s = map.second;
+    if (!isObject(s)) err('map.second must be an object');
+    else {
+      number(s.gap, 'map.second.gap', { min: 2, integer: true });
+      number(s.width, 'map.second.width', { min: 12, integer: true });
+      number(s.height, 'map.second.height', { min: 12, integer: true });
+      number(s.offsetY, 'map.second.offsetY', { min: 0, integer: true });
+      if (!isObject(s.generation)) err('map.second.generation is missing');
+      else {
+        for (const key of ['landFraction', 'forestFractionOfLand', 'fertileFractionOfLand']) {
+          number(s.generation[key], `map.second.generation.${key}`, { min: 0, minExclusive: true, max: 1 });
+        }
+      }
+      if (!isObject(s.guarantees)) err('map.second.guarantees is missing');
+      else for (const key of ['minForestTiles', 'minFertileBlocks2x2', 'minCoastTiles']) number(s.guarantees[key], `map.second.guarantees.${key}`, { integer: true });
+    }
+  }
 
   // --- population -----------------------------------------------------------
   number(population.growthIntervalSeconds, 'population.growthIntervalSeconds', { min: 0, minExclusive: true });
@@ -325,6 +343,14 @@ export function validateData(data) {
       number(config.trade.unitsPerHarbor, 'config.trade.unitsPerHarbor', { min: 1, integer: true });
     }
   }
+  if (config.fleet !== undefined) {
+    if (!isObject(config.fleet)) err('config.fleet must be an object');
+    else {
+      number(config.fleet.capacity, 'config.fleet.capacity', { min: 1, integer: true });
+      number(config.fleet.secondsPerTile, 'config.fleet.secondsPerTile', { min: 0, minExclusive: true });
+      number(config.fleet.loadSeconds, 'config.fleet.loadSeconds', { min: 0 });
+    }
+  }
   // Prices: a good may be traded if it has both. Buying must cost more than
   // selling earns, or the ship would be a machine that prints coins.
   for (const [id, g] of Object.entries(goods)) {
@@ -348,7 +374,7 @@ export function validateData(data) {
       const where = Array.isArray(config.addedLater) ? `config.addedLater[${i}]` : 'config.addedLater';
       if (!isObject(step)) { err(`${where} must be an object`); return; }
       for (const [key, list] of Object.entries(step)) {
-        if (!['goods', 'buildings', 'tiers', 'upgradesFrom', 'config', 'buildingSettings', 'goodSettings'].includes(key)) err(`${where} has an unknown entry "${key}"`);
+        if (!['goods', 'buildings', 'tiers', 'upgradesFrom', 'config', 'buildingSettings', 'goodSettings', 'mapSettings'].includes(key)) err(`${where} has an unknown entry "${key}"`);
         else if (!Array.isArray(list) || !list.every((id) => typeof id === 'string')) err(`${where}.${key} must be a list of names`);
       }
     });

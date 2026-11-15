@@ -334,6 +334,8 @@ test('a game saved before Artisans existed can be continued, and plays on as it 
     const copy = throughText(state);
     delete copy.goods.wool;
     delete copy.goods.cloth;
+    delete copy.second.goods.wool; // (the old game was made by today's code, which gives every game a second stock)
+    delete copy.second.goods.cloth;
     delete copy.milestones;
     delete copy.undo; // the old game still remembers its last action, long since too late to undo
     // Entries added back on loading come last, so compare what is there, not the order.

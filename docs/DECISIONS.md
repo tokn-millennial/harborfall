@@ -11,6 +11,10 @@ Every choice that was not spelled out in the brief is recorded here, with the re
 | Q3 | Win condition | 100 residents of the Worker tier. Farmers do not count. |
 | Q4 | Unlisted features | Demolish with partial refund is added. Save and load is not. |
 | Q5 | Map | One island generated from a fixed seed stored in `data/map.json`. |
+| Q6 | Where the second island is (Phase 22) | On the same map, across the water. |
+| Q7 | How goods cross (Phase 22) | Your own ship, with each island keeping its own goods. |
+| Q8 | What the second island offers (Phase 22) | A new good the home island cannot make, which Artisans want. |
+| Q9 | When it opens (Phase 22) | After the win, so the first game stays as it is. |
 
 ## Decisions I made (Phase 0)
 
@@ -401,3 +405,19 @@ You chose this phase ("Small polish") from the options I gave: difficulty settin
 | D295 | The tools come in five groups with a small gap, and the top bar in four with faint lines. | Sixteen tools in an even row were hard to scan. Groups by job make each easier to find. They still fit one row from 1280 to 1920 wide. | `src/ui/buildMenu.js`, `ui.css`. |
 | D296 | The names of goods on the top bar show only above 2300 pixels wide, where it was 1640. | At 1920 wide the bar wrapped onto two lines, and had since staff and cloth were added. The icons and numbers stay, and each name shows on hover. | `ui.css`. |
 | D297 | The title screen, the building panel and the win screen were left as they were. | They were already tidy. Changing them for the sake of it would cost your familiarity for little gain. | `src/ui/`. |
+| D298 | Your "Approve and proceed" approved Phase 21 and started the second island. Your four answers are Q6 to Q9 above. | They were the choices the roadmap said needed your say. | |
+| D299 | The second island comes in two phases: the island, its own goods and your ship now (22), the new good in 23. | The new good needs the island, the separate goods and the ship to exist first, and each half is a large change to test on its own. | Say so and Phase 23 is next. |
+| D300 | The second island is 44 by 44 tiles, about half the home island's land, and 15 to 20 tiles of sea to the east. | Room for a second town, far enough that it is plainly another island and the crossing takes a while. | `second` in `data/map.json`. |
+| D301 | The home island is generated first and never changes because of the second. | So the first game, its balance and every older save stay exactly as they were. A test checks tile for tile. | `withSecondIsland` in `src/sim/mapgen.js`. |
+| D302 | Until the second island has a warehouse and a harbour, building there is paid from home. | Otherwise nothing could be built: the ship needs a harbour there, and a harbour needs goods there. | `paysFrom` in `src/sim/islands.js`. |
+| D303 | Staff are shared between the islands. | Separate staff would mean the second island needs houses, a market and food before anything works there, before it has any reason to exist. Phase 23 may revisit this. | `src/sim/staff.js` counts every building. |
+| D304 | The trade ship calls at the home island only. | One trading stockpile is simpler to understand. The second island's harbour is for your ship. | `countHarbors` in `src/sim/trade.js`. |
+| D305 | One ship, which comes with the harbours and costs nothing. | Buying and naming ships is more screens for little gain at this size. | `src/sim/ship.js`. |
+| D306 | It carries 30 goods a trip, 0.8 seconds a tile of sea, and waits 10 seconds in each harbour. About 14 seconds a crossing and 50 seconds a round trip. | Close to what a trade ship call carries, and slow enough to watch it sail. I first had 0.4 seconds a tile: a 7-second crossing looked like a ferry. | `fleet` in `data/config.json`. |
+| D307 | Orders are per good: stays, takes over, brings home. The ship takes all it can carry, turn about between the goods, and keeps nothing back at home. | Simple to set with one button a good. Keeping a level back is the obvious next step if it empties home of something. | `shipRows` in `src/ui/panelModel.js`. |
+| D308 | The orders are set in the second island's harbour panel only. The home harbour panel shows where the ship is. | The home harbour panel already lists the trade orders; two lists of seven goods would not fit 800 pixels high. | `panelModel`. |
+| D309 | Goods that do not fit when unloading stay aboard, and come back on the next trip. | Nothing is lost, and the cargo line in the panel shows it. | `arrive` in `src/sim/ship.js`. |
+| D310 | A harbour's berth includes the water across one beach tile. | Found in the browser: a harbour need only touch the beach, so one set a tile back had no water beside it and no route. Changing where harbours may go would have changed Phase 18's rules. | `waterBeside` in `src/sim/ship.js`. |
+| D311 | The top bar shows the goods of the island in the middle of the screen, outlined in gold with a label below on the second island. | A label inside the bar pushed it onto two lines at 1280 wide. | `src/ui/hud.js`, `ui.css`. |
+| D312 | The bot keeps to the home island unless told otherwise. No build order settles the second island yet. | Its planner picked a second-island site for a home harbour when I first tried it. The island has nothing to win yet, so there is no balance to measure until Phase 23. | `createPlanner` in `tools/bot/planner.js`. |
+| D313 | Scenarios have the second island too. Their win screens do not mention it. | They are the same map rules. Their goals end at the win, so the island is only there for whoever plays on. | `winMessage` in `src/ui/text.js`. |

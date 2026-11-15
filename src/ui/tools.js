@@ -2,6 +2,7 @@
 // These only read the game, through the same checks the commands use, so the
 // preview always agrees with what a click will do. Tested in Node.
 
+import { HOME, islandOf } from '../sim/index.js';
 import { buildingAt, canPlace, canUpgrade, inMarketRange, siteReason } from '../sim/index.js';
 import { MILLI } from '../sim/rules.js';
 
@@ -95,7 +96,8 @@ export function previewDemolish(game, x, y, pointed = null) {
   const building = pointed ?? buildingAt(game, x, y);
   if (building) {
     const def = rules.buildings[building.type];
-    const last = def.category === 'storage' && state.buildings.filter((b) => rules.buildings[b.type].category === 'storage').length === 1;
+    const homeStorage = (b) => rules.buildings[b.type].category === 'storage' && islandOf(game, b) === HOME;
+    const last = homeStorage(building) && state.buildings.filter(homeStorage).length === 1;
     return { kind: 'building', building, x: building.x, y: building.y, w: def.w, h: def.h, ok: !last, reason: last ? 'last_warehouse' : null };
   }
   const onMap = x >= 0 && y >= 0 && x < map.width && y < map.height;

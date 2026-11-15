@@ -63,9 +63,13 @@ export function testGame({ change, coins, goods, rows = TEST_ISLAND, start = TES
 
 // The data files with carts switched off: goods reach the stockpile at once.
 // Warehouses keep no carts either, so this is exactly the data of Phase 18.
+// It also takes out the second island and your ship (Phase 22), which came
+// later still, so the result is still exactly the data of Phase 18.
 export function withoutCarts(data) {
   delete data.config.carts;
   delete data.config.materials;
+  delete data.config.fleet;
+  delete data.map.second;
   for (const b of Object.values(data.buildings)) if (b !== null && typeof b === 'object') delete b.carts;
   return data;
 }
@@ -157,6 +161,7 @@ export function dataBefore(rounds) {
     for (const key of added.goodSettings ?? []) {
       for (const g of Object.values(data.goods)) if (g !== null && typeof g === 'object') delete g[key];
     }
+    for (const key of added.mapSettings ?? []) delete data.map[key];
   }
   // Scenarios came in Phase 17, after staff (round 2) and before trade, and one of them needs Artisans.
   if (rounds < 2) delete data.config.scenarios;

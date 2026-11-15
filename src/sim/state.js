@@ -9,6 +9,8 @@ import { generateMap } from './mapgen.js';
 import { addBuilding } from './buildings.js';
 import { refresh } from './refresh.js';
 import { createTradeState } from './trade.js';
+import { createSecondStock } from './islands.js';
+import { createShipState } from './ship.js';
 
 // options.map lets tests (or a future hand-made level) supply the island
 // instead of generating it: { width, height, terrain[], start: { x, y } | null }
@@ -47,6 +49,8 @@ export function createGame(rawData, options = {}) {
     staffClock: 0, // thousandths of a tick of work saved up while short of staff (see staff.js)
     trade: createTradeState(), // the ship's timer, the standing orders and the last call (see trade.js)
     carts: [], // every warehouse's carts, at home or on the road (see carts.js)
+    second: createSecondStock(rules), // the second island's goods and storage room (see islands.js)
+    ship: createShipState(rules), // your own ship between the islands, and what it carries each way (see ship.js)
     undo: null, // what is needed to take back the last command (see undo.js)
   };
   const game = { rules, state };
@@ -66,11 +70,20 @@ function checkCustomMap(map, rules) {
   for (const t of map.terrain) {
     if (!rules.map.terrain[t]) throw new Error(`A custom map uses unknown terrain "${t}"`);
   }
-  return {
+  const out = {
     width: map.width,
     height: map.height,
     seed: null,
     terrain: [...map.terrain],
     start: map.start ? { x: map.start.x, y: map.start.y } : null,
   };
+  // A hand-made map may also have a second island: the box of tiles it lies in.
+  if (map.second) {
+    const s = map.second;
+    if (![s.x, s.y, s.width, s.height].every((n) => Number.isInteger(n) && n >= 0) || s.x + s.width > map.width || s.y + s.height > map.height) {
+      throw new Error('A custom map\'s second island must be a box of tiles inside the map');
+    }
+    out.second = { x: s.x, y: s.y, width: s.width, height: s.height };
+  }
+  return out;
 }

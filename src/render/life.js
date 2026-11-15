@@ -55,7 +55,11 @@ function randomSource(seed) {
   };
 }
 
-export function createLife(rules, seed = 7) {
+// `sea` gives the few things about islands and your ship that this layer may
+// not work out for itself (it imports nothing): { islandAt, seaPath, shipHarbour }
+// from src/sim/index.js. Without it, every harbour is on the home island and
+// your ship is not drawn.
+export function createLife(rules, seed = 7, sea = null) {
   let random = randomSource(seed);
   let watching = null;   // the game state this belongs to
   let lastTick = 0;
@@ -68,6 +72,9 @@ export function createLife(rules, seed = 7) {
   let cartSentAt = new Map();    // producer id -> tick its last cart left
   let boatWaters = new Map();    // fisherman id -> { home, out } or null
   let shipWaters = new Map();    // harbour id -> { home, out } or null
+  const HOME = 0;
+  const SECOND = 1;
+  let ownRoute = null;           // { key, path }: the sea path of your own ship between its harbours
   let actors = [];
   let fresh = true;              // nothing has been shown yet for this game
 
@@ -85,6 +92,7 @@ export function createLife(rules, seed = 7) {
     cartSentAt = new Map();
     boatWaters = new Map();
     shipWaters = new Map();
+    ownRoute = null;
     cartRoutes = new Map();
     routesFor = null;
     fresh = true;
@@ -455,6 +463,7 @@ export function createLife(rules, seed = 7) {
       } else if (state.trade.timer >= due - inTicks) out = 1 - ease((state.trade.timer - (due - inTicks)) / inTicks);
       for (const b of state.buildings) {
         if (!rules.buildings[b.type].harbor) continue;
+        if (sea && sea.islandAt(state.map, b.x, b.y) !== HOME) continue; // the trade ship calls at the home island only
         const waters = shipWaters.has(b.id) ? shipWaters.get(b.id) : findWaters(state.map, b, SHIP_REACH);
         shipsNow.set(b.id, waters);
         if (!waters || out === null || !b.connected) continue;
@@ -470,6 +479,39 @@ export function createLife(rules, seed = 7) {
       }
     }
     shipWaters = shipsNow;
+
+    // Your own ship, where the game says it is on the crossing.
+    if (sea && rules.fleet && state.ship && state.ship.trip > 0) {
+      const home = sea.shipHarbour(game, HOME);
+      const second = sea.shipHarbour(game, SECOND);
+      const key = `${home?.id}>${second?.id}`;
+      if (!ownRoute || ownRoute.key !== key || ownRoute.map !== state.map) ownRoute = { key, map: state.map, path: home && second ? sea.seaPath(game, home, second) : null };
+      const path = ownRoute.path;
+      if (path && path.length > 0) {
+        const s = state.ship;
+        // Share of the way from home to the second island: 0 at home, 1 there.
+        let share;
+        if (s.phase === 'sailing') {
+          const done = s.trip > 0 ? 1 - s.left / s.trip : 1;
+          share = s.at === SECOND ? done : 1 - done;
+        } else share = s.at === SECOND ? 1 : 0;
+        const along = share * (path.length - 1);
+        const i = Math.min(path.length - 2, Math.floor(along));
+        const a = path[Math.max(0, i)];
+        const b = path[Math.min(path.length - 1, Math.max(0, i) + 1)];
+        const f = path.length > 1 ? along - Math.max(0, i) : 0;
+        const towardSecond = s.phase === 'sailing' ? s.at === SECOND : s.at === HOME;
+        const sign = towardSecond ? 1 : -1;
+        actors.push({
+          kind: 'ship', own: true, id: 'own', look: 7,
+          x: a[0] + 0.5 + (b[0] - a[0]) * f,
+          y: a[1] + 0.5 + (b[1] - a[1]) * f,
+          dx: (b[0] - a[0]) * sign || 1,
+          dy: (b[1] - a[1]) * sign,
+          docked: s.phase !== 'sailing',
+        });
+      }
+    }
     return actors;
   }
 

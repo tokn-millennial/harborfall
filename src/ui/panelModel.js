@@ -2,9 +2,9 @@
 // buttons. Plain data, built from the game, so it is tested in Node.
 // infoPanel.js turns this into page elements.
 
-import { buildingIssue, canUpgrade, housesInRangeOf, staffing } from '../sim/index.js';
+import { SECOND, buildingIssue, canUpgrade, hasSecondIsland, housesInRangeOf, islandOf, paysFrom, shipSummary, staffing, stockOfBuildingFor } from '../sim/index.js';
 import { MILLI } from '../sim/rules.js';
-import { amountText, cartTimeText, clock, costText, issueLevel, reasonText, refundText, tradeCallText, tradeOrderText } from './text.js';
+import { SHIP_WAY_TEXT, amountText, cartTimeText, clock, costText, issueLevel, reasonText, refundText, shipStatusText, tradeCallText, tradeOrderText } from './text.js';
 import { MAX_TRADE_LEVEL } from '../sim/trade.js';
 import { previewDemolish } from './tools.js';
 
@@ -15,8 +15,11 @@ export function panelModel(game, building, options = {}) {
   const lines = [];
   const actions = [];
   const issue = buildingIssue(game, building);
+  const island = islandOf(game, building);
+  const stock = stockOfBuildingFor(game, building); // its own island's goods
 
   let title = def.name;
+  if (island === SECOND) lines.push({ label: 'Island', value: 'The second island' });
 
   if (building.house) {
     const h = building.house;
@@ -42,15 +45,16 @@ export function panelModel(game, building, options = {}) {
         label: `Upgrade to ${next.name} house`,
         detail: `${costText(rules, tier.upgrade.cost)}. Holds ${next.capacity}.`,
         enabled: check.ok,
-        reason: check.ok ? null : reasonText(game, check.reason, { cost: tier.upgrade.cost }),
+        reason: check.ok ? null : reasonText(game, check.reason, { cost: tier.upgrade.cost, from: paysFrom(game, island) }),
       });
     }
   } else {
     // A producer the player has closed says so, unless something worse (no road) is wrong with it.
     const closed = Boolean(building.production?.closed) && !issue;
-    let status = closed ? 'Closed. It makes nothing.' : issue ? reasonText(game, issue, { building: building.type }) : building.production ? 'Working.' : def.harbor ? 'Open to ships.' : 'Fine.';
+    const harbourStatus = island === SECOND ? 'For your own ship.' : 'Open to ships.';
+    let status = closed ? 'Closed. It makes nothing.' : issue ? reasonText(game, issue, { building: building.type }) : building.production ? 'Working.' : def.harbor ? harbourStatus : 'Fine.';
     const inputs = Object.keys(def.production?.inputs ?? {});
-    if (issue === 'missing_input' && rules.materials && inputs.every((g) => state.goods[g] >= def.production.inputs[g])) {
+    if (issue === 'missing_input' && rules.materials && inputs.every((g) => stock.goods[g] >= def.production.inputs[g])) {
       status = `Waiting for a cart to bring ${inputs.map((g) => rules.goods[g].name.toLowerCase()).join(' and ')}.`;
     }
     lines.push({ label: 'Status', value: status, level: closed ? 'warn' : issueLevel(issue) });
@@ -98,7 +102,8 @@ export function panelModel(game, building, options = {}) {
   }
 
   let trade = null;
-  if (def.harbor && rules.trade) {
+  // The trade ship calls at the home island only.
+  if (def.harbor && rules.trade && island !== SECOND) {
     const t = state.trade;
     const due = (rules.trade.shipTicks - t.timer) / rules.ticksPerSecond;
     lines.push({ label: 'Next ship', value: building.connected ? `in ${clock(due)}` : 'Not while cut off by road', level: building.connected ? undefined : 'warn' });
@@ -108,9 +113,19 @@ export function panelModel(game, building, options = {}) {
     trade = tradeRows(game);
   }
 
+  // Your own ship: where it is, on every harbour; what it carries each way, on the second island's.
+  let ship = null;
+  if (def.harbor && rules.fleet && hasSecondIsland(game)) {
+    const s = shipSummary(game);
+    lines.push({ label: 'Your ship', value: shipStatusText(s), level: s.route ? undefined : 'warn' });
+    lines.push({ label: 'On board', value: s.units > 0 ? rules.goodIds.filter((g) => s.cargo[g] > 0).map((g) => amountText(rules, g, s.cargo[g])).join(', ') : `Nothing (holds ${s.capacity})` });
+    if (island === SECOND) ship = shipRows(game, s);
+    else lines.push({ label: 'Its orders', value: 'Set at the harbour on the second island.' });
+  }
+
   if (def.storagePerGood > 0) {
     lines.push({ label: 'Storage', value: `${def.storagePerGood} of each good` });
-    lines.push({ label: 'Island total', value: `${state.storageCap} of each good` });
+    lines.push({ label: 'Island total', value: `${stock.storageCap} of each good` });
   }
   if (rules.carts && def.carts > 0) {
     const mine = state.carts.filter((c) => c.home === building.id);
@@ -152,7 +167,26 @@ export function panelModel(game, building, options = {}) {
     reason: demolish.ok ? null : reasonText(game, demolish.reason),
   });
 
-  return { title, issue, level: issueLevel(issue), lines, actions, trade };
+  return { title, issue, level: issueLevel(issue), lines, actions, trade, ship };
+}
+
+// What your ship carries, one row per good, with the stock on each island.
+// The button goes round: stays, takes it over, brings it home. Each button
+// carries its whole command, as "ship:good:way".
+const NEXT_WAY = { off: 'out', out: 'back', back: 'off' };
+function shipRows(game, ship) {
+  const { rules, state } = game;
+  return rules.goodIds.map((good) => {
+    const way = ship.orders[good] ?? 'off';
+    return {
+      good,
+      name: rules.goods[good].name,
+      stocks: `home ${state.goods[good]} · here ${state.second.goods[good]}`,
+      way,
+      order: SHIP_WAY_TEXT[way],
+      next: `ship:${good}:${NEXT_WAY[way]}`,
+    };
+  });
 }
 
 // The harbour's standing orders, one row per good that can be traded. Each

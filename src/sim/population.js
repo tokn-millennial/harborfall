@@ -6,6 +6,7 @@
 // it buys its first unit of everything at once. That first purchase is what
 // lets people move in.
 
+import { islandOf, paysFrom, stockOfBuilding } from './islands.js';
 import { footprintCenter, footprintWithinRadius } from './grid.js';
 import { affordReason, pay } from './economy.js';
 
@@ -31,7 +32,7 @@ function connectedMarkets(game) {
     const def = rules.buildings[b.type];
     if (def.marketRadius > 0 && b.connected) {
       const [cx, cy] = footprintCenter(b.x, b.y, def.w, def.h);
-      markets.push({ cx, cy, radius: def.marketRadius });
+      markets.push({ cx, cy, radius: def.marketRadius, island: islandOf(game, b) });
     }
   }
   return markets;
@@ -64,7 +65,9 @@ export function recomputeCoverage(game) {
   for (const b of state.buildings) {
     if (!b.house) continue;
     const def = rules.buildings[b.type];
-    b.house.served = markets.some((m) => footprintWithinRadius(m.cx, m.cy, m.radius, b.x, b.y, def.w, def.h));
+    // A market serves houses on its own island only.
+    const island = islandOf(game, b);
+    b.house.served = markets.some((m) => m.island === island && footprintWithinRadius(m.cx, m.cy, m.radius, b.x, b.y, def.w, def.h));
   }
 }
 
@@ -84,14 +87,15 @@ export function stepHouses(game) {
     const h = b.house;
     if (!h) continue;
     const tier = rules.tiers[h.tier];
+    const goods = stockOfBuilding(game, b).goods; // a house buys from its own island
 
     let satisfied = h.served;
     for (const good in tier.needs) {
       const threshold = tier.needs[good].hungerThreshold;
       if (h.hunger[good] < threshold) h.hunger[good] += h.residents;
       if (h.hunger[good] >= threshold) {
-        if (h.served && state.goods[good] >= 1) {
-          state.goods[good] -= 1;
+        if (h.served && goods[good] >= 1) {
+          goods[good] -= 1;
           h.hunger[good] -= threshold;
           h.met[good] = true;
         } else {
@@ -140,10 +144,11 @@ export function upgradeReason(game, building) {
   // The next tier's extra needs must be in stock, so the house does not
   // upgrade straight into a shortage.
   const next = rules.tiers[tier.upgrade.to];
+  const goods = stockOfBuilding(game, building).goods;
   for (const good of Object.keys(next.needs)) {
-    if (!(good in tier.needs) && state.goods[good] < 1) return `no_${good}`;
+    if (!(good in tier.needs) && goods[good] < 1) return `no_${good}`;
   }
-  return affordReason(game, tier.upgrade.cost);
+  return affordReason(game, tier.upgrade.cost, paysFrom(game, islandOf(game, building)));
 }
 
 // Assumes upgradeReason() returned null.
@@ -151,7 +156,7 @@ export function upgradeHouse(game, building) {
   const { rules } = game;
   const h = building.house;
   const tier = rules.tiers[h.tier];
-  pay(game, tier.upgrade.cost);
+  pay(game, tier.upgrade.cost, paysFrom(game, islandOf(game, building)));
   h.tier = tier.upgrade.to;
   addNeeds(h, rules.tiers[h.tier]);
   h.growTimer = 0;

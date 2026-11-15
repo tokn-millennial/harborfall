@@ -2,6 +2,8 @@
 // into commands for the simulation, and tells the renderer what to highlight.
 // It never changes the game state itself: every change goes through execute().
 
+import { islandAt, paysFrom } from '../sim/index.js';
+import { worldToTile } from '../render/iso.js';
 import { buildingById, execute, getSummary } from '../sim/index.js';
 import { centerOnTile, clampToMap, screenToTile } from '../render/camera.js';
 import { pick } from '../render/pick.js';
@@ -28,7 +30,7 @@ const TINT = {
 };
 const SELECT = { mode: 'select', building: null };
 const MESSAGE_SECONDS = 3;
-const QUIET_ACTIONS = ['undo', 'close', 'reopen', 'trade'];
+const QUIET_ACTIONS = ['undo', 'close', 'reopen', 'trade', 'ship'];
 const CONFIRM_SECONDS = 4; // how long a first demolish click waits for the second
 
 // onSound(name) is told when something worth a sound happens: 'pick', 'place',
@@ -70,6 +72,10 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
       if (id.startsWith('trade:')) {
         const [, good, mode, level] = id.split(':');
         act({ action: 'trade', good, mode, level: Number(level) });
+      }
+      if (id.startsWith('ship:')) {
+        const [, good, way] = id.split(':');
+        act({ action: 'ship', good, way });
       }
       if (id === 'closeBuilding') act({ action: 'close', id: building.id });
       if (id === 'reopenBuilding') act({ action: 'reopen', id: building.id });
@@ -223,6 +229,12 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
   // Keep keyboard focus off the buttons, so Space always means pause.
   document.addEventListener('click', (event) => event.target.closest?.('button')?.blur());
 
+  // The island at the middle of the screen. Open water counts as home.
+  function islandInView() {
+    const t = worldToTile(camera.x, camera.y);
+    return islandAt(map, Math.floor(t.x), Math.floor(t.y));
+  }
+
   // ---- one frame --------------------------------------------------------------
   function frame(dt) {
     controls.update(dt);
@@ -268,7 +280,7 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
       overlay.tints.push({ x: at.x, y: at.y, w: def.w, h: def.h, color: preview.ok ? TINT.ok : TINT.bad });
       overlay.ghost = ghostFor(tool.building, preview);
       if (!preview.ok) {
-        tip = { text: reasonText(game, preview.reason, { building: tool.building, cost: def.cost }), level: 'bad' };
+        tip = { text: reasonText(game, preview.reason, { building: tool.building, cost: def.cost, from: paysFrom(game, islandAt(map, at.x, at.y)) }), level: 'bad' };
       } else if (preview.hints.includes('no_market')) {
         tip = { text: 'No market in range here. Nobody will move in until there is one.', level: 'warn' };
       } else if (def.requiresRoad && !touchesRoad(at.x, at.y, def.w, def.h)) {
@@ -320,7 +332,7 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
     const summary = getSummary(game);
     // Tips are for a game with a goal still ahead: the win, or a goal after it.
     const goalAhead = !state.won || summary.milestones.some((m) => m.reachedAtTick === null);
-    hud.update(summary, goalAhead ? advisor.update(game) : null);
+    hud.update(summary, goalAhead ? advisor.update(game) : null, islandInView());
     menu.update(tool);
     if (selected && tool.mode === 'select') info.show(panelModel(game, selected, { confirmDemolish: armed?.id === selected.id }));
     else info.hide();

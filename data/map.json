@@ -25,6 +25,26 @@
     "fertileFractionOfLand": 0.18
   },
 
+  "_second": "The second island, across the water to the east of the home island. It opens after the win. It is made from the island's seed after the home island is finished, so the home island is exactly the same with it or without it. 'gap' is the extra open water between the two areas, in tiles. 'offsetY' moves it down from the top of the map. Remove this whole entry for a game with one island.",
+  "second": {
+    "gap": 8,
+    "width": 44,
+    "height": 44,
+    "offsetY": 10,
+    "generation": {
+      "landFraction": 0.5,
+      "coastRoughness": 0.6,
+      "patchSize": 6,
+      "forestFractionOfLand": 0.25,
+      "fertileFractionOfLand": 0.2
+    },
+    "guarantees": {
+      "minForestTiles": 90,
+      "minFertileBlocks2x2": 5,
+      "minCoastTiles": 40
+    }
+  },
+
   "_guarantees": "The generator must meet all of these or the map is rejected by the tests. They make sure every island can be won.",
   "guarantees": {
     "minForestTiles": 250,

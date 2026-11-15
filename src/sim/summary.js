@@ -1,5 +1,6 @@
 // A read-only snapshot of the numbers the HUD, the bot and the reports need.
 
+import { hasSecondIsland, secondIsOpen, stockOfBuilding } from './islands.js';
 import { MILLI } from './rules.js';
 import { incomeRates } from './economy.js';
 import { countAtLeast, countResidents } from './population.js';
@@ -38,6 +39,8 @@ export function getSummary(game) {
     },
     goods: { ...state.goods },
     storageCap: state.storageCap,
+    // The second island's own goods (see islands.js), whether there is one, and whether it is open.
+    second: { goods: { ...state.second.goods }, storageCap: state.second.storageCap, exists: hasSecondIsland(game), open: secondIsOpen(game) },
     residents,
     housing,
     // Staff for the producing buildings: how many are needed, how many the
@@ -95,7 +98,8 @@ export function buildingIssue(game, building) {
   if (status === 'yard_full') {
     // Waiting for a cart, or the cart is waiting for room in the stockpile.
     const outputs = Object.keys(def.production.outputs);
-    return outputs.every((good) => game.state.goods[good] >= game.state.storageCap) ? 'storage_full' : 'yard_full';
+    const stock = stockOfBuilding(game, building);
+    return outputs.every((good) => stock.goods[good] >= stock.storageCap) ? 'storage_full' : 'yard_full';
   }
   return null;
 }

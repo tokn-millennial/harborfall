@@ -680,3 +680,30 @@ Added in Phase 21, an art and design pass. **No rule, number or balance changed.
 - The **top bar** comes in groups with faint lines between: coins; goods; people and the goal; the clock.
 - The names of goods on the top bar ("Wood") show only on screens wider than 2300 pixels. Since staff and cloth joined the bar it no longer fitted one line at 1920 with the names.
 - The title screen, the building panel and the win screen were not redesigned. They pick up the new ground behind them.
+
+## 23. The second island and your ship
+
+Added in Phase 22. The new good grown there comes in Phase 23.
+
+**Where it is.** Across the water to the east of the home island, about 15 tiles of sea away. It is made from the same seed, after the home island, so the home island is exactly as it was. The map grows to hold it (`map.json`, "second").
+
+**When.** It opens when you win. Before that, anything you try to build there says "The second island opens when you reach the goal." The win screen says it is open.
+
+**Its own goods.** Each island keeps its own goods in its own warehouses, and the top bar shows the goods of the island in the middle of your screen. On the second island the goods are outlined in gold, with "The second island's goods" below them. Coins are shared.
+- Building on the second island takes goods from the second island's warehouses.
+- **Except at first:** until the second island has both a warehouse and a harbour, whatever you build there is paid from home. The settlers bring it with them.
+- Carts, workshops and houses there use the second island's goods. A market serves houses on its own island only.
+- Staff are shared: residents on either island work anywhere.
+- The trade ship calls at the home island only.
+- The last warehouse on the home island cannot be demolished. Those on the second island can.
+
+**Your ship.** Once each island has a harbour linked to a warehouse by road, your own ship sails between them (`config.json`, "fleet").
+- It carries 30 goods a trip, takes 0.8 seconds per tile of sea (about 14 seconds a crossing on the standard map), and spends 10 seconds in each harbour.
+- In the second island's harbour panel, each good has a button that goes round: **Stays**, **Takes over** (home to the second island) and **Brings home**. Each row shows the stock on both islands.
+- In each harbour it first unloads everything that fits, then, as it leaves, loads what is ordered to leave that island, taking turns between the goods one at a time until it is full. What does not fit when unloading stays aboard.
+- Both harbour panels say where the ship is and what is on board. It is drawn sailing between the harbours, with a red stripe on its sails.
+- A tip after the win says how to get it going, until it sails.
+
+**Saved games.** A game saved before this phase loads with the second island added and the map widened. Every building and road on the home island stays where it was, and the home island plays on exactly as before.
+
+**Not in this phase:** a new good grown only on the second island (Phase 23), a level to keep at home before the ship takes a good, more than one ship, and the trade ship calling at the second island.

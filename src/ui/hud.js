@@ -14,6 +14,10 @@ export function createHud(root, rules) {
 
   const goods = {};
   const goodsRow = el('div', 'hud-goods');
+  // Shown only while you look at the second island, whose goods the row then shows.
+  const islandTag = el('span', 'hud-island', 'The second island\'s goods');
+  islandTag.hidden = true;
+  goodsRow.append(islandTag);
   for (const id of rules.goodIds) {
     const value = el('span', 'hud-value');
     // The storage limit is the same for every good. On a narrow window it is
@@ -55,8 +59,13 @@ export function createHud(root, rules) {
   );
 
   return {
-    // `advice` is a sentence from the advisor, or null.
-    update(summary, advice = null) {
+    // `advice` is a sentence from the advisor, or null. `island` is the one
+    // in view: on the second island the goods shown are its own.
+    update(summary, advice = null, island = 0) {
+      const onSecond = island === 1 && summary.second?.exists;
+      islandTag.hidden = !onSecond;
+      goodsRow.classList.toggle('second', Boolean(onSecond));
+      const stock = onSecond ? summary.second : summary;
       tip.hidden = !advice;
       if (advice) setText(tip, `Tip: ${advice}`);
       setText(coins, String(summary.coins));
@@ -67,11 +76,11 @@ export function createHud(root, rules) {
       if (n < 0) setText(warning, 'You are losing money. Build houses, or demolish something.');
 
       for (const id of rules.goodIds) {
-        setText(goods[id].value, String(summary.goods[id]));
-        setText(goods[id].cap, ` / ${summary.storageCap}`);
-        goods[id].box.title = `${rules.goods[id].name}: ${summary.goods[id]} of ${summary.storageCap}`;
-        goods[id].box.classList.toggle('full', summary.goods[id] >= summary.storageCap);
-        goods[id].box.classList.toggle('empty', summary.goods[id] === 0);
+        setText(goods[id].value, String(stock.goods[id]));
+        setText(goods[id].cap, ` / ${stock.storageCap}`);
+        goods[id].box.title = `${rules.goods[id].name}${onSecond ? ' on the second island' : ''}: ${stock.goods[id]} of ${stock.storageCap}`;
+        goods[id].box.classList.toggle('full', stock.storageCap > 0 && stock.goods[id] >= stock.storageCap);
+        goods[id].box.classList.toggle('empty', stock.goods[id] === 0);
       }
       for (const id of Object.keys(tiers)) setText(tiers[id], `${summary.residents[id]} / ${summary.housing[id]}`);
 

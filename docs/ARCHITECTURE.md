@@ -585,3 +585,15 @@ Phase 21 changed only `src/render/`, two files in `src/ui/` and `ui.css`. No rul
 - **Roofs** in `kit.gable`: each slope filled with a gradient (`fade`), rows and staggered joints drawn in one path each (`strokes`), a dark eave line and a light ridge. `kit.box` fades walls 6 pixels or taller toward the ground. Building pictures are drawn once and kept, so this costs nothing per frame.
 - **Figures** in `src/render/art/actors.js`: still small rectangles, with round shadows (`groundShadow`), arms, a shaded side and round wheels.
 - **Tool groups** in `src/ui/buildMenu.js`: `add()` takes a group, and the first tool of a new group gets the class `group-start`.
+
+## 25. The second island and your ship
+
+- **The map.** `withSecondIsland` in `src/sim/mapgen.js` generates the second island on its own seed (the home island's plus 7919) and copies both into a wider map. `map.second` is the box of tiles it lies in, and is saved with the map. A hand-made map in a test may have one too.
+- **Islands.** `src/sim/islands.js`: `islandAt` (inside the box is the second island, everything else home), `stockOf` (`state` itself for home, `state.second` for the second island: both have `goods` and `storageCap`), and `paysFrom` (home, until the second island has a warehouse and a harbour).
+- **Every use of the stockpile** now takes the island: `affordReason`, `pay` and `refund` take one; production, houses, carts (each cart's island is its warehouse's) and the upkeep of storage room use the building's own. Undo records say which island paid (`from`); older records have none and mean home.
+- **The lock** is in `siteReason`: `island_locked` before the win.
+- **Your ship.** `src/sim/ship.js`: `state.ship` holds the orders, phase, island, time left, trip length and cargo. `recomputeShipRoute`, called by refresh, finds each island's oldest connected harbour and the sea distance between them by a search over water (`seaTiles`). A harbour's berth is the water beside it or across one beach tile, because a harbour need only touch the beach. `stepShip` runs after the trade ship each tick.
+- **Command:** `{ action: 'ship', good, way }`, way 'out', 'back' or 'off'. Undoable.
+- **Saves.** A sixth round in `addedLater`: `{ "mapSettings": ["second"], "config": ["fleet"] }`. 'mapSettings' is new: it names entries added to `map.json`. Loading an older save widens its map (`widenForSecondIsland`), adds an empty second stock and a ship at rest.
+- **Drawing.** `src/render/life.js` imports nothing, so the renderer hands it `islandAt`, `seaPath` and `shipHarbour` when it is made. Your ship follows `seaPath` by the share of its crossing done.
+- **The bot** builds on one island at a time: `createPlanner(game, { island })`, home if not given. Before this, after the win its planner could pick a site on the second island.

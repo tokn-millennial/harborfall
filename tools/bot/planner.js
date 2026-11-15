@@ -7,7 +7,7 @@
 // The planner only reads the game. It uses the same public checks a player's
 // mouse would (siteReason), so it cannot cheat.
 
-import { buildingIssue, siteReason } from '../../src/sim/index.js';
+import { HOME, buildingIssue, islandAt, siteReason } from '../../src/sim/index.js';
 
 const CELL = 3; // a 2-tile building cell plus a 1-tile lane
 const OFF_LANE_COST = 4; // a road tile off the lanes is allowed but discouraged
@@ -21,10 +21,12 @@ const STRUGGLING_PRODUCERS = 3;
 const DIRS4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const mod = (n, m) => ((n % m) + m) % m;
 
-export function createPlanner(game) {
+// The bot builds on one island at a time: the home island unless `island` says
+// otherwise (see src/sim/islands.js). Its layout is anchored on that island's first warehouse.
+export function createPlanner(game, { island = HOME } = {}) {
   const { rules, state } = game;
   const { width: W, height: H } = state.map;
-  const origin = state.buildings.find((b) => rules.buildings[b.type].category === 'storage');
+  const origin = state.buildings.find((b) => rules.buildings[b.type].category === 'storage' && islandAt(state.map, b.x, b.y) === island);
   if (!origin) throw new Error('The bot needs a starting warehouse to anchor its layout');
   const ox = origin.x;
   const oy = origin.y;
@@ -117,6 +119,7 @@ export function createPlanner(game) {
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         if (!free && (mod(x - ox, CELL) !== 0 || mod(y - oy, CELL) !== 0)) continue;
+        if (islandAt(state.map, x, y) !== island) continue;
         if (siteReason(game, type, x, y) === null) sites.push([x, y]);
       }
     }

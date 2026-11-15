@@ -125,6 +125,7 @@ export function rulesStamp(rawData, without = null) {
     for (const key of step.buildingSettings ?? []) {
       for (const b of Object.values(data.buildings ?? {})) if (b !== null && typeof b === 'object') delete b[key];
     }
+    for (const key of step.mapSettings ?? []) delete data.map?.[key];
     for (const key of step.goodSettings ?? []) {
       for (const g of Object.values(data.goods ?? {})) if (g !== null && typeof g === 'object') delete g[key];
     }
@@ -269,6 +270,14 @@ export function compileRules(rawData) {
     // Materials: how much of each material a workshop's store holds. null:
     // workshops take their materials straight from the stockpile.
     materials: config.materials && config.carts ? { store: config.materials.store } : null,
+    // Your own ship between the two islands (see ship.js), or null.
+    fleet: config.fleet
+      ? {
+          capacity: config.fleet.capacity,
+          ticksPerTile: Math.max(1, Math.round(config.fleet.secondsPerTile * ticksPerSecond)),
+          loadTicks: Math.round(config.fleet.loadSeconds * ticksPerSecond),
+        }
+      : null,
     // Trade: how often the ship calls and how much it carries per harbour.
     // null switches trade off. Prices are per good, for the goods that have them.
     trade: config.trade
@@ -306,6 +315,7 @@ export function compileRules(rawData) {
     olderStamps: addedSteps(config.addedLater).map((_, i, steps) => ({
       stamp: rulesStamp(data, steps.slice(i)),
       configAdded: steps.slice(i).flatMap((s) => s.config ?? []),
+      mapAdded: steps.slice(i).flatMap((s) => s.mapSettings ?? []),
     })),
   });
 }

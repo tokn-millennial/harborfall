@@ -13,17 +13,50 @@ import { createRng } from './rng.js';
 import { DIRS4, footprint, tileWithinRadius } from './grid.js';
 
 const MAX_ATTEMPTS = 50;
+// The second island is made from the home island's seed plus this, so the two never share a seed.
+const SECOND_SEED = 7919;
 const BORDER = 2; // tiles of guaranteed water around the edge
 
 export function generateMap(mapData, startSize = [1, 1]) {
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const map = generateOnce(mapData, mapData.seed + attempt, startSize);
-    if (checkGuarantees(map, mapData).length === 0) return map;
+    if (checkGuarantees(map, mapData).length === 0) return withSecondIsland(map, mapData);
   }
   throw new Error(
     `No island that meets the guarantees in map.json was found for seed ${mapData.seed} ` +
       `(tried ${MAX_ATTEMPTS} seeds). Loosen the guarantees or change the generation settings.`,
   );
+}
+
+// Adds the second island (map.json "second") to the east of a finished home
+// island. The home island's tiles keep their x and y, so it is unchanged; the
+// map only grows. map.second is the box of tiles the second island lies in.
+// Without a "second" entry the home island comes back as it was.
+export function withSecondIsland(home, mapData) {
+  const s = mapData.second;
+  if (!s) return home;
+  const island = generateSecond(s, home.seed);
+  const x0 = home.width + s.gap;
+  const y0 = s.offsetY;
+  const width = x0 + s.width;
+  const height = Math.max(home.height, y0 + s.height);
+  const terrain = new Array(width * height).fill('water');
+  for (let y = 0; y < home.height; y++) {
+    for (let x = 0; x < home.width; x++) terrain[y * width + x] = home.terrain[y * home.width + x];
+  }
+  for (let y = 0; y < s.height; y++) {
+    for (let x = 0; x < s.width; x++) terrain[(y0 + y) * width + x0 + x] = island.terrain[y * s.width + x];
+  }
+  return { ...home, width, height, terrain, second: { x: x0, y: y0, width: s.width, height: s.height } };
+}
+
+function generateSecond(s, homeSeed) {
+  const data = { width: s.width, height: s.height, generation: s.generation };
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const island = generateOnce(data, homeSeed + SECOND_SEED + attempt, null);
+    if (checkGuarantees({ ...island, start: true }, { guarantees: s.guarantees }).length === 0) return island;
+  }
+  throw new Error(`No second island that meets its guarantees in map.json was found for seed ${homeSeed}.`);
 }
 
 // Returns a list of guarantee failures. Empty means the map is good.
@@ -124,9 +157,9 @@ function generateOnce(mapData, seed, startSize) {
     terrain[i] = 'fertile';
   }
 
-  // 5. Start site.
+  // 5. Start site (none for the second island, which is settled from the home island).
   const map = { width, height, seed, terrain, start: null };
-  map.start = findStartSite(map, mapData, startSize);
+  if (startSize) map.start = findStartSite(map, mapData, startSize);
   return map;
 }
 

@@ -13,6 +13,7 @@
 // Work in hand waits inside a closed producer and carries on when it reopens.
 
 import { staffWorksThisTick } from './staff.js';
+import { stockOfBuilding } from './islands.js';
 
 export function createProductionState() {
   return { status: 'no_road', active: false, progress: 0, yard: {}, store: {} };
@@ -32,11 +33,12 @@ export function stepProduction(game) {
   const { rules, state } = game;
   // A town short of staff works on only some ticks (see staff.js).
   if (!staffWorksThisTick(game)) return;
-  const goods = state.goods;
   for (const b of state.buildings) {
     const p = b.production;
     if (!p) continue;
     const def = rules.buildings[b.type].production;
+    const stock = stockOfBuilding(game, b); // its own island's goods
+    const goods = stock.goods;
 
     if (!b.connected) {
       p.status = 'no_road';
@@ -85,7 +87,7 @@ export function stepProduction(game) {
       continue;
     }
     // Without carts, straight to the stockpile, only if every output fits.
-    if (outputs.every(([good, amount]) => goods[good] + amount <= state.storageCap)) {
+    if (outputs.every(([good, amount]) => goods[good] + amount <= stock.storageCap)) {
       for (const [good, amount] of outputs) goods[good] += amount;
       p.active = false;
       p.progress = 0;

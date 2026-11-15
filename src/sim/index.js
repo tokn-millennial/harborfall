@@ -14,12 +14,26 @@ import { undoStatus } from './undo.js';
 import { staffing } from './staff.js';
 import { stepTrade, tradeSummary, tradeOrderReason } from './trade.js';
 import { cartsSummary, servedByCarts, stepCarts } from './carts.js';
+import { seaPath, shipHarbour, shipOrderReason, shipSummary, stepShip } from './ship.js';
+import { HOME, SECOND, islandAt, islandOf, secondIsOpen, hasSecondIsland, paysFrom, stockOf } from './islands.js';
 
 export {
   createGame, execute, canPlace, siteReason, buildingAt, buildingById,
   countResidents, isSatisfied, getSummary, buildingIssue, inMarketRange, housesInRangeOf,
   saveGame, loadGame, SAVE_FORMAT, undoStatus, staffing, medalFor, tradeSummary, cartsSummary, servedByCarts,
+  shipSummary, seaPath, shipHarbour, HOME, SECOND, islandAt, islandOf, secondIsOpen, hasSecondIsland, paysFrom, stockOf,
 };
+
+// The goods of the island a building stands on: { goods, storageCap }.
+export function stockOfBuildingFor(game, building) {
+  return stockOf(game, islandOf(game, building));
+}
+
+// Checks an order for your ship without giving it. Never changes the game.
+export function canShip(game, good, way) {
+  const reason = shipOrderReason(game, good, way);
+  return reason ? { ok: false, reason } : { ok: true };
+}
 
 // Checks a trade order without giving it. Never changes the game.
 export function canTrade(game, good, mode, level) {
@@ -40,6 +54,7 @@ export function step(game) {
   stepCarts(game);         // 3. carts collect from the yards and unload at warehouses
   stepHouses(game);        // 4. houses buy goods, residents move in or out
   stepTrade(game);         // 5. the trade ship, when it is due
-  settleIncome(game);      // 6. taxes, base income and upkeep (on its interval)
-  checkWin(game);          // 7. the win check
+  stepShip(game);          // 6. your own ship between the islands
+  settleIncome(game);      // 7. taxes, base income and upkeep (on its interval)
+  checkWin(game);          // 8. the win check
 }

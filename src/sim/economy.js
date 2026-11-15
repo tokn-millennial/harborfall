@@ -2,45 +2,53 @@
 // Coins are held in whole thousandths ("milli-coins") so nothing ever drifts.
 
 import { MILLI } from './rules.js';
+import { HOME, SECOND, islandOf, stockOf } from './islands.js';
+
+// Coins are shared by the islands. Goods come from one island's stock:
+// `from` is the island (see islands.js), the home island if not given.
 
 // Returns null if the cost can be paid, otherwise the reason it cannot.
-export function affordReason(game, cost) {
+export function affordReason(game, cost, from = HOME) {
   const { state } = game;
   if (state.coinsMilli < cost.coinsMilli) return 'not_enough_coins';
+  const goods = stockOf(game, from).goods;
   for (const [good, amount] of Object.entries(cost.goods)) {
-    if (state.goods[good] < amount) return 'not_enough_goods';
+    if (goods[good] < amount) return 'not_enough_goods';
   }
   return null;
 }
 
-export function pay(game, cost) {
+export function pay(game, cost, from = HOME) {
   const { state } = game;
   state.coinsMilli -= cost.coinsMilli;
-  for (const [good, amount] of Object.entries(cost.goods)) state.goods[good] -= amount;
+  const goods = stockOf(game, from).goods;
+  for (const [good, amount] of Object.entries(cost.goods)) goods[good] -= amount;
 }
 
 // Gives back a share of a cost, rounded down to whole coins and whole goods.
 // Returned goods that do not fit in storage are lost.
 // Returns what was actually given: { coinsMilli, goods }.
-export function refund(game, cost, ratio) {
+export function refund(game, cost, ratio, to = HOME) {
   const { state } = game;
+  const stock = stockOf(game, to);
   const given = { coinsMilli: Math.floor((cost.coinsMilli / MILLI) * ratio) * MILLI, goods: {} };
   state.coinsMilli += given.coinsMilli;
   for (const [good, amount] of Object.entries(cost.goods)) {
-    const room = Math.max(0, state.storageCap - state.goods[good]);
+    const room = Math.max(0, stock.storageCap - stock.goods[good]);
     const back = Math.min(room, Math.floor(amount * ratio));
-    state.goods[good] += back;
+    stock.goods[good] += back;
     if (back > 0) given.goods[good] = back;
   }
   return given;
 }
 
-// Total storage room per good: every storage building adds its share.
+// Total storage room per good on each island: every storage building adds its share.
 export function recomputeStorage(game) {
   const { rules, state } = game;
-  let cap = 0;
-  for (const b of state.buildings) cap += rules.buildings[b.type].storagePerGood;
-  state.storageCap = cap;
+  const cap = [0, 0];
+  for (const b of state.buildings) cap[islandOf(game, b)] += rules.buildings[b.type].storagePerGood;
+  state.storageCap = cap[HOME];
+  state.second.storageCap = cap[SECOND];
 }
 
 // Coins per minute right now, in milli-coins: taxes from every resident, the

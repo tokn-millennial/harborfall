@@ -139,7 +139,11 @@ function boat(ctx, a, time) {
 
 // The trade ship: a two-masted trader with cream sails, larger than a fishing boat.
 const SHIP = { hull: '#5e3d27', band: '#d9b46a', deck: '#9a7350', sail: '#f3ead2', stripe: '#3d6f8f', mast: '#4a3322' };
+// Your own ship: the same trader, with a red stripe and a gold pennant, so it is told apart.
+const OWN_SHIP = { ...SHIP, stripe: '#b3412f', band: '#e9c46a' };
+const TRADER = SHIP;
 function ship(ctx, a, time) {
+  const SHIP = a.own ? OWN_SHIP : TRADER;
   const p = tileToWorld(a.x, a.y);
   const x = p.x;
   const y = p.y + CLIFF + Math.sin(time * 1.2 + a.look) * (a.docked ? 0.4 : 1);

@@ -17,6 +17,7 @@
 // The art itself lives in src/render/art/. This file decides what to draw,
 // where and in what order.
 
+import { islandAt, seaPath, shipHarbour } from '../sim/index.js';
 import { TILE_H, boxSilhouette, depthOf, footprintCorners, mapBounds, tileToWorld } from './iso.js';
 import { visibleTileRange } from './camera.js';
 import { buildingVisual } from './visuals.js';
@@ -81,7 +82,7 @@ export function createRenderer(canvas, rules) {
   let viewStillSince = 0;
   let closeUpShown = false;
   const sprites = createSpriteCache();
-  const life = createLife(rules); // walkers, carts and boats: decoration that follows the game
+  const life = createLife(rules, 7, { islandAt, seaPath, shipHarbour }); // walkers, carts and boats: decoration that follows the game
   const buildEffects = createBuildEffects(rules); // dust when something is built or removed
   let dayAndNight = true;
   let nightNow = 0;

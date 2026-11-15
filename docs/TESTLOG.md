@@ -1586,3 +1586,67 @@ Roofs and walls are drawn once into kept pictures, so their extra detail costs n
 - I would have measured the ground shading with numbers before looking at it, not after; the first version looked fine zoomed out and blocky zoomed in.
 
 **After the gate:** committed on your "Approve and proceed". Not pushed.
+
+## Phase 22: The second island and your ship
+
+Date: 2026-11-14. Status: approved by Colin with no changes (he asked to commit it).
+
+**Turns used:** 1 (your "Approve and proceed", then your four answers at the start of the phase). Built by Claude Opus 5.5. My usage limit ran out once part way through; I carried on when it reset.
+
+**What was built** (all in `SPEC.md` section 23)
+- **A second island** across the water to the east, on the same map. It opens at the win.
+- **Each island keeps its own goods.** The first warehouse and harbour there are paid from home. The top bar shows the goods of the island you are looking at.
+- **Your own ship** between a harbour on each island, carrying what you order each way, set by one button per good in the second island's harbour panel.
+- **A tip** after the win until the ship sails, and a line on the win screen.
+- **Older saves** load with the island added.
+
+**Automated tests: 581 pass, 0 fail.** That is 555 from before plus 26 new: 21 in `tests/islands.test.js`, 3 more map tests (and one, "there is one island", became "there are two islands"), and 2 automatic checks that the two new simulation files use nothing from the browser or the clock. Older tests changed: the map tests now look at each island's own area (the map is wider); the list of older save stamps gained Phase 21's; two test helpers learned about the second island; one older-save test ignores the second stock that today's code gives every game.
+
+**Did the tests mean anything?** I broke the new rules on purpose in eleven ways.
+
+| Break | Tests that failed |
+|---|---|
+| The second island open before the win | 1 |
+| Everything paid from home | 1 |
+| One storage limit for both islands | 2 |
+| Markets serving across the water | 1 |
+| Carts unloading at home whatever their island | 1 |
+| The ship loading one good before the next, not in turns | 3 |
+| The ship unloading everything, room or not | 1 |
+| A crossing that ignores distance | 1 |
+| Older saves keeping their narrow map | 1 |
+| The trade ship counting the second island's harbour | 1 |
+| The bot straying to the other island | 1 |
+
+**The first game is untouched.** Proven two ways: a test runs the standard game with and without the second island in the data and gets the same win minute, the same town, goods and coins; and the bot's figures are exactly Phase 20's: standard 28.9, careless 31.9, merchant 31.9, bread first 58.7, and 100 Artisans 26.3 minutes after the win.
+
+**Browser checks** (on the test page and the demo, which never save)
+
+| Check | How | Result |
+|---|---|---|
+| A whole game through the real buttons | UI playthrough of the standard order | Pass. Won at 28.92 minutes, as in Phase 20. (One run said 28.79: my settling script had run while it was finishing and added planks. Run again untouched: 28.92.) |
+| Building on the second island after the win | Picked Warehouse with its key and clicked on the island | Pass. Placed, paid from home. |
+| The second island's harbour panel | Clicked the harbour, then two order buttons | Pass, read from the page: "Island: The second island", "Status: For your own ship.", the ship's place and cargo, and a row per good with both stocks. Both buttons turned to "Takes over". |
+| The top bar on the second island | Centred the view there, at 1280 wide | Pass after a fix: the label first pushed the bar onto two lines (D311). |
+| The ship crossing | Ordered wood and fish over and watched | Pass: 15 of each aboard, drawn on the sea between the harbours. See `docs/screenshots/phase22-ship-crossing.jpg`. |
+| The error console | Read it | Empty. |
+
+**Bugs found and fixed**
+- A harbour set one tile back from the water had no route for the ship (D310). Found in the browser; a test now covers it.
+- The bot's planner picked a site on the second island for a home harbour (D312).
+- The top bar's island label wrapped the bar (D311).
+- The panel rebuilds every second while the ship's countdown runs, so a page element found before a click can be gone by the click. Clicking by position works. This was already so for the trade ship's countdown since Phase 18, and the click-through test has always clicked by position.
+
+**Speed.** The island picture is bigger: about 149 MB on this screen (1.5 times sharp), where it was about 90 MB. Painting it takes under a second once. The whole test suite still runs in about 6 seconds.
+
+**Decisions made:** 16 (D298 to D313), and your four answers as Q6 to Q9.
+
+**Weak or unfinished**
+- **The second island has no purpose yet.** Its land is the same kinds as home. The new good that makes it worth settling is Phase 23.
+- **Nobody has played it**, and the bot does not settle it, so there is no measure of how long settling takes.
+- **The ship takes everything it can,** and can empty home of a good. A level to keep back is not done (D307).
+- **Memory use is up** by about two thirds (above).
+- **Staff are shared** between islands (D303), which is not how Anno does it.
+- **Not done:** your notes from playing, and a Mac test.
+
+**After the gate:** committed on your "Commit the working tree changes with a sensible message." Not pushed.

@@ -8,7 +8,8 @@
 // The ship carries a limited number of units per harbour on each call, sold
 // and bought together.
 //
-// The orders belong to the island, not to one harbour: there is one stockpile.
+// The orders belong to the home island, not to one harbour: the ship trades
+// with the home island's stockpile. It does not call at the second island.
 
 const MODES = ['sell', 'buy'];
 export const MAX_TRADE_LEVEL = 999;
@@ -21,7 +22,8 @@ export function createTradeState() {
 export function countHarbors(game, connectedOnly = true) {
   const { rules, state } = game;
   let n = 0;
-  for (const b of state.buildings) if (rules.buildings[b.type].harbor && (b.connected || !connectedOnly)) n++;
+  // The trade ship calls at the home island. A harbour on the second island is for your own ship.
+  for (const b of state.buildings) if (rules.buildings[b.type].harbor && (b.connected || !connectedOnly) && islandOf(game, b) === HOME) n++;
   return n;
 }
 
@@ -132,4 +134,5 @@ export function tradeSummary(game) {
     orders: JSON.parse(JSON.stringify(state.trade.orders)),
     last: state.trade.last ? JSON.parse(JSON.stringify(state.trade.last)) : null,
   };
-}
+}import { HOME, islandOf } from './islands.js';
+

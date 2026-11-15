@@ -231,8 +231,11 @@ test('the stamps that saved games out in the world carry are still recognised', 
   // Phase 18 added a third: games saved in Phases 15 to 17, before trade.
   // Phase 19 a fourth: games saved in Phase 18, before carts.
   // Phase 20 a fifth: games saved in Phase 19, before materials travelled.
-  assert.deepEqual(rules.olderStamps.map((o) => o.stamp), ['6fe08f1bee9bb754', 'b16fd0a9142282c9', '10d0dc80671f7e66', 'fc1b9e1dd0f19bb7', 'c7dd0d43d8d2ffb8']);
-  assert.deepEqual(rules.olderStamps.map((o) => o.configAdded), [['milestones', 'workforce', 'trade', 'carts', 'materials'], ['workforce', 'trade', 'carts', 'materials'], ['trade', 'carts', 'materials'], ['carts', 'materials'], ['materials']]);
+  // Phase 22 a sixth: games saved in Phases 20 and 21, before the second island.
+  assert.deepEqual(rules.olderStamps.map((o) => o.stamp), ['6fe08f1bee9bb754', 'b16fd0a9142282c9', '10d0dc80671f7e66', 'fc1b9e1dd0f19bb7', 'c7dd0d43d8d2ffb8', 'e6ebd7221f59fd55']);
+  assert.deepEqual(rules.olderStamps.map((o) => o.configAdded), [['milestones', 'workforce', 'trade', 'carts', 'materials', 'fleet'], ['workforce', 'trade', 'carts', 'materials', 'fleet'], ['trade', 'carts', 'materials', 'fleet'], ['carts', 'materials', 'fleet'], ['materials', 'fleet'], ['fleet']]);
+  assert.deepEqual(rules.olderStamps.map((o) => o.mapAdded), [['second'], ['second'], ['second'], ['second'], ['second'], ['second']]);
+  assert.equal(createGame(dataBefore(5)).rules.stamp, 'e6ebd7221f59fd55');
   assert.equal(createGame(dataBefore(4)).rules.stamp, 'c7dd0d43d8d2ffb8');
   assert.equal(createGame(dataBefore(2)).rules.stamp, '10d0dc80671f7e66');
   assert.equal(createGame(dataBefore(3)).rules.stamp, 'fc1b9e1dd0f19bb7');

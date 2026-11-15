@@ -2,6 +2,7 @@
 // it is tested in Node. Numbers come from the data files, so retuning the game
 // updates the text by itself.
 
+import { HOME, SECOND, stockOf } from '../sim/index.js';
 import { MILLI } from '../sim/rules.js';
 
 export const clock = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
@@ -28,14 +29,33 @@ export function costText(rules, cost) {
 }
 
 // What a cost is short of right now: "Need 12 more coins and 3 more wood", or null if affordable.
-export function shortfallText(game, cost) {
+// `from` is the island whose goods pay (see src/sim/islands.js): on the
+// second island the sentence says so.
+export function shortfallText(game, cost, from = HOME) {
   const { rules, state } = game;
+  const goods = stockOf(game, from).goods;
   const parts = [];
   if (state.coinsMilli < cost.coinsMilli) parts.push(`${Math.ceil((cost.coinsMilli - state.coinsMilli) / MILLI)} more coins`);
   for (const [good, n] of Object.entries(cost.goods)) {
-    if (state.goods[good] < n) parts.push(`${n - state.goods[good]} more ${lower(rules, good)}`);
+    if (goods[good] < n) parts.push(`${n - goods[good]} more ${lower(rules, good)}`);
   }
-  return parts.length ? `Need ${parts.join(' and ')}` : null;
+  if (!parts.length) return null;
+  const where = from === SECOND && Object.keys(cost.goods).some((good) => goods[good] < cost.goods[good]) ? ' on the second island' : '';
+  return `Need ${parts.join(' and ')}${where}`;
+}
+
+// What your ship does with a good: the words on its order button.
+export const SHIP_WAY_TEXT = { off: 'Stays', out: 'Takes over', back: 'Brings home' };
+
+// Where your ship is and what it is doing, in a few words.
+export function shipStatusText(ship) {
+  if (!ship.route) return 'Waiting. It needs a harbour linked to a warehouse on each island.';
+  const where = ship.at === SECOND ? 'the second island' : 'home';
+  const left = `${Math.ceil(ship.secondsLeft)} s`;
+  // Short, so it fits beside its label: "At home · sails in 8 s".
+  if (ship.phase === 'loading') return `At ${where} · sails in ${left}`;
+  if (ship.phase === 'sailing') return `To ${where} · ${left}`;
+  return 'About to set sail.';
 }
 
 // What a demolish gives back: "Returns 25 coins, 10 wood" or "Returns nothing".
@@ -158,6 +178,9 @@ const FIXED_REASONS = {
   not_enough_goods: 'Not enough materials.',
   nothing_here: 'There is nothing to demolish here.',
   last_warehouse: 'You cannot demolish your last warehouse.',
+  island_locked: 'The second island opens when you reach the goal.',
+  no_ship: 'There is no ship to give orders to.',
+  unknown_good: 'There is no such good.',
   not_a_house: 'Only houses can be upgraded.',
   not_a_producer: 'Only buildings that make things can be closed.',
   no_harbor: 'Build a harbour first. The trade ship calls there.',
@@ -188,7 +211,7 @@ export function reasonText(game, code, options = {}) {
   const { rules } = game;
   if (!code) return '';
   if ((code === 'not_enough_coins' || code === 'not_enough_goods') && options.cost) {
-    return `${shortfallText(game, options.cost) ?? FIXED_REASONS[code].slice(0, -1)}.`;
+    return `${shortfallText(game, options.cost, options.from ?? HOME) ?? FIXED_REASONS[code].slice(0, -1)}.`;
   }
   if (code === 'missing_input' && options.building) {
     const inputs = rules.buildings[options.building].production?.inputs ?? {};
@@ -242,7 +265,7 @@ export function winMessage(rules, summary, buildings) {
     detail: `${summary.win.target} ${name(summary.win.tier)} live on your island. It took ${clock(summary.win.wonAtSeconds)} of game time.`,
     stats: `You finished with ${summary.coins} coins and ${buildings} buildings.`,
     medal: medal ? { kind: medal, text: `${medalName(medal)} medal. ${medalTimesText(rules, rules.medals)}` } : null,
-    next: next ? `There is more, if you want it. Next goal: ${next.target} ${name(next.tier)}.` : null,
+    next: next ? `There is more, if you want it. Next goal: ${next.target} ${name(next.tier)}.${summary.second?.exists ? ' And the second island, across the water to the east, is now open to settle.' : ''}` : null,
   };
 }
 

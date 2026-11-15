@@ -6,6 +6,7 @@ import { recomputeHauls } from './carts.js';
 import { recomputeStorage } from './economy.js';
 import { syncProductionStatus } from './production.js';
 import { recomputeCoverage } from './population.js';
+import { recomputeShipRoute } from './ship.js';
 
 export function refresh(game) {
   recomputeConnections(game);
@@ -13,4 +14,5 @@ export function refresh(game) {
   recomputeStorage(game);
   syncProductionStatus(game);
   recomputeCoverage(game);
+  recomputeShipRoute(game);
 }

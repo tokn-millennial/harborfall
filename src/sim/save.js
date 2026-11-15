@@ -12,6 +12,9 @@ import { footprint, inBounds, tileIndex } from './grid.js';
 import { undoProblem } from './undo.js';
 import { createTradeState, tradeProblem } from './trade.js';
 import { cartsFor, cartsProblem, recomputeHauls } from './carts.js';
+import { withSecondIsland } from './mapgen.js';
+import { createSecondStock } from './islands.js';
+import { createShipState, shipProblem } from './ship.js';
 
 export const SAVE_FORMAT = 1;
 const APP = 'harborfall';
@@ -84,11 +87,23 @@ export function loadGame(rawData, save) {
   }
   // A save from before trade existed has no orders and no ship on its way.
   if (state !== null && typeof state === 'object' && state.trade === undefined) state.trade = createTradeState();
+  // A save from before the second island: the island is added across the
+  // water, and the map grows to hold it. The home island keeps every tile,
+  // building and road where it was. Nothing is built there and it has no goods.
+  if (state !== null && typeof state === 'object') {
+    if (rules.map.second && state.map && typeof state.map === 'object' && state.map.second === undefined && older?.mapAdded?.includes('second')) {
+      const widened = widenForSecondIsland(state, rules);
+      if (widened) return fail('damaged', widened);
+    }
+    if (state.second === undefined) state.second = createSecondStock(rules);
+    if (state.ship === undefined) state.ship = createShipState();
+  }
   // A save from before staff existed has saved up no work. It starts from nothing.
   if (state !== null && typeof state === 'object' && state.staffClock === undefined) state.staffClock = 0;
   if (older && state !== null && typeof state === 'object') {
     // None of the new goods, and, if the goals after the win are new to it, none reached yet.
     if (state.goods !== null && typeof state.goods === 'object') for (const good of rules.goodIds) state.goods[good] ??= 0;
+    if (state.second?.goods !== null && typeof state.second?.goods === 'object') for (const good of rules.goodIds) state.second.goods[good] ??= 0;
     if (older.configAdded.includes('milestones')) state.milestones = rules.milestones.map(() => null);
   }
   let problem = stateProblem(rules, state);
@@ -97,7 +112,7 @@ export function loadGame(rawData, save) {
     // How far each producer is from a warehouse was never saved. Work it out now.
     recomputeHauls({ rules, state });
   }
-  problem ??= tradeProblem(rules, state) ?? cartsProblem(rules, state) ?? undoProblem(rules, state);
+  problem ??= tradeProblem(rules, state) ?? cartsProblem(rules, state) ?? shipProblem(rules, state) ?? undoProblem(rules, state);
   if (problem) return fail('damaged', problem);
 
   // Everything worked out from what is built where (road connections, storage,
@@ -111,6 +126,23 @@ export function loadGame(rawData, save) {
   if (stableText(check.state) !== stableText(state)) return fail('damaged', 'connections or storage do not add up');
 
   return { ok: true, game: { rules, state } };
+}
+
+// Grows an older save's map to hold the second island. Returns what is wrong, or null.
+function widenForSecondIsland(state, rules) {
+  const old = state.map;
+  if (!Number.isInteger(old.width) || !Number.isInteger(old.height) || !Array.isArray(old.terrain) || !Number.isInteger(old.seed)) return 'the island cannot be read';
+  if (!Array.isArray(state.roads) || !Array.isArray(state.occupancy)) return 'the road or building map is missing';
+  const map = withSecondIsland(old, rules.map);
+  const grow = (list) => {
+    const out = new Array(map.width * map.height).fill(0);
+    for (let y = 0; y < old.height; y++) for (let x = 0; x < old.width; x++) out[y * map.width + x] = list[y * old.width + x];
+    return out;
+  };
+  state.roads = grow(state.roads);
+  state.occupancy = grow(state.occupancy);
+  state.map = map;
+  return null;
 }
 
 // The first thing wrong with a state, in words, or null if it is a possible game.
@@ -143,6 +175,14 @@ function stateProblem(rules, state) {
     if (!Object.hasOwn(rules.map.terrain, t)) return `the island has unknown ground "${t}"`;
   }
   if (map.start !== null && (typeof map.start !== 'object' || !inBounds(map, map.start.x, map.start.y))) return 'the start site is off the island';
+  if (map.second !== undefined) {
+    const s = map.second;
+    if (s === null || typeof s !== 'object' || ![s.x, s.y, s.width, s.height].every(isCount) || s.x + s.width > map.width || s.y + s.height > map.height) return 'the second island is off the map';
+  }
+  const second = state.second;
+  if (second === null || typeof second !== 'object' || !isCount(second.storageCap) || second.goods === null || typeof second.goods !== 'object') return 'the second island\'s goods are missing';
+  for (const id of rules.goodIds) if (!isCount(second.goods[id])) return `the second island's amount of ${id} is not a whole number`;
+  if (Object.keys(second.goods).length !== rules.goodIds.length) return 'the second island has a good the rules do not know';
 
   if (!Array.isArray(state.roads) || state.roads.length !== total) return 'the road list is the wrong length';
   if (!state.roads.every((r) => r === 0 || r === 1)) return 'the road list holds something that is not a road';

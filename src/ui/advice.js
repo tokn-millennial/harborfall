@@ -9,9 +9,19 @@
 //
 // No page code here, so it is tested in Node. It only reads the game.
 
-import { buildingIssue, staffing } from '../sim/index.js';
+import { SECOND, buildingIssue, hasSecondIsland, islandOf, shipSummary, staffing, stockOfBuildingFor } from '../sim/index.js';
 
 const article = (word) => (/^[aeiou]/i.test(word) ? 'an' : 'a');
+
+// After the win, while nothing else needs saying: how to get going on the
+// second island, until your ship is sailing.
+function islandTip(game) {
+  if (!game.state.won || !hasSecondIsland(game) || !game.rules.fleet) return null;
+  if (shipSummary(game).route) return null;
+  const settled = game.state.buildings.some((b) => islandOf(game, b) === SECOND);
+  if (!settled) return 'The second island, to the east, is open. Build a warehouse and a harbour on its shore. The first of each is paid from home.';
+  return 'Your ship needs a harbour on each island, each linked by road to a warehouse.';
+}
 
 export function createAdvisor(rules, { patienceSeconds = 30 } = {}) {
   const patienceTicks = patienceSeconds * rules.ticksPerSecond;
@@ -112,7 +122,7 @@ export function createAdvisor(rules, { patienceSeconds = 30 } = {}) {
           // A workshop out of materials the stockpile holds is waiting for a cart too.
           if (issue === 'missing_input' && rules.materials) {
             const inputs = Object.entries(rules.buildings[b.type].production.inputs);
-            if (inputs.every(([good, n]) => game.state.goods[good] >= n)) issue = 'yard_full';
+            if (inputs.every(([good, n]) => stockOfBuildingFor(game, b).goods[good] >= n)) issue = 'yard_full';
           }
           if (issue in found && !found[issue]) found[issue] = b;
         }
@@ -128,7 +138,7 @@ export function createAdvisor(rules, { patienceSeconds = 30 } = {}) {
         }
         if (lasted('yard_full')) return 'Your carts cannot keep up. Build another warehouse near your workshops.';
       }
-      return lasting.length ? explain(game, lasting[0][0]) : null;
+      return lasting.length ? explain(game, lasting[0][0]) : islandTip(game);
     },
   };
 }

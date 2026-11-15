@@ -9,16 +9,18 @@
 //     gave back is taken away again
 //   - a house just upgraded goes back to what it was, and the cost is returned
 //   - a producer just closed is open again, and one just reopened is closed
-//   - a trade order just changed is what it was
+//   - a trade order just changed is what it was, and so is an order for your ship
 // An undo cannot itself be undone.
 //
 // What is needed to undo is kept in the state (state.undo), so it is saved
 // with the game and two games given the same commands still match exactly.
 
 import { footprint, inBounds, tileIndex } from './grid.js';
-import { buildingById, countCategory, removeBuilding } from './buildings.js';
+import { buildingById, removeBuilding } from './buildings.js';
 import { refresh } from './refresh.js';
 import { MAX_TRADE_LEVEL, setTradeOrder } from './trade.js';
+import { HOME, SECOND, islandAt, islandOf, paysFrom, stockOf } from './islands.js';
+import { SHIP_WAYS, setShipOrder } from './ship.js';
 
 const copy = (value) => JSON.parse(JSON.stringify(value));
 const fail = (reason) => ({ ok: false, reason });
@@ -49,22 +51,26 @@ export function undoStatus(game) {
   return status;
 }
 
-// Gives a cost back in full. Goods that do not fit in storage are lost, as with any refund.
-function giveBack(game, cost) {
+// Gives a cost back in full, to the island it was paid from (records from
+// before the second island have none: the home island). Goods that do not fit
+// in storage are lost, as with any refund.
+function giveBack(game, cost, from = HOME) {
   const { state } = game;
+  const stock = stockOf(game, from ?? HOME);
   state.coinsMilli += cost.coinsMilli;
   for (const [good, amount] of Object.entries(cost.goods)) {
-    state.goods[good] = Math.min(Math.max(state.storageCap, state.goods[good]), state.goods[good] + amount);
+    stock.goods[good] = Math.min(Math.max(stock.storageCap, stock.goods[good]), stock.goods[good] + amount);
   }
 }
 
 // Takes back what a demolish handed out. False if it is no longer all there.
-function takeBack(game, given) {
+function takeBack(game, given, from = HOME) {
   const { state } = game;
+  const goods = stockOf(game, from ?? HOME).goods;
   if (state.coinsMilli < given.coinsMilli) return false;
-  for (const [good, amount] of Object.entries(given.goods)) if (state.goods[good] < amount) return false;
+  for (const [good, amount] of Object.entries(given.goods)) if (goods[good] < amount) return false;
   state.coinsMilli -= given.coinsMilli;
-  for (const [good, amount] of Object.entries(given.goods)) state.goods[good] -= amount;
+  for (const [good, amount] of Object.entries(given.goods)) goods[good] -= amount;
   return true;
 }
 
@@ -79,19 +85,20 @@ export function undoLast(game) {
     const building = buildingById(game, u.id);
     if (!building) return fail('nothing_to_undo');
     const def = rules.buildings[building.type];
-    if (def.category === 'storage' && countCategory(game, 'storage') === 1) return fail('last_warehouse');
+    if (def.category === 'storage' && islandOf(game, building) === HOME && countHome(game, 'storage') === 1) return fail('last_warehouse');
     removeBuilding(game, building);
     // Its number is handed back too, so the game is exactly as it was.
     if (building.id === state.nextId - 1) state.nextId = building.id;
     refresh(game);
-    giveBack(game, def.cost);
+    giveBack(game, def.cost, u.from);
   } else if (u.kind === 'road') {
     const cost = rules.buildings.road.cost;
     for (const [x, y] of u.tiles) {
       const i = tileIndex(state.map, x, y);
       if (state.roads[i] !== 1) continue;
+      const from = paysFrom(game, islandAt(state.map, x, y));
       state.roads[i] = 0;
-      giveBack(game, cost);
+      giveBack(game, cost, from);
     }
     refresh(game);
   } else if (u.kind === 'demolish') {
@@ -101,7 +108,7 @@ export function undoLast(game) {
       const i = tileIndex(state.map, x, y);
       if (state.occupancy[i] !== 0 || state.roads[i] !== 0) return fail('blocked');
     }
-    if (!takeBack(game, u.given)) return fail('undo_spent');
+    if (!takeBack(game, u.given, u.from)) return fail('undo_spent');
     reconnecting(game, u.statuses, () => {
       // Back into the same place in the list, because older houses are fed first.
       state.buildings.splice(Math.min(u.index, state.buildings.length), 0, copy(building));
@@ -112,14 +119,14 @@ export function undoLast(game) {
   } else if (u.kind === 'unroad') {
     const i = tileIndex(state.map, u.x, u.y);
     if (state.occupancy[i] !== 0 || state.roads[i] !== 0) return fail('blocked');
-    if (!takeBack(game, u.given)) return fail('undo_spent');
+    if (!takeBack(game, u.given, u.from)) return fail('undo_spent');
     reconnecting(game, u.statuses, () => { state.roads[i] = 1; });
   } else if (u.kind === 'upgrade') {
     const building = buildingById(game, u.id);
     if (!building?.house) return fail('nothing_to_undo');
     const cost = rules.tiers[u.house.tier].upgrade.cost;
     building.house = copy(u.house);
-    giveBack(game, cost);
+    giveBack(game, cost, u.from);
   } else if (u.kind === 'close' || u.kind === 'reopen') {
     const building = buildingById(game, u.id);
     if (!building?.production) return fail('nothing_to_undo');
@@ -128,12 +135,18 @@ export function undoLast(game) {
     building.production.status = u.status; // the word it had before, exactly
   } else if (u.kind === 'trade') {
     setTradeOrder(game, u.good, u.before);
+  } else if (u.kind === 'ship') {
+    setShipOrder(game, u.good, u.before);
   } else {
     return fail('nothing_to_undo');
   }
 
   state.undo = null;
   return { ok: true, undone: u.kind };
+}
+
+function countHome(game, category) {
+  return game.state.buildings.filter((b) => game.rules.buildings[b.type].category === category && islandOf(game, b) === HOME).length;
 }
 
 // The one-word status of every producer that is linked to a warehouse right
@@ -172,7 +185,13 @@ export function undoProblem(rules, state) {
   const STATUS = ['missing_input', 'working', 'storage_full', 'closed', 'yard_full'];
   const statuses = (s) => s !== null && typeof s === 'object' && Object.values(s).every((word) => STATUS.includes(word));
 
+  // Which island's goods a record paid from or was given to. Older records have none.
+  if (u.from !== undefined && u.from !== HOME && u.from !== SECOND) return 'the undo record names an unknown island';
   if (u.kind === 'place') return Number.isInteger(u.id) ? null : 'the undo record names no building';
+  if (u.kind === 'ship') {
+    if (typeof u.good !== 'string' || !rules.goodIds.includes(u.good)) return 'the undo record is for a good your ship cannot carry';
+    return SHIP_WAYS.includes(u.before) ? null : 'the undo record for your ship is wrong';
+  }
   if (u.kind === 'trade') {
     if (typeof u.good !== 'string' || !Object.hasOwn(rules.prices, u.good)) return 'the undo record is for a good that cannot be traded';
     const b = u.before;
