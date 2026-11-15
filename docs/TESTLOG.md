@@ -2044,3 +2044,63 @@ Date: 2026-11-15. Status: approved by Colin with no changes (his next request, "
 - **Not touched:** panels, figures, buildings other than houses.
 
 **After the gate:** committed on your "Make the art even better. Focus on the buildings". Not pushed.
+
+## Phase 31: A fourth art pass: the buildings
+
+Date: 2026-11-15. Status: approved by Colin with no changes ("Keep building", taken as approval as at D254).
+
+**Turns used:** 1 (your "Make the art even better. Focus on the buildings"). Built by Claude Opus 5.5.
+
+**How I chose.** I drew every building large, side by side, in one picture. Eight of them were the same shape (a long box under one gable along the same axis), the walls were bare (flat yellow squares for windows, nothing at the foot of the walls), barrels read as rings on the ground, and the farm's crop read as yellow bars. So: detail shared by all of them first (D368), then a second shape for the ones most alike (D369).
+
+**What was built** (`SPEC.md` section 32)
+- Stone footings, framed windows with glazing bars and sills, framed doors, eave shadows and gable trim on every building.
+- Dormers on Workers' houses, a front gable on Artisans' houses, a porch and woodshed on Farmers' cottages.
+- A loft gable and hoist on the warehouse, a domed bread oven on the bakery (glowing while it bakes), an arched cellar door, round window, vine and stacked barrels on the winery, a wool lean-to on the weaver, stalks and ears on the farm, a chopping block at the lumberjack, windows and sawdust at the sawmill.
+- Upright round barrels everywhere.
+- Before-and-after pictures: `docs/screenshots/phase31-before-after-buildings.jpg` (every building) and `-town.jpg`.
+
+**Automated tests: 625 pass, 0 fail.** 619 from before plus 6 new in `tests/art.test.js`: every walled building has a footing; windows have frames and bars and the door a frame; the right buildings have dormers (one or two by look) and a dormer never rises above its roof's ridge; the bakery has an oven that glows only while baking; barrels are round; the farm grows stalks, with ears only once half grown. No older test changed.
+
+**Did the tests mean anything?** Ten breaks, each caught:
+
+| Break | Tests that failed |
+|---|---|
+| The bakery loses its footing | 1 |
+| Windows without glazing bars | 1 |
+| Window frames gone | 1 (only after I made the test count the frames; at first it passed, because the glazing bars use the same pale color) |
+| A door without its frame | 1 |
+| Every townhouse with two dormers | 1 |
+| The winery's gable gone | 1 |
+| Dormers poking through the ridge | 1 |
+| The oven never glows | 1 |
+| Barrels back to boxes | 1 |
+| Ears on a young crop | 1 |
+
+**Balance.** Nothing in the rules changed. The click-through game still wins at 28.92.
+
+**Browser checks** (my own copy on port 5174)
+
+| Check | How | Result |
+|---|---|---|
+| Every building, large | A gallery of all 15 drawings, before and after | See the picture. |
+| The town, by day and night | Full-size pictures | Fine; the lit windows glow through their bars. |
+| Frame times | Phase 30's code and this phase's in turns | The same within the noise (about 22 to 35 ms at normal zoom, 25 to 30 close up, in the hidden pane). |
+| Drawing the building pictures | Every building in all four looks, timed | About 1.5 times as long as before, paid once per zoom step. |
+| A whole game through the real buttons | UI playthrough on `?fresh&paused` | Pass: tick 0, won at 28.92. |
+| Random input | 2500 actions on `?fresh` and `?demo` | No errors. |
+| The error console | Read it | Empty. |
+
+**Found along the way**
+- My first bread oven was a stack of flat ovals and read as a pink disc with a box on it; it is a dome on a stone base now.
+- My first dormers were too small to read; they are larger.
+- Two slips of mine in a change script (a color in the wrong form, a line that did nothing) were caught before it ran, and a placeholder line in a test was replaced by a real check of the door frame.
+
+**Decisions made:** 6 (D367 to D372).
+
+**Weak or unfinished**
+- **Judged by my eye**, mostly in close-ups. Zoomed out, the footings and window bars are too small to see; the dormers, oven and gables still show.
+- **Not changed:** the market, the harbour quay and crane, the sheep farm, the vineyard, the fisherman's hut (apart from footings), the figures.
+- **Fertile land** is still as it was (D366).
+
+**After the gate:** committed on your "Keep building". Not pushed.

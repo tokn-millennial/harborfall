@@ -831,3 +831,82 @@ test('meadows have broad warm and cool patches that change by small steps', () =
   assert.ok(Math.max(...warmths) > base + 0.025, 'the grass is never warmer');
   assert.ok(Math.min(...warmths) < base - 0.025, 'the grass is never cooler');
 });
+
+// ---- the buildings, closer (Phase 31) ----------------------------------------------
+
+// Draws one building and notes every call it makes to the kit, by name.
+function kitCalls(id, extra = {}) {
+  const calls = [];
+  const kit = createKit(recorder().ctx, 0, 0);
+  const watched = new Proxy(kit, {
+    get: (t, key) => (typeof t[key] === 'function' && key !== 'P' ? (...args) => { calls.push({ name: key, args }); return t[key](...args); } : t[key]),
+  });
+  const info = { h: 30, color: '#b9553a', working: false, progress: 0.2, residents: 4, time: 0, variant: 0, seed: 0, ...extra };
+  BUILDING_ART[id](watched, info);
+  return calls;
+}
+
+test('every building with walls stands on a stone footing', () => {
+  for (const id of ['warehouse', 'lumberjack', 'sawmill', 'fisherman', 'farm', 'bakery', 'cottage', 'townhouse', 'sheepfarm', 'weaver', 'vineyard', 'winery', 'harbor']) {
+    const footed = kitCalls(id).filter((c) => c.name === 'box' && c.args[7]?.base);
+    assert.ok(footed.length >= 1, `${id} has no footing`);
+  }
+});
+
+test('windows have frames, glazing bars and sills; doors have frames', () => {
+  const r = styledRecorder();
+  BUILDING_ART.townhouse(createKit(r.ctx, 0, 0), { h: 30, color: '#b9553a', working: false, progress: 0, residents: 4, time: 0, variant: 0 });
+  // A pale frame behind each window on the lit wall (five, and two in the dormers).
+  const calls = kitCalls('townhouse');
+  const frames = calls.filter((c) => c.name === 'onLit' && c.args[5] === '#f1e8d2').length;
+  assert.ok(frames >= 7, `${frames} window frames on the lit wall`);
+  // The door in a darker frame: a wider shape starting at the ground, drawn just before the door.
+  const door = calls.findIndex((c) => c.name === 'onLit' && c.args[5] === '#5b3d28');
+  assert.ok(door > 0, 'no door');
+  const frame = calls[door - 1];
+  assert.ok(frame.name === 'onLit' && frame.args[2] === 0 && frame.args[0] < calls[door].args[0] && frame.args[1] > calls[door].args[1] && frame.args[3] > calls[door].args[3], 'the door has no frame');
+  // Each window is a frame, its glass, at least three bars and a sill.
+  const lines = calls.filter((c) => c.name === 'line').length;
+  const panes = calls.filter((c) => c.name === 'onLit' || c.name === 'onShade').length;
+  assert.ok(lines > panes, `${lines} lines for ${panes} wall shapes: windows without bars`);
+});
+
+test('houses and some workshops have dormers or a gable rising from the wall', () => {
+  const dormers = (id, extra) => kitCalls(id, extra).filter((c) => c.name === 'dormer').length;
+  assert.equal(dormers('townhouse', { variant: 0 }), 2);
+  assert.equal(dormers('townhouse', { variant: 1 }), 1, 'some townhouses have one dormer in the middle');
+  for (const id of ['guildhouse', 'warehouse', 'winery']) assert.equal(dormers(id), 1, id);
+  // A dormer never rises above the roof it sits in.
+  const roof = { v0: 0.3, v1: 1.68, z: 20, rise: 15, overhang: 0.1 };
+  for (const at of [1.68, 1.4, 1.2]) {
+    const { ctx, points } = recorder();
+    createKit(ctx, 0, 0).dormer(roof, 0.8, 1.1, { at, height: 9, rise: 4, color: '#b9553a', wall: '#e3d2b0' });
+    const ridge = tileToWorld(0.8, (roof.v0 + roof.v1) / 2).y - (roof.z + roof.rise);
+    for (const [, y] of points) assert.ok(y >= ridge - 1, `a dormer at ${at} pokes above the ridge`);
+  }
+});
+
+test('the bakery has a domed oven that glows while it bakes', () => {
+  assert.ok(kitCalls('bakery').some((c) => c.name === 'dome'), 'no oven');
+  const glow = (working) => {
+    const r = styledRecorder();
+    BUILDING_ART.bakery(createKit(r.ctx, 0, 0), { h: 30, color: '#c46f3a', working, progress: 0, residents: 0, time: 0 });
+    return r.drawn.some((d) => d.color === '#f2a64a');
+  };
+  assert.equal(glow(true), true);
+  assert.equal(glow(false), false);
+});
+
+test('barrels are round and stand upright', () => {
+  for (const id of ['warehouse', 'winery', 'harbor']) {
+    assert.ok(kitCalls(id).filter((c) => c.name === 'cylinder').length >= 2, `${id} has no round barrels`);
+  }
+});
+
+test('a farm grows stalks, which carry ears once the crop is half grown', () => {
+  const ears = (progress) => kitCalls('farm', { progress, color: '#e0c04a' }).filter((c) => c.name === 'poly' && c.args[0].length === 3).length;
+  const stalks = kitCalls('farm', { progress: 0.2 }).filter((c) => c.name === 'line').length;
+  assert.ok(stalks > 100, `only ${stalks} stalks`);
+  assert.equal(ears(0.2), 0, 'a young crop has ears');
+  assert.ok(ears(0.9) > 100, 'a ripe crop has no ears');
+});

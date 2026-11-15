@@ -813,3 +813,12 @@ Added in Phase 30. Only the look changed. No rule, number or data file changed, 
 - **Meadows have warm and cool patches**: broad sunny yellow-green rises and cool blue-green hollows, about twenty tiles across, changing so gradually that no tile's edge shows.
 - **The sea deepens further out**: a sixth, faint band of shallows reaches about three and a half tiles from the shore.
 - A forest tile is still one tile of forest: what can be built, and where a lumberjack works, are as before.
+
+## 32. A fourth art pass: the buildings
+
+Added in Phase 31. Only the look changed. No rule, number or data file changed, and saved games are untouched.
+
+- **Every building** stands on a low stone footing. Windows have pale frames, glazing bars and a sill; doors have a frame and a latch. Roofs cast a soft shadow on the walls under their eaves, and the visible gable end has a darker trim.
+- **Houses.** Farmers' cottages have a small porch over the door and a woodshed against the side. Workers' houses have dormer windows in the roof: two, or for some one in the middle. Artisans' houses have a tall gable over the door, rising from the wall, with a window.
+- **Workshops.** The warehouse has a loft door in a gable over its big doors, with a hoist and a sack on its rope. The bakery has a domed bread oven against its side, whose mouth glows while it bakes, and loaves on a bench by the door. The winery has an arched cellar door, a gable with a round window, a vine up the wall and barrels stacked by the wall. The weaver has a lean-to where the wool is kept. The farm's crop grows as rows of stalks that carry ears once half grown. The lumberjack has a chopping block with an axe in it; the sawmill has windows and sawdust by its door.
+- **Barrels** everywhere are round and stand upright.

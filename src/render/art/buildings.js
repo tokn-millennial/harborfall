@@ -26,6 +26,7 @@ const DARK_WOOD = '#6b4a32';
 const LOG = '#7c5a3c';
 const PLASTER = '#eadfc4';
 const STONE = '#a7a59c';
+const DARK_STONE = '#86847c';
 const BRICK = '#b96a4d';
 const DOOR = '#5b3d28';
 const GLASS = '#33475a';
@@ -34,14 +35,65 @@ const STRAW = '#d9bf6a';
 const SOIL = '#8b6a45';
 const PAVING = '#cfc2a4';
 
+const TRIM = '#f1e8d2';
+const FRAME_LINE = 'rgba(40, 28, 20, 0.35)';
+
+// A door in a wooden frame, with a plank line down its middle and a latch.
 function door(g, u0, u1, z, v) {
-  g.onLit(u0, u1, 0, z, v, DOOR);
+  g.onLit(u0 - 0.03, u1 + 0.03, 0, z + 1.3, v, tone(DARK_WOOD, 0.9));
+  g.onLit(u0, u1, 0, z, v, DOOR, null);
+  g.line(g.P((u0 + u1) / 2, v, 0), g.P((u0 + u1) / 2, v, z), tone(DOOR, 0.7), 0.4);
+  g.dot(u1 - (u1 - u0) * 0.22, v, z * 0.45, 0.45, '#d9b45a');
 }
+// Glazing bars across a window: one upright for each pane, and one across.
+function glazing(g, along, z0, z1, color) {
+  const panes = Math.max(2, Math.round(along.length / 0.13));
+  for (let i = 1; i < panes; i++) {
+    const t = i / panes;
+    g.line(along.at(t, z0), along.at(t, z1), color, 0.55);
+  }
+  g.line(along.at(0, (z0 + z1) / 2), along.at(1, (z0 + z1) / 2), color, 0.55);
+}
+// A window on the lit wall: a pale frame, glass (glowing when `lit`),
+// glazing bars and a sill.
 function windowLit(g, u0, u1, z0, z1, v, lit) {
-  g.onLit(u0, u1, z0, z1, v, lit ? GLOW : GLASS);
+  g.onLit(u0 - 0.025, u1 + 0.025, z0 - 0.8, z1 + 0.8, v, TRIM, FRAME_LINE);
+  g.onLit(u0, u1, z0, z1, v, lit ? GLOW : GLASS, null);
+  glazing(g, { length: u1 - u0, at: (t, z) => g.P(u0 + (u1 - u0) * t, v, z) }, z0, z1, TRIM);
+  g.line(g.P(u0 - 0.045, v, z0 - 1), g.P(u1 + 0.045, v, z0 - 1), tone(TRIM, 0.62), 1);
 }
+// The same on the shaded wall.
 function windowShade(g, v0, v1, z0, z1, u, lit) {
-  g.onShade(v0, v1, z0, z1, u, lit ? tone(GLOW, 0.85) : tone(GLASS, 0.85));
+  const trim = tone(TRIM, 0.78);
+  g.onShade(v0 - 0.025, v1 + 0.025, z0 - 0.8, z1 + 0.8, u, trim, FRAME_LINE);
+  g.onShade(v0, v1, z0, z1, u, lit ? tone(GLOW, 0.85) : tone(GLASS, 0.85), null);
+  glazing(g, { length: v1 - v0, at: (t, z) => g.P(u, v0 + (v1 - v0) * t, z) }, z0, z1, trim);
+  g.line(g.P(u, v0 - 0.045, z0 - 1), g.P(u, v1 + 0.045, z0 - 1), tone(TRIM, 0.5), 1);
+}
+// A round-topped door on the lit wall, `z` pixels to the top of the arch.
+function archedDoor(g, u0, u1, z, v, fill = DOOR) {
+  const um = (u0 + u1) / 2;
+  const half = (u1 - u0) / 2;
+  const spring = z - half * 22; // the arch is as tall as it is wide, in pixels on screen
+  const arch = (grow, zFrom) => {
+    const points = [g.P(um - half - grow, v, 0)];
+    for (let k = 0; k <= 8; k++) {
+      const a = Math.PI - (k / 8) * Math.PI;
+      points.push(g.P(um + Math.cos(a) * (half + grow), v, zFrom + Math.sin(a) * (half + grow) * 22));
+    }
+    points.push(g.P(um + half + grow, v, 0));
+    return points;
+  };
+  g.poly(arch(0.035, spring), tone(STONE, 0.95));
+  g.poly(arch(0, spring), fill, null);
+}
+// A lean-to: a low shed against a wall, its roof sloping away from it.
+// It runs along v from v0 to v1, out from the wall at u0 to u1.
+function leanTo(g, u0, v0, u1, v1, low, high, wall, roof) {
+  g.box(u0, v0, u1 - 0.02, v1, 0, low, wall, { top: false });
+  g.poly([g.P(u0 - 0.02, v0 - 0.04, high), g.P(u0 - 0.02, v1 + 0.05, high), g.P(u1 + 0.03, v1 + 0.05, low - 0.6), g.P(u1 + 0.03, v0 - 0.04, low - 0.6)], tone(roof, 0.86));
+  g.line(g.P(u1 + 0.03, v0 - 0.04, low - 0.6), g.P(u1 + 0.03, v1 + 0.05, low - 0.6), tone(roof, 0.55), 1);
+  g.line(g.P(u0 - 0.02, v1 + 0.05, high), g.P(u1 + 0.03, v1 + 0.05, low - 0.6), tone(roof, 0.6), 0.9);
 }
 // Faint vertical plank lines on the lit wall.
 function planksLit(g, u0, u1, z, v, color, count) {
@@ -107,21 +159,33 @@ function sheep(g, u, v) {
   g.oval(u, v, 2.6, 3.3, 2.3, '#f4f1e6');
   g.dot(u + 0.1, v + 0.03, 3.4, 1.25, '#3b342c');
 }
-function barrel(g, u, v) {
-  g.box(u, v, u + 0.14, v + 0.14, 0, 4.5, '#8a5f3c');
+// An upright barrel with two hoops, standing at (u, v) on height z.
+function barrel(g, u, v, z = 0) {
+  g.cylinder(u + 0.07, v + 0.07, z, z + 5.5, 2.6, '#8a5f3c', { hoops: 2, top: '#a8784c' });
 }
 
 export const BUILDING_ART = {
   // A long timber hall with a big door, crates and barrels outside.
   warehouse(g, { h, color }) {
     const wall = h * 0.55;
-    g.box(0.14, 0.16, 1.86, 1.7, 0, wall, WOOD, { top: false });
+    g.box(0.14, 0.16, 1.86, 1.7, 0, wall, WOOD, { top: false, base: STONE });
     planksLit(g, 0.14, 1.86, wall, 1.7, WOOD, 9);
-    g.onLit(0.8, 1.25, 0, wall * 0.72, 1.7, DARK_WOOD);
+    // Big double doors in a frame, with a cross brace on each leaf.
+    g.onLit(0.77, 1.28, 0, wall * 0.76, 1.7, tone(DARK_WOOD, 0.85));
+    g.onLit(0.8, 1.25, 0, wall * 0.72, 1.7, DARK_WOOD, null);
     g.line(g.P(1.025, 1.7, 0), g.P(1.025, 1.7, wall * 0.72), tone(DARK_WOOD, 0.6), 0.6);
+    for (const [a, b] of [[0.8, 1.025], [1.025, 1.25]]) g.line(g.P(a, 1.7, 0.5), g.P(b, 1.7, wall * 0.7), tone(DARK_WOOD, 1.25), 0.6);
     windowShade(g, 0.55, 0.85, wall * 0.45, wall * 0.75, 1.86, false);
     windowShade(g, 1.1, 1.4, wall * 0.45, wall * 0.75, 1.86, false);
+    const roof = { v0: 0.16, v1: 1.7, z: wall, rise: h * 0.6, overhang: 0.08 };
     g.gable(0.14, 0.16, 1.86, 1.7, wall, h * 0.6, color, { axis: 'u', wall: WOOD, lines: 4 });
+    // A gable over the doors with a loft door, and a hoist beam with a sack on its rope.
+    const loft = h * 0.34;
+    g.dormer(roof, 0.8, 1.25, { at: 1.7, height: loft, rise: h * 0.18, color, wall: WOOD,
+      window: (u0, u1, z0, z1, v) => g.onLit(u0, u1, z0, z1, v, tone(DARK_WOOD, 0.8)) });
+    g.line(g.P(1.025, 1.7, wall + loft), g.P(1.025, 1.98, wall + loft), DARK_WOOD, 1.3);
+    g.line(g.P(1.025, 1.95, wall + loft), g.P(1.025, 1.95, wall * 0.95), 'rgba(60, 45, 30, 0.8)', 0.5);
+    g.dot(1.025, 1.95, wall * 0.88, 1.8, '#d8c79e', 'rgba(90, 70, 40, 0.6)');
     crate(g, 0.18, 1.76, 0.2);
     crate(g, 0.42, 1.78, 0.16, '#c29a66');
     barrel(g, 1.5, 1.8);
@@ -131,10 +195,14 @@ export const BUILDING_ART = {
   // A log cabin with a stack of cut logs beside it.
   lumberjack(g, { h, color }) {
     const wall = h * 0.55;
-    g.box(0.12, 0.16, 0.72, 0.76, 0, wall, LOG, { top: false });
+    g.box(0.12, 0.16, 0.72, 0.76, 0, wall, LOG, { top: false, base: STONE, baseHeight: 1.6 });
     logLines(g, 0.12, 0.16, 0.72, 0.76, wall, LOG, 4);
     door(g, 0.34, 0.5, wall * 0.75, 0.76);
     g.gable(0.12, 0.16, 0.72, 0.76, wall, h * 0.6, color, { axis: 'u', wall: LOG, lines: 2 });
+    // A chopping block with an axe in it.
+    g.box(0.2, 0.82, 0.32, 0.94, 0, 3, '#8c6642', { top: '#d9bd8c', outline: false });
+    g.line(g.P(0.26, 0.88, 3), g.P(0.34, 0.86, 7), DARK_WOOD, 0.9);
+    g.poly([g.P(0.25, 0.88, 3.4), g.P(0.29, 0.88, 3.2), g.P(0.28, 0.88, 5.2), g.P(0.24, 0.88, 5)], '#9aa0a6', null);
     // The log pile: three logs lying along v, with pale cut ends.
     for (const [u, z] of [[0.8, 0], [0.9, 0], [0.85, 3.2]]) {
       g.box(u, 0.3, u + 0.09, 0.8, z, z + 3.2, '#8c6642', { top: tone('#8c6642', 1.15) });
@@ -146,13 +214,17 @@ export const BUILDING_ART = {
   sawmill(g, { h, color }) {
     const wall = h * 0.6;
     g.ground(0.1, 0.1, 1.9, 1.9, '#b9a27c');
-    g.box(0.16, 0.2, 1.2, 1.8, 0, wall, WOOD, { top: false });
+    g.box(0.16, 0.2, 1.2, 1.8, 0, wall, WOOD, { top: false, base: STONE });
     planksLit(g, 0.16, 1.2, wall, 1.8, WOOD, 6);
+    windowLit(g, 0.4, 0.62, wall * 0.4, wall * 0.75, 1.8, false);
+    windowLit(g, 0.78, 1.0, wall * 0.4, wall * 0.75, 1.8, false);
     // The open doorway on the shaded side, with a log going in.
     g.onShade(0.55, 1.45, 0, wall * 0.7, 1.2, '#3a2a1e');
     g.box(1.2, 0.9, 1.5, 1.02, 2, 5, '#8c6642');
     g.dot(1.5, 0.96, 3.5, 1.6, '#e2c79a');
     g.gable(0.16, 0.2, 1.2, 1.8, wall, h * 0.55, color, { axis: 'v', wall: WOOD, lines: 3 });
+    // Sawdust by the door.
+    g.oval(1.36, 1.62, 0, 5, 2.4, '#e6d2a6');
     // The plank stack.
     for (let i = 0; i < 4; i++) {
       const c = i % 2 ? '#e6c98f' : '#d8b878';
@@ -163,7 +235,7 @@ export const BUILDING_ART = {
   // A small hut by the shore, with a net rack and a rowing boat.
   fisherman(g, { h, color }) {
     const wall = h * 0.55;
-    g.box(0.14, 0.2, 0.66, 0.74, 0, wall, PLASTER, { top: false });
+    g.box(0.14, 0.2, 0.66, 0.74, 0, wall, PLASTER, { top: false, base: STONE, baseHeight: 1.6 });
     door(g, 0.3, 0.46, wall * 0.75, 0.74);
     windowShade(g, 0.36, 0.56, wall * 0.4, wall * 0.75, 0.66, false);
     g.gable(0.14, 0.2, 0.66, 0.74, wall, h * 0.6, color, { axis: 'v', wall: PLASTER, lines: 2 });
@@ -183,22 +255,39 @@ export const BUILDING_ART = {
     g.ground(0.04, 0.04, 1.96, 1.96, SOIL);
     // The barn stands at the back, so it is drawn before the rows in front of it.
     const wall = h * 0.9;
-    g.box(0.12, 0.12, 0.92, 0.84, 0, wall, '#a8553d', { top: false });
-    g.onLit(0.4, 0.66, 0, wall * 0.75, 0.84, DARK_WOOD);
+    g.box(0.12, 0.12, 0.92, 0.84, 0, wall, '#a8553d', { top: false, base: STONE, baseHeight: 1.8 });
+    planksLit(g, 0.12, 0.92, wall, 0.84, '#a8553d', 6);
+    g.onLit(0.38, 0.68, 0, wall * 0.79, 0.84, tone(DARK_WOOD, 0.85));
+    g.onLit(0.4, 0.66, 0, wall * 0.75, 0.84, DARK_WOOD, null);
+    for (const [a, b] of [[0.4, 0.53], [0.53, 0.66]]) g.line(g.P(a, 0.84, 0.4), g.P(b, 0.84, wall * 0.72), tone(DARK_WOOD, 1.3), 0.5);
     g.gable(0.12, 0.12, 0.92, 0.84, wall, h * 0.9, STRAW, { axis: 'u', wall: '#a8553d', lines: 2 });
     const crop = mix('#6f9a42', color, Math.min(1, progress * 1.15));
     const height = 1.5 + progress * 4;
     for (let i = 0; i < 6; i++) {
       const v = 0.2 + i * 0.3;
       // Rows level with the barn start to its right.
-      g.box(v < 0.95 ? 1.05 : 0.1, v, 1.9, v + 0.16, 0, height, crop, { top: tone(crop, 1.14), outline: false });
+      const u0 = v < 0.95 ? 1.05 : 0.1;
+      // The body of the row, a little lower than the stalks, then the stalks
+      // standing out along its top, and once it ripens, an ear on each.
+      g.box(u0, v, 1.9, v + 0.16, 0, height * 0.75, mix(crop, '#000000', 0.1), { top: tone(crop, 1.05), outline: false });
+      const stalks = [];
+      const ears = [];
+      for (let u = u0 + 0.03; u < 1.88; u += 0.055) {
+        for (const dv of [0.03, 0.13]) {
+          const lean = (hash2(Math.round(u * 100), i * 7 + Math.round(dv * 100), 5) - 0.5) * 0.04;
+          stalks.push([g.P(u, v + dv, height * 0.6), g.P(u + lean, v + dv, height + 1)]);
+          if (progress > 0.45) ears.push(g.P(u + lean, v + dv, height + 1.2));
+        }
+      }
+      for (const [a, b] of stalks) g.line(a, b, tone(crop, 1.08), 0.7);
+      for (const p of ears) g.poly([{ x: p.x - 0.5, y: p.y }, { x: p.x, y: p.y - 1.4 }, { x: p.x + 0.5, y: p.y }], tone(color, 1.12), null);
     }
   },
 
   // A brick bakehouse with a tall chimney that smokes while it bakes.
   bakery(g, { h, color, working }) {
     const wall = h * 0.55;
-    g.box(0.2, 0.24, 1.8, 1.72, 0, wall, BRICK, { top: false });
+    g.box(0.2, 0.24, 1.8, 1.72, 0, wall, BRICK, { top: false, base: STONE });
     for (let i = 1; i < 4; i++) g.line(g.P(0.2, 1.72, (wall * i) / 4), g.P(1.8, 1.72, (wall * i) / 4), tone(BRICK, 0.82), 0.5);
     door(g, 0.86, 1.14, wall * 0.72, 1.72);
     windowLit(g, 0.36, 0.66, wall * 0.35, wall * 0.75, 1.72, working);
@@ -208,7 +297,14 @@ export const BUILDING_ART = {
     g.dot(1.0, 1.72, wall * 0.9, 2.4, '#e2b56b', 'rgba(60, 40, 20, 0.7)');
     g.gable(0.2, 0.24, 1.8, 1.72, wall, h * 0.55, color, { axis: 'u', wall: BRICK, lines: 4 });
     chimney(g, 1.25, 0.5, wall + h * 0.25, wall + h * 0.95);
-    crate(g, 0.24, 1.78, 0.16, '#c9a56a');
+    // The bread oven: a brick base with a rounded dome, built against the side wall,
+    // its mouth glowing while it bakes.
+    g.box(1.8, 0.7, 1.98, 1.16, 0, wall * 0.36, STONE, { top: tone(STONE, 1.05) });
+    g.dome(1.89, 0.93, wall * 0.36, 8.5, 8, BRICK);
+    g.onShade(0.86, 1.0, wall * 0.08, wall * 0.3, 1.98, working ? '#f2a64a' : '#2e1f16', null);
+    // A bench by the door with loaves set out on it.
+    g.box(0.28, 1.8, 0.7, 1.92, 0, 3, WOOD, { top: tone(WOOD, 1.2), outline: false });
+    for (const u of [0.36, 0.48, 0.6]) g.oval(u, 1.86, 3.6, 2.1, 1.3, '#d29a52');
   },
 
   // A thatched cottage. Its windows glow once someone lives there.
@@ -217,7 +313,7 @@ export const BUILDING_ART = {
     const lived = residents > 0;
     const roof = variedRoof(color, variant);
     const plaster = variedWall(PLASTER, variant);
-    g.box(0.3, 0.36, 1.7, 1.62, 0, wall, plaster, { top: false });
+    g.box(0.3, 0.36, 1.7, 1.62, 0, wall, plaster, { top: false, base: STONE, baseHeight: 2 });
     door(g, 0.9, 1.12, wall * 0.8, 1.62);
     windowLit(g, 0.46, 0.72, wall * 0.35, wall * 0.8, 1.62, lived);
     windowLit(g, 1.3, 1.56, wall * 0.35, wall * 0.8, 1.62, lived);
@@ -226,6 +322,15 @@ export const BUILDING_ART = {
     chimney(g, chimneyMoved(variant) ? 1.3 : 0.5, 0.7, wall + h * 0.3, wall + h * 0.85);
     // A little garden path, and for some a bed of flowers beside it.
     g.ground(0.9, 1.62, 1.12, 1.95, '#c9b68e');
+    // A woodshed on the side, with logs stacked under it.
+    leanTo(g, 1.7, 0.66, 1.94, 1.34, wall * 0.62, wall * 0.92, WOOD, roof);
+    g.onShade(0.74, 1.26, 0, wall * 0.5, 1.92, '#4a3626', null);
+    for (const [v, z] of [[0.86, 0], [1.02, 0], [1.18, 0], [0.94, 2.6], [1.1, 2.6]]) g.dot(1.92, v, z + 1.3, 1.25, '#d9bd8c', 'rgba(90, 60, 30, 0.7)');
+    // A small porch roof over the door on two posts.
+    g.post(0.86, 1.86, 0, wall * 0.92, DARK_WOOD, 1);
+    g.post(1.16, 1.86, 0, wall * 0.92, DARK_WOOD, 1);
+    g.poly([g.P(0.82, 1.62, wall * 1.08), g.P(1.2, 1.62, wall * 1.08), g.P(1.2, 1.9, wall * 0.88), g.P(0.82, 1.9, wall * 0.88)], tone(roof, 0.95));
+    g.line(g.P(0.82, 1.9, wall * 0.88), g.P(1.2, 1.9, wall * 0.88), tone(roof, 0.55), 1);
     if (variant === 2) {
       g.ground(0.36, 1.68, 0.82, 1.92, '#7fa65a');
       g.dot(0.47, 1.8, 1, 1.1, '#e06a7a');
@@ -245,7 +350,7 @@ export const BUILDING_ART = {
     const lived = residents > 0;
     const roof = variedRoof(color, variant);
     const plaster = variedWall('#e3d2b0', variant);
-    g.box(0.26, 0.3, 1.74, 1.68, 0, wall, plaster, { top: false });
+    g.box(0.26, 0.3, 1.74, 1.68, 0, wall, plaster, { top: false, base: STONE });
     // Timber framing.
     g.line(g.P(0.26, 1.68, wall * 0.5), g.P(1.74, 1.68, wall * 0.5), DARK_WOOD, 0.9);
     g.line(g.P(1.74, 1.68, wall * 0.5), g.P(1.74, 0.3, wall * 0.5), tone(DARK_WOOD, 0.8), 0.9);
@@ -264,6 +369,12 @@ export const BUILDING_ART = {
       for (const u of [0.36, 0.66, 1.28, 1.58]) g.onLit(u, u + 0.06, wall * 0.6, wall * 0.88, 1.68, '#4f7a4a');
     }
     g.gable(0.26, 0.3, 1.74, 1.68, wall, h * 0.5, roof, { axis: 'u', wall: plaster, overhang: 0.1, lines: 4 });
+    // Dormer windows in the roof: two, or for some one in the middle.
+    const slope = { v0: 0.3, v1: 1.68, z: wall, rise: h * 0.5, overhang: 0.1 };
+    const window = (u0, u1, z0, z1, v) => windowLit(g, u0, u1, z0, z1, v, lived);
+    for (const [u0, u1] of variant % 2 ? [[0.82, 1.18]] : [[0.46, 0.8], [1.2, 1.54]]) {
+      g.dormer(slope, u0, u1, { at: 1.32, height: h * 0.3, rise: h * 0.14, color: roof, wall: plaster, window });
+    }
     chimney(g, chimneyMoved(variant) ? 0.55 : 1.3, 0.6, wall + h * 0.2, wall + h * 0.75, BRICK);
     g.ground(0.9, 1.68, 1.12, 1.95, '#c9b68e');
   },
@@ -272,7 +383,8 @@ export const BUILDING_ART = {
   sheepfarm(g, { h, color }) {
     g.ground(0.04, 0.04, 1.96, 1.96, '#9cc27a', 'rgba(60, 90, 50, 0.35)');
     const wall = h * 0.8;
-    g.box(0.14, 0.14, 0.86, 0.7, 0, wall, WOOD, { top: false });
+    g.box(0.14, 0.14, 0.86, 0.7, 0, wall, WOOD, { top: false, base: STONE, baseHeight: 1.6 });
+    planksLit(g, 0.14, 0.86, wall, 0.7, WOOD, 5);
     g.onLit(0.38, 0.62, 0, wall * 0.7, 0.7, DARK_WOOD);
     g.gable(0.14, 0.14, 0.86, 0.7, wall, h * 0.7, color, { axis: 'u', wall: WOOD, lines: 2 });
     for (const [u, v] of [[1.3, 0.5], [1.62, 0.98], [0.6, 1.25], [1.15, 1.5], [0.35, 1.66]]) sheep(g, u, v);
@@ -288,12 +400,16 @@ export const BUILDING_ART = {
   // A weaver's workshop, with dyed cloth hung out to dry and a bale of wool by the wall.
   weaver(g, { h, color, working }) {
     const wall = h * 0.55;
-    g.box(0.22, 0.28, 1.78, 1.66, 0, wall, PLASTER, { top: false });
+    g.box(0.22, 0.28, 1.78, 1.66, 0, wall, PLASTER, { top: false, base: STONE });
     g.line(g.P(0.22, 1.66, wall * 0.55), g.P(1.78, 1.66, wall * 0.55), DARK_WOOD, 0.8);
     door(g, 0.4, 0.64, wall * 0.75, 1.66);
     windowLit(g, 0.9, 1.6, wall * 0.3, wall * 0.8, 1.66, working); // the wide workshop window
     windowShade(g, 0.6, 1.0, wall * 0.35, wall * 0.8, 1.78, working);
     g.gable(0.22, 0.28, 1.78, 1.66, wall, h * 0.5, color, { axis: 'u', wall: PLASTER, overhang: 0.1, lines: 4 });
+    // A lean-to on the side, open at the front, where the wool is kept.
+    leanTo(g, 1.78, 0.5, 1.98, 1.4, wall * 0.62, wall * 0.9, WOOD, color);
+    g.onShade(0.62, 1.28, 0, wall * 0.5, 1.96, '#4a3626', null);
+    for (const [v, z] of [[0.78, 0], [1.08, 0], [0.93, 3.4]]) g.dot(1.9, v, z + 1.8, 2.4, '#f1ece0', 'rgba(120, 110, 90, 0.6)');
     g.post(0.3, 1.88, 0, 8, DARK_WOOD, 1);
     g.post(1.1, 1.88, 0, 8, DARK_WOOD, 1);
     g.line(g.P(0.3, 1.88, 8), g.P(1.1, 1.88, 8), DARK_WOOD, 0.8);
@@ -306,7 +422,8 @@ export const BUILDING_ART = {
   vineyard(g, { h, color, progress }) {
     g.ground(0.04, 0.04, 1.96, 1.96, SOIL);
     const wall = h * 0.9;
-    g.box(0.12, 0.12, 0.7, 0.62, 0, wall, WOOD, { top: false });
+    g.box(0.12, 0.12, 0.7, 0.62, 0, wall, WOOD, { top: false, base: STONE, baseHeight: 1.6 });
+    planksLit(g, 0.12, 0.7, wall, 0.62, WOOD, 4);
     g.onLit(0.3, 0.5, 0, wall * 0.75, 0.62, DARK_WOOD);
     g.gable(0.12, 0.12, 0.7, 0.62, wall, h * 0.7, '#9a4a3a', { axis: 'u', wall: WOOD, lines: 2 });
     const grape = mix('#8fae5a', '#5b2a52', Math.min(1, progress * 1.1));
@@ -324,17 +441,28 @@ export const BUILDING_ART = {
   // A stone winery with a dark red roof, a cellar door and barrels by the wall.
   winery(g, { h, color, working }) {
     const wall = h * 0.55;
-    g.box(0.22, 0.28, 1.78, 1.66, 0, wall, STONE, { top: false });
-    door(g, 0.86, 1.18, wall * 0.75, 1.66);
+    g.box(0.22, 0.28, 1.78, 1.66, 0, wall, STONE, { top: false, base: DARK_STONE });
+    // Stone courses.
+    for (let i = 1; i < 4; i++) g.line(g.P(0.22, 1.66, (wall * i) / 4), g.P(1.78, 1.66, (wall * i) / 4), tone(STONE, 0.85), 0.45);
+    archedDoor(g, 0.86, 1.18, wall * 0.85, 1.66, '#3f2a1e');
     windowLit(g, 0.36, 0.66, wall * 0.35, wall * 0.75, 1.66, working);
     windowLit(g, 1.36, 1.64, wall * 0.35, wall * 0.75, 1.66, working);
     windowShade(g, 0.6, 1.0, wall * 0.35, wall * 0.75, 1.78, working);
     g.gable(0.22, 0.28, 1.78, 1.66, wall, h * 0.5, color, { axis: 'u', wall: STONE, overhang: 0.1, lines: 4 });
-    // Barrels lying by the near wall.
-    for (const u of [0.3, 0.55]) {
-      g.oval(u, 1.82, 3.2, 3.4, 2.4, '#6b4a32');
-      g.oval(u, 1.82, 3.2, 2.2, 1.5, '#8a6440');
-    }
+    // A gable over the cellar door, with a round window.
+    g.dormer({ v0: 0.28, v1: 1.66, z: wall, rise: h * 0.5, overhang: 0.1 }, 0.78, 1.26, {
+      at: 1.66, height: h * 0.32, rise: h * 0.2, color, wall: STONE,
+      window: (u0, u1, z0, z1, v) => {
+        g.dot((u0 + u1) / 2, v, (z0 + z1) / 2, 3.3, TRIM, FRAME_LINE);
+        g.dot((u0 + u1) / 2, v, (z0 + z1) / 2, 2.4, working ? GLOW : GLASS);
+      },
+    });
+    // A vine trained up the wall beside the door.
+    for (let k = 0; k < 9; k++) g.dot(0.72 + hash2(k, 3, 7) * 0.12, 1.67, 1.5 + k * wall * 0.09, 1.6, k % 3 ? '#5f8f3a' : '#4a7530');
+    // Barrels by the near wall, one stood on two.
+    barrel(g, 0.24, 1.76);
+    barrel(g, 0.46, 1.78);
+    barrel(g, 0.35, 1.77, 5.5);
     crate(g, 1.5, 1.74, 0.16, '#7a3a4a');
   },
 
@@ -358,6 +486,11 @@ export const BUILDING_ART = {
     if (variant === 2) g.onLit(1.2, 1.31, wall * 0.36, wall * 0.62, 1.72, '#c9a55a');
     if (variant === 3) g.onLit(1.2, 1.31, wall * 0.36, wall * 0.62, 1.72, '#4a6fa5');
     g.gable(0.22, 0.26, 1.78, 1.72, wall, h * 0.42, roof, { axis: 'u', wall: upper, overhang: 0.1, lines: 5 });
+    // A tall gable over the door, rising straight up from the front wall, with a window.
+    g.dormer({ v0: 0.26, v1: 1.72, z: wall, rise: h * 0.42, overhang: 0.1 }, 0.74, 1.26, {
+      at: 1.72, height: h * 0.3, rise: h * 0.2, color: roof, wall: upper,
+      window: (u0, u1, z0, z1, v) => windowLit(g, u0, u1, z0, z1, v, lived),
+    });
     chimney(g, 0.45, 0.55, wall + h * 0.15, wall + h * 0.62, BRICK);
     if (variant !== 1) chimney(g, 1.4, 0.55, wall + h * 0.15, wall + h * 0.62, BRICK);
     g.ground(0.88, 1.72, 1.12, 1.95, '#c9b68e');
@@ -371,7 +504,7 @@ export const BUILDING_ART = {
     for (let i = 1; i < 4; i++) g.line(g.P(0.04, 0.04 + i * 0.48), g.P(1.96, 0.04 + i * 0.48), tone(STONE, 0.85), 0.5);
     // The harbourmaster's house at the back.
     const wall = h * 0.5;
-    g.box(0.12, 0.12, 1.0, 0.8, 0, wall, PLASTER, { top: false });
+    g.box(0.12, 0.12, 1.0, 0.8, 0, wall, PLASTER, { top: false, base: STONE, baseHeight: 1.8 });
     door(g, 0.46, 0.64, wall * 0.75, 0.8);
     windowLit(g, 0.18, 0.36, wall * 0.42, wall * 0.78, 0.8, false);
     windowLit(g, 0.74, 0.92, wall * 0.42, wall * 0.78, 0.8, false);

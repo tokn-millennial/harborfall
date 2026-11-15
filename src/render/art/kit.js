@@ -100,6 +100,8 @@ export function createKit(ctx, originX, originY) {
     // A box. Only the three faces the viewer can see are drawn.
     // options.top: a color for the top, or false to leave it off (under a roof).
     // options.outline: false for small things, where outlines would swamp the shape.
+    // options.base: a color for a low band along the foot of the walls, such
+    // as a stone footing under a house, `baseHeight` pixels tall (2.4).
     box(u0, v0, u1, v1, z0, z1, color, options = {}) {
       const stroke = options.outline === false ? null : OUTLINE;
       // Walls of any height darken a little toward the ground.
@@ -109,6 +111,11 @@ export function createKit(ctx, originX, originY) {
       poly([P(u0, v1, z0), P(u1, v1, z0), P(u1, v1, z1), P(u0, v1, z1)], lit, stroke);
       poly([P(u1, v1, z0), P(u1, v0, z0), P(u1, v0, z1), P(u1, v1, z1)], shade, stroke);
       if (options.top !== false) poly([P(u0, v0, z1), P(u1, v0, z1), P(u1, v1, z1), P(u0, v1, z1)], options.top ?? tone(color, SHADE.top), stroke);
+      if (options.base) {
+        const b = z0 + (options.baseHeight ?? 2.4);
+        poly([P(u0, v1, z0), P(u1, v1, z0), P(u1, v1, b), P(u0, v1, b)], tone(options.base, SHADE.lit * 0.95), stroke, 0.5);
+        poly([P(u1, v1, z0), P(u1, v0, z0), P(u1, v0, b), P(u1, v1, b)], tone(options.base, SHADE.shade * 0.95), stroke, 0.5);
+      }
     },
 
     // A rectangle on the lit wall (the plane v = constant).
@@ -127,8 +134,15 @@ export function createKit(ctx, originX, originY) {
     // Each slope is lightest at the ridge and darker toward the eaves, laid in
     // rows (`lines` of them) with the joints of each row offset from the next,
     // and finished with a dark eave edge.
-    gable(u0, v0, u1, v1, z, rise, color, { axis = 'u', wall = null, overhang = 0.08, lines = 3 } = {}) {
+    //
+    // The overhang casts a soft shadow on the walls just below it (`eaves`,
+    // on by default), and the visible gable end has a darker trim along its edge.
+    gable(u0, v0, u1, v1, z, rise, color, { axis = 'u', wall = null, overhang = 0.08, lines = 3, eaves = true } = {}) {
       const o = overhang;
+      if (eaves) {
+        poly([P(u0, v1, z - 2.8), P(u1, v1, z - 2.8), P(u1, v1, z), P(u0, v1, z)], 'rgba(35, 22, 12, 0.18)', null);
+        poly([P(u1, v1, z - 1.8), P(u1, v0, z - 1.8), P(u1, v0, z), P(u1, v1, z)], 'rgba(20, 12, 6, 0.16)', null);
+      }
       const rows = lines + 1;
       const joints = [];
       const courses = [];
@@ -156,6 +170,8 @@ export function createKit(ctx, originX, originY) {
         strokes(joints, tone(color, 0.84), 0.4);
         line(P(u0 - o, v1 + o, z - drop), P(u1 + o, v1 + o, z - drop), tone(color, 0.55), 1.1);
         line(P(u0 - o, vm, z + rise), P(u1 + o, vm, z + rise), tone(color, 1.3), 1.1);
+        // The trim along the gable end.
+        strokes([[P(u1 + o, v0 - o, z - drop), P(u1 + o, vm, z + rise)], [P(u1 + o, vm, z + rise), P(u1 + o, v1 + o, z - drop)]], tone(color, 0.5), 1.2);
       } else {
         const um = (u0 + u1) / 2;
         const drop = (o * rise) / (um - u0);
@@ -170,7 +186,33 @@ export function createKit(ctx, originX, originY) {
         strokes(joints, tone(color, 0.66), 0.4);
         line(P(u1 + o, v0 - o, z - drop), P(u1 + o, v1 + o, z - drop), tone(color, 0.5), 1.1);
         line(P(um, v0 - o, z + rise), P(um, v1 + o, z + rise), tone(color, 1.3), 1.1);
+        strokes([[P(u0 - o, v1 + o, z - drop), P(um, v1 + o, z + rise)], [P(um, v1 + o, z + rise), P(u1 + o, v1 + o, z - drop)]], tone(color, 0.5), 1.2);
       }
+    },
+
+    // A dormer: a small upright window in the near slope of a roof drawn with
+    // gable(..., { axis: 'u' }), with its own little roof. `roof` is that
+    // roof: { v0, v1, z, rise, overhang }. The dormer spans u0 to u1, its front
+    // stands at `at` (a v between the ridge and the eave, or the wall itself,
+    // v1, for a gable rising straight up from the wall), `height` pixels tall.
+    dormer(roof, u0, u1, { at, height, rise, color, wall, window = null }) {
+      const o = roof.overhang ?? 0.08;
+      const vm = (roof.v0 + roof.v1) / 2;
+      const drop = (o * roof.rise) / (vm - roof.v0);
+      const eave = roof.v1 + o;
+      // The height of the roof's near slope at v.
+      const roofZ = (v) => roof.z + roof.rise - ((roof.rise + drop) * (v - vm)) / (eave - vm);
+      const footZ = Math.min(roof.z, roofZ(at));
+      const topZ = footZ + height;
+      // Where the dormer's top meets the slope behind it.
+      const back = Math.max(vm, vm + ((roof.z + roof.rise - topZ) * (eave - vm)) / (roof.rise + drop));
+      poly([P(u0, at, footZ), P(u1, at, footZ), P(u1, at, topZ), P(u0, at, topZ)], tone(wall, SHADE.lit));
+      if (back < at) poly([P(u1, at, footZ), P(u1, at, topZ), P(u1, back, topZ)], tone(wall, SHADE.shade));
+      if (window) {
+        const inset = (u1 - u0) * 0.28;
+        window(u0 + inset, u1 - inset, footZ + height * 0.2, footZ + height * 0.82, at);
+      }
+      kit.gable(u0, back, u1, at, topZ, rise, color, { axis: 'v', wall, overhang: 0.05, lines: 1, eaves: false });
     },
 
     // A four-sided roof coming to a point, for tents and awnings.
@@ -199,6 +241,64 @@ export function createKit(ctx, originX, originY) {
         ctx.lineWidth = 0.6;
         ctx.stroke();
       }
+    },
+
+    // An upright round thing, such as a barrel: a body lit on the left and
+    // shaded on the right, a lighter top, and `hoops` bands round it.
+    // `r` is its radius in pixels across the screen.
+    cylinder(u, v, z0, z1, r, color, { hoops = 0, top = null } = {}) {
+      const b = P(u, v, z0);
+      const t = P(u, v, z1);
+      const ry = r * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(b.x - r, t.y);
+      ctx.lineTo(b.x - r, b.y);
+      ctx.ellipse(b.x, b.y, r, ry, 0, Math.PI, 0, true);
+      ctx.lineTo(b.x + r, t.y);
+      ctx.ellipse(t.x, t.y, r, ry, 0, 0, Math.PI, true);
+      ctx.closePath();
+      const side = ctx.createLinearGradient(b.x - r, 0, b.x + r, 0);
+      side.addColorStop(0, tone(color, 1.08));
+      side.addColorStop(0.45, tone(color, 0.95));
+      side.addColorStop(1, tone(color, 0.66));
+      ctx.fillStyle = side;
+      ctx.fill();
+      ctx.strokeStyle = OUTLINE;
+      ctx.lineWidth = 0.6;
+      ctx.stroke();
+      for (let i = 1; i <= hoops; i++) {
+        const y = b.y + ((t.y - b.y) * i) / (hoops + 1);
+        ctx.beginPath();
+        ctx.ellipse(b.x, y, r, ry, 0, Math.PI, 0, true);
+        ctx.strokeStyle = tone(color, 0.55);
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.ellipse(t.x, t.y, r, ry, 0, 0, Math.PI * 2);
+      ctx.fillStyle = top ?? tone(color, 1.18);
+      ctx.fill();
+      ctx.strokeStyle = OUTLINE;
+      ctx.lineWidth = 0.6;
+      ctx.stroke();
+    },
+
+    // A dome standing on the ground plane at height z: round at the front,
+    // `rise` pixels tall, lit from the left.
+    dome(u, v, z, r, rise, color) {
+      const p = P(u, v, z);
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, r, r * 0.5, 0, 0, Math.PI);
+      ctx.ellipse(p.x, p.y, r, rise, 0, Math.PI, Math.PI * 2);
+      ctx.closePath();
+      const light = ctx.createLinearGradient(p.x - r, p.y - rise, p.x + r, p.y);
+      light.addColorStop(0, tone(color, 1.15));
+      light.addColorStop(1, tone(color, 0.68));
+      ctx.fillStyle = light;
+      ctx.fill();
+      ctx.strokeStyle = OUTLINE;
+      ctx.lineWidth = 0.7;
+      ctx.stroke();
     },
 
     // A flat oval on the ground, for shadows and barrel tops.

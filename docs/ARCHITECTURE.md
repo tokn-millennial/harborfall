@@ -662,3 +662,13 @@ Phase 30 changed only `src/render/art/terrain.js` and one line of `src/render/re
 - `grassWarmth(x, y)`, from -4 to 4, comes from smooth noise on a lattice every 20 tiles. Neighbouring tiles differ by at most one step (a test checks every pair on the island). The grass color is mixed toward `GRASS_WARM` or `GRASS_COOL` by 0.065 a step, then lit or shaded as before, so ground fills are keyed by layer, shade and warmth.
 - Undergrowth on forest tiles is part of the ground painter's details.
 - **Measured** in the hidden test pane: frame times old and new overlap (about 19 to 30 ms in both). Drawing all 61 forest tiles near the demo town's buildings at once costs about 4 ms more than before; that is the browser painting more trees, not working them out (1.0 ms against 0.6). Painting the whole island's ground once when a game opens takes about 0.87 s against 0.6 s in that pane, mostly the extra meadow colors; a close-up costs about the same as before.
+
+## 34. The buildings, closer
+
+Phase 31 changed only `src/render/art/kit.js` and `src/render/art/buildings.js`.
+
+- **The kit.** `box` takes `base` (and `baseHeight`) for a stone footing. `gable` draws a soft eave shadow on the walls below (`eaves`, on by default) and a trim along the visible gable end. New: `dormer(roof, u0, u1, { at, height, rise, color, wall, window })`, a small upright gable set into the near slope of a roof drawn along u, or rising from the wall when `at` is the wall itself; it works out where its top meets the slope, so it never rises above the ridge. `cylinder` for barrels and the like, `dome` for the oven.
+- **Shared parts** in `buildings.js`: `door` (framed, with a plank line and latch), `windowLit` and `windowShade` (frame, glass, glazing bars by `glazing`, sill), `archedDoor`, `leanTo`, and `barrel` (now an upright cylinder).
+- The bakery's oven mouth depends on `working`, which the bakery already declared in `ART_USES`. The farm's ears depend on `progress`, already declared. Nothing new changes a stored picture's key.
+- **Measured:** drawing every building in all four looks takes about 1.5 times as long as before (about 25 to 59 ms for the whole set in the hidden test pane, against 15 to 43). Pictures are drawn once per zoom step, so this is paid once. Frame times are the same within the noise, measured old and new in turns.
+- A test aid in the scratchpad drew every building large in one picture (a "gallery"); it is not part of the project.
