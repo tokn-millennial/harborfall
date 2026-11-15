@@ -60,10 +60,12 @@ export function createInfoPanel(root, { onAction, onClose }) {
 
       // Your ship's orders: the good, its stock at home and here, and the order.
       const ship = model.ship ? [
-        el('div', 'trade-head', [el('span', null, 'Your ship carries'), el('span', 'trade-hint', 'Click to change: stays, takes over, brings home.')]),
-        ...model.ship.map((row) => el('div', `trade-row ship-row ${row.way}`, [
-          el('div', 'trade-good', [el('span', 'trade-name', row.name), el('div', 'trade-prices', row.stocks)]),
+        el('div', 'trade-head', [el('span', null, 'Your ship carries'), el('span', 'trade-hint', 'Click to change. − and + set how many it leaves behind.')]),
+        ...model.ship.map((row) => el('div', `trade-row ship-row ${row.way}${row.keep ? ' keeps' : ''}`, [
+          // "keeps 20" sits beside the name, so the row stays two lines.
+          el('div', 'trade-good', [el('span', 'trade-name', row.name), row.keep ? el('span', 'trade-stock', ` ${row.keep}`) : null, el('div', 'trade-prices', row.stocks)]),
           el('button', { class: 'trade-order', type: 'button', 'data-action': row.next, title: 'Stays, then takes it over, then brings it home' }, row.order),
+          ...(row.keep ? [tradeStep(row.down, '−', `Leave fewer ${row.keepWhere}`), tradeStep(row.up, '+', `Leave more ${row.keepWhere}`)] : []),
         ])),
       ] : [];
 

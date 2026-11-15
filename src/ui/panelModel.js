@@ -2,6 +2,7 @@
 // buttons. Plain data, built from the game, so it is tested in Node.
 // infoPanel.js turns this into page elements.
 
+import { MAX_KEEP } from '../sim/ship.js';
 import { SECOND, buildingIssue, canUpgrade, hasSecondIsland, houseCapacity, housesInRangeOf, islandOf, needCounts, paysFrom, shipSummary, staffing, stockOfBuildingFor } from '../sim/index.js';
 import { MILLI } from '../sim/rules.js';
 import { SHIP_WAY_TEXT, amountText, cartTimeText, clock, costText, issueLevel, reasonText, refundText, shipStatusText, tradeCallText, tradeOrderText } from './text.js';
@@ -181,12 +182,21 @@ export function panelModel(game, building, options = {}) {
 
 // What your ship carries, one row per good, with the stock on each island.
 // The button goes round: stays, takes it over, brings it home. Each button
-// carries its whole command, as "ship:good:way".
+// carries its whole command, as "ship:good:way". A good that is carried also
+// shows how many the ship leaves behind on the island it loads from, with −
+// and + in steps of 10 ("keep:good:level").
 const NEXT_WAY = { off: 'out', out: 'back', back: 'off' };
+const KEEP_STEP = 10;
 function shipRows(game, ship) {
   const { rules, state } = game;
   return rules.goodIds.map((good) => {
     const way = ship.orders[good] ?? 'off';
+    const keep = ship.keep[good] ?? 0;
+    const source = way === 'back' ? state.second : state;
+    const top = Math.min(MAX_KEEP, Math.max(source.storageCap, KEEP_STEP));
+    const down = Math.max(0, Math.ceil(keep / KEEP_STEP) * KEEP_STEP - KEEP_STEP);
+    const up = Math.min(top, Math.floor(keep / KEEP_STEP) * KEEP_STEP + KEEP_STEP);
+    const carried = way !== 'off';
     return {
       good,
       name: rules.goods[good].name,
@@ -194,6 +204,11 @@ function shipRows(game, ship) {
       way,
       order: SHIP_WAY_TEXT[way],
       next: `ship:${good}:${NEXT_WAY[way]}`,
+      // Short, so the row stays two lines: "keeps 20". Where it is kept is said on hover.
+      keep: carried ? `keeps ${keep}` : null,
+      keepWhere: carried ? (way === 'out' ? 'at home' : 'on the second island') : null,
+      down: carried && keep > 0 ? `keep:${good}:${down}` : null,
+      up: carried && keep < top ? `keep:${good}:${up}` : null,
     };
   });
 }

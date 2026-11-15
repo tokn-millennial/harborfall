@@ -97,6 +97,8 @@ export function loadGame(rawData, save) {
     }
     if (state.second === undefined) state.second = createSecondStock(rules);
     if (state.ship === undefined) state.ship = createShipState();
+    // A save from before Phase 24 keeps nothing back.
+    if (state.ship !== null && typeof state.ship === 'object' && state.ship.keep === undefined) state.ship.keep = {};
   }
   // A save from before staff existed has saved up no work. It starts from nothing.
   if (state !== null && typeof state === 'object' && state.staffClock === undefined) state.staffClock = 0;

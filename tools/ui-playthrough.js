@@ -9,8 +9,11 @@
 // Only the passing of time is not done through the UI: the game is stepped
 // directly, so a 28-minute game takes a second or two.
 //
-// Run it from the browser's console on the test page, http://localhost:5173/?fresh
-// which opens a new game with no title screen and never touches the saved game:
+// Run it from the browser's console on the paused test page,
+// http://localhost:5173/?fresh&paused, which opens a new game with no title
+// screen, never touches the saved game, and does not let the clock run before
+// this starts. (On plain ?fresh the game may already be a second or two in,
+// and then ends a little differently: startedAtTick in the result says so.)
 //   const { playThroughUi } = await import('/tools/ui-playthrough.js');
 //   await playThroughUi(window.harborfall);
 
@@ -23,8 +26,13 @@ import { buildingVisual } from '../src/render/visuals.js';
 
 // Options: maxMinutes (give up after this much game time), zoom (the zoom
 // level to click at, to check that picking is exact when zoomed far in or out).
-export async function playThroughUi({ game, camera, renderer, ui }, orderName = 'standard', { maxMinutes = 60, zoom = 1 } = {}) {
+export async function playThroughUi({ game, camera, renderer, ui, loop }, orderName = 'standard', { maxMinutes = 60, zoom = 1 } = {}) {
   const { rules, state } = game;
+  // The page's own clock runs from the moment it opens. Stop it, so it cannot
+  // add ticks of its own, and say where the game was when this began: a game
+  // already some seconds in ends differently from one started at tick 0.
+  loop?.setSpeed(0);
+  const startedAtTick = state.tick;
   const order = await fetch(new URL(`./bot/orders/${orderName}.json`, import.meta.url)).then((r) => r.json());
   const steps = expandOrder(order);
   const planner = createPlanner(game);
@@ -216,6 +224,7 @@ export async function playThroughUi({ game, camera, renderer, ui }, orderName = 
 
   const summary = getSummary(game);
   return {
+    startedAtTick,
     won: state.won,
     wonAtMinutes: state.won ? +(summary.win.wonAtSeconds / 60).toFixed(2) : null,
     buildings: state.buildings.length,

@@ -1,9 +1,11 @@
 // Your own ship: it sails back and forth between a harbour on the home island
 // and one on the second island, carrying the goods you choose each way.
 //
-// state.ship = { orders, phase, at, left, trip, cargo }
+// state.ship = { orders, keep, phase, at, left, trip, cargo }
 //   orders  what it carries, per good: 'out' from home to the second island,
 //           'back' from the second island home. A good not listed stays put.
+//   keep    per good, how many to leave behind on the island it loads from
+//           (added in Phase 24). A good not listed keeps none back.
 //   phase   'idle'     there is no route: an island has no harbour linked to a warehouse
 //           'loading'  tied up in the harbour of island `at`
 //           'sailing'  on its way to the harbour of island `at`
@@ -23,10 +25,11 @@ import { DIRS4, footprint, inBounds, tileIndex } from './grid.js';
 import { HOME, SECOND, hasSecondIsland, islandOf, stockOf } from './islands.js';
 
 export const SHIP_WAYS = ['off', 'out', 'back'];
+export const MAX_KEEP = 999;
 const PHASES = ['idle', 'loading', 'sailing'];
 
 export function createShipState() {
-  return { orders: {}, phase: 'idle', at: HOME, left: 0, trip: 0, cargo: {} };
+  return { orders: {}, keep: {}, phase: 'idle', at: HOME, left: 0, trip: 0, cargo: {} };
 }
 
 // The harbour your ship uses on an island: the oldest one linked to a warehouse, or null.
@@ -206,7 +209,8 @@ function load(game) {
     took = false;
     for (const good of chosen) {
       if (room === 0) break;
-      if (goods[good] < 1) continue;
+      // Never below the level kept back on this island.
+      if (goods[good] <= (s.keep[good] ?? 0)) continue;
       goods[good]--;
       s.cargo[good] = (s.cargo[good] ?? 0) + 1;
       room--;
@@ -230,6 +234,19 @@ export function setShipOrder(game, good, way) {
   else game.state.ship.orders[good] = way;
 }
 
+// Checks a level to keep back without setting it. Null when it can be set.
+export function shipKeepReason(game, good, keep) {
+  if (!game.rules.fleet || !hasSecondIsland(game)) return 'no_ship';
+  if (typeof good !== 'string' || !game.rules.goodIds.includes(good)) return 'unknown_good';
+  if (!Number.isInteger(keep) || keep < 0 || keep > MAX_KEEP) return 'bad_command';
+  return null;
+}
+
+export function setShipKeep(game, good, keep) {
+  if (keep === 0) delete game.state.ship.keep[good];
+  else game.state.ship.keep[good] = keep;
+}
+
 // A read-only picture of the ship for the screen and the bot.
 export function shipSummary(game) {
   const { rules, state } = game;
@@ -246,6 +263,7 @@ export function shipSummary(game) {
     units: unitsAboard(s),
     capacity: rules.fleet?.capacity ?? 0,
     orders: { ...s.orders },
+    keep: { ...s.keep },
     harbours: { home: shipHarbour(game, HOME)?.id ?? null, second: shipHarbour(game, SECOND)?.id ?? null },
   };
 }
@@ -258,6 +276,10 @@ export function shipProblem(rules, state) {
   if (s.orders === null || typeof s.orders !== 'object') return 'the orders for your ship are missing';
   for (const [good, way] of Object.entries(s.orders)) {
     if (!rules.goodIds.includes(good) || (way !== 'out' && way !== 'back')) return 'your ship has an order it cannot carry out';
+  }
+  if (s.keep === null || typeof s.keep !== 'object') return 'the levels your ship keeps back are missing';
+  for (const [good, n] of Object.entries(s.keep)) {
+    if (!rules.goodIds.includes(good) || !Number.isInteger(n) || n < 1 || n > MAX_KEEP) return 'your ship keeps back a wrong amount';
   }
   if (!PHASES.includes(s.phase)) return 'your ship is doing something unknown';
   if (s.at !== HOME && s.at !== SECOND) return 'your ship is at an unknown island';

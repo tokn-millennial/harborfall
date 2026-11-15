@@ -20,7 +20,7 @@ import { buildingById, removeBuilding } from './buildings.js';
 import { refresh } from './refresh.js';
 import { MAX_TRADE_LEVEL, setTradeOrder } from './trade.js';
 import { HOME, SECOND, islandAt, islandOf, paysFrom, stockOf } from './islands.js';
-import { SHIP_WAYS, setShipOrder } from './ship.js';
+import { MAX_KEEP, SHIP_WAYS, setShipKeep, setShipOrder } from './ship.js';
 
 const copy = (value) => JSON.parse(JSON.stringify(value));
 const fail = (reason) => ({ ok: false, reason });
@@ -137,6 +137,8 @@ export function undoLast(game) {
     setTradeOrder(game, u.good, u.before);
   } else if (u.kind === 'ship') {
     setShipOrder(game, u.good, u.before);
+  } else if (u.kind === 'shipKeep') {
+    setShipKeep(game, u.good, u.before);
   } else {
     return fail('nothing_to_undo');
   }
@@ -188,6 +190,10 @@ export function undoProblem(rules, state) {
   // Which island's goods a record paid from or was given to. Older records have none.
   if (u.from !== undefined && u.from !== HOME && u.from !== SECOND) return 'the undo record names an unknown island';
   if (u.kind === 'place') return Number.isInteger(u.id) ? null : 'the undo record names no building';
+  if (u.kind === 'shipKeep') {
+    if (typeof u.good !== 'string' || !rules.goodIds.includes(u.good)) return 'the undo record is for a good your ship cannot carry';
+    return Number.isInteger(u.before) && u.before >= 0 && u.before <= MAX_KEEP ? null : 'the undo record for your ship is wrong';
+  }
   if (u.kind === 'ship') {
     if (typeof u.good !== 'string' || !rules.goodIds.includes(u.good)) return 'the undo record is for a good your ship cannot carry';
     return SHIP_WAYS.includes(u.before) ? null : 'the undo record for your ship is wrong';

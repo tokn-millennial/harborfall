@@ -23,7 +23,7 @@ export function expandOrder(order) {
       steps.push({ kind: 'found', label: 'found the second island: a harbour at home facing it, then a warehouse and a harbour there' });
     } else if (entry.ship) {
       // { ship: 'wood', way: 'out' }: what your own ship carries.
-      steps.push({ kind: 'ship', good: entry.ship, way: entry.way, label: `ship order: ${entry.ship} ${entry.way}` });
+      steps.push({ kind: 'ship', good: entry.ship, way: entry.way, keep: entry.keep ?? null, label: `ship order: ${entry.ship} ${entry.way}${entry.keep ? `, keeping ${entry.keep}` : ''}` });
     } else if (entry.trade) {
       steps.push({ kind: 'trade', good: entry.trade, mode: entry.mode, level: entry.level ?? 0, label: `trade order: ${entry.mode} ${entry.trade}${entry.mode === 'off' ? '' : ` at ${entry.level}`}` });
     } else if (entry.upgrade) {
@@ -158,7 +158,12 @@ export function runBot(game, order, options = {}) {
     if (current.kind === 'found') return found(current);
     if (current.kind === 'ship') {
       const done = execute(game, { action: 'ship', good: current.good, way: current.way });
-      return done.ok || done.reason === 'no_change' ? null : done.reason;
+      if (!done.ok && done.reason !== 'no_change') return done.reason;
+      if (current.keep !== null) {
+        const kept = execute(game, { action: 'shipKeep', good: current.good, keep: current.keep });
+        if (!kept.ok && kept.reason !== 'no_change') return kept.reason;
+      }
+      return null;
     }
 
     if (current.kind === 'build') {

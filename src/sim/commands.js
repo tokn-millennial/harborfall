@@ -12,7 +12,7 @@ import { producerStatuses, remember, undoLast } from './undo.js';
 import { syncProductionStatus } from './production.js';
 import { setTradeOrder, tradeOrderReason } from './trade.js';
 import { HOME, islandAt, islandOf, paysFrom } from './islands.js';
-import { setShipOrder, shipOrderReason } from './ship.js';
+import { setShipKeep, setShipOrder, shipKeepReason, shipOrderReason } from './ship.js';
 
 const fail = (reason) => ({ ok: false, reason });
 
@@ -27,6 +27,7 @@ export function execute(game, command) {
     case 'reopen': return setClosed(game, command, false);
     case 'trade': return trade(game, command);
     case 'ship': return ship(game, command);
+    case 'shipKeep': return shipKeep(game, command);
     case 'undo': return undoLast(game);
     default: return fail('unknown_command');
   }
@@ -156,6 +157,18 @@ function ship(game, { good, way }) {
   if (before === way) return fail('no_change');
   setShipOrder(game, good, way);
   remember(game, { kind: 'ship', good, before });
+  return { ok: true };
+}
+
+// { action: 'shipKeep', good, keep }
+// How many of a good your ship leaves behind on the island it loads from. 0 is none.
+function shipKeep(game, { good, keep }) {
+  const reason = shipKeepReason(game, good, keep);
+  if (reason) return fail(reason);
+  const before = game.state.ship.keep[good] ?? 0;
+  if (before === keep) return fail('no_change');
+  setShipKeep(game, good, keep);
+  remember(game, { kind: 'shipKeep', good, before });
   return { ok: true };
 }
 

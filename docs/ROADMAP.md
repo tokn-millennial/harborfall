@@ -1,6 +1,6 @@
 # Harborfall: Roadmap
 
-Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 23. Phases 0 to 17 by Claude Fable 5.2; Phases 18 to 23 by Claude Opus 5.5.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 24. Phases 0 to 17 by Claude Fable 5.2; Phases 18 to 24 by Claude Opus 5.5.
 
 This is a list of what could come next, in the order I would do it. **Nothing here is decided.** Every item is a proposal, and you choose. The working rule from the brief still stands: nothing gets built that you did not ask for.
 
@@ -8,8 +8,8 @@ Read `HANDOFF.md` first if you are picking the project up after a break.
 
 ## Where the project stands
 
-- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), undo with a first-game guide (Phase 11), a third kind of resident with a goal after the win (Phase 12), difficulty settings with two touches to the look (Phase 13), dust, chimney smoke and day and night (Phase 14), staff for buildings (Phase 15), closing a building for now (Phase 16), three scenarios with medals (Phase 17), a harbour with a trade ship (Phase 18), carts that carry goods by road (Phase 19), materials carried to workshops (Phase 20), an art and design pass (Phase 21), a second island with your own ship (Phase 22), and grapes and wine from that island (Phase 23).
-- **Proven by machines:** 588 automated tests pass. A bot wins in 28.9 minutes. A script wins through the real UI and ends in exactly the bot's game.
+- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), undo with a first-game guide (Phase 11), a third kind of resident with a goal after the win (Phase 12), difficulty settings with two touches to the look (Phase 13), dust, chimney smoke and day and night (Phase 14), staff for buildings (Phase 15), closing a building for now (Phase 16), three scenarios with medals (Phase 17), a harbour with a trade ship (Phase 18), carts that carry goods by road (Phase 19), materials carried to workshops (Phase 20), an art and design pass (Phase 21), a second island with your own ship (Phase 22), grapes and wine from that island (Phase 23), and a level your ship keeps back (Phase 24).
+- **Proven by machines:** 593 automated tests pass. A bot wins in 28.9 minutes. A script wins through the real UI and ends in exactly the bot's game.
 - **Checked by you:** you played for about 40 minutes on 2026-11-12. The game runs smoothly and the figures move well.
 - **Still not known:** whether you won and how long it took, how the sounds are, whether the guide helps someone new, and how any of it works on a Mac.
 
@@ -46,7 +46,8 @@ Each phase so far took one long working session. The sizes compare with that.
 | 21 | **Done, unplayed.** An art and design pass | Medium | You asked for it before the second island. |
 | 22 | **Done, unplayed.** A second island, each island's own goods, and your own ship (most of the rest of D4) | Large | You chose it, and answered four questions about it (Q6 to Q9). |
 | 23 | **Done, unplayed.** Grapes and wine from the second island, which fill Artisan houses | Large | The second half of your Q8. |
-| 24 onward | Your notes from playing, or the rest of the list below | | Everything on the roadmap you chose is now done. The game most needs a person to play it. |
+| 24 | **Done, unplayed.** A level your ship keeps back | Small | The known weakness from Phase 22. |
+| 25 onward | Your notes from playing, or the rest of the list below | | Everything on the roadmap you chose is now done. What is left needs your say, and the game most needs a person to play it. |
 | Any time | Put it online (E1) | Small | Independent of the rest. Read the privacy note there first. |
 
 ---
@@ -166,7 +167,7 @@ Every item here changes the rules. Each one needs new data, new tests, a new bot
 
 ### D4. Ships, trade and a second island (ships and trade done in Phase 18)
 - **Done:** a harbour, a trade ship every two minutes, standing orders to sell and buy at fixed prices (`SPEC.md` section 19).
-- **Left over:** prices that change with supply, more than one ship, and a level to keep back from your ship.
+- **Left over:** prices that change with supply, and more than one ship.
 - **What you get:** sell surplus, buy what the island lacks, settle a second island with different land.
 - **Depends on:** D3 in spirit, and save and load in practice, because games get long.
 - **Size:** large.
@@ -217,10 +218,10 @@ These are not features. They are debts and loose ends, smallest first.
 
 One line is enough. For example:
 
-> Phase 24: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
+> Phase 25: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
 
 or
 
-> Phase 24: a level to keep back at home before my ship takes a good. Show me the plan first.
+> Phase 25: a way to lose (D5). Show me the plan first.
 
 The helper should then follow the working rules in `HANDOFF.md` section 6: plan first, one feature at a time, test everything itself, stop at the gate with the five-part report, and commit only after you approve.

@@ -172,6 +172,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .trade-order:hover, .trade-step:hover:not(:disabled) { filter: brightness(1.25); }
 /* Your ship's orders: one button a row, green when it takes a good over, gold when it brings it home. */
 .trade-row.ship-row { grid-template-columns: 1fr auto; }
+.trade-row.ship-row.keeps { grid-template-columns: 1fr auto auto auto; }
 .trade-row.ship-row.out .trade-order { background: rgba(79, 174, 98, 0.35); border-color: #4fae62; }
 .trade-row.ship-row.back .trade-order { background: rgba(233, 196, 106, 0.3); border-color: var(--gold); }
 /* Looking at the second island: its goods are outlined in gold, with a small

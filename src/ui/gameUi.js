@@ -30,7 +30,7 @@ const TINT = {
 };
 const SELECT = { mode: 'select', building: null };
 const MESSAGE_SECONDS = 3;
-const QUIET_ACTIONS = ['undo', 'close', 'reopen', 'trade', 'ship'];
+const QUIET_ACTIONS = ['undo', 'close', 'reopen', 'trade', 'ship', 'shipKeep'];
 const CONFIRM_SECONDS = 4; // how long a first demolish click waits for the second
 
 // onSound(name) is told when something worth a sound happens: 'pick', 'place',
@@ -76,6 +76,10 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
       if (id.startsWith('ship:')) {
         const [, good, way] = id.split(':');
         act({ action: 'ship', good, way });
+      }
+      if (id.startsWith('keep:')) {
+        const [, good, keep] = id.split(':');
+        act({ action: 'shipKeep', good, keep: Number(keep) });
       }
       if (id === 'closeBuilding') act({ action: 'close', id: building.id });
       if (id === 'reopenBuilding') act({ action: 'reopen', id: building.id });

@@ -630,3 +630,89 @@ test('a game saved in Phase 22, before grapes and wine, loads and plays on', () 
   const again = loadGame(loadData(), throughText(saveGame(loaded.game)));
   assert.equal(again.ok, true);
 });
+
+// ---- Phase 24: levels your ship keeps back -----------------------------------
+
+test('your ship leaves behind the level you set, on the island it loads from', () => {
+  const game = smallGame();
+  settleSmall(game);
+  game.state.goods.wood = 40;
+  order(game, 'wood', 'out');
+  assert.equal(execute(game, { action: 'shipKeep', good: 'wood', keep: 25 }).ok, true);
+  until(game, 'sailing', SECOND);
+  assert.deepEqual(game.state.ship.cargo, { wood: 15 }, 'it took only what was above 25');
+  assert.equal(game.state.goods.wood, 25);
+  // Bringing a good home keeps the level back on the second island.
+  until(game, 'loading', SECOND);
+  game.state.second.goods.planks = 18;
+  order(game, 'planks', 'back');
+  execute(game, { action: 'shipKeep', good: 'planks', keep: 10 });
+  until(game, 'sailing', HOME);
+  assert.equal(game.state.ship.cargo.planks, 8);
+  assert.equal(game.state.second.goods.planks, 10);
+});
+
+test('a level to keep back can be undone, and a wrong one is refused', () => {
+  const game = smallGame();
+  assert.equal(execute(game, { action: 'shipKeep', good: 'wood', keep: 30 }).ok, true);
+  assert.equal(execute(game, { action: 'shipKeep', good: 'wood', keep: 40 }).ok, true);
+  assert.equal(execute(game, { action: 'undo' }).ok, true);
+  assert.equal(game.state.ship.keep.wood, 30);
+  assert.equal(execute(game, { action: 'shipKeep', good: 'wood', keep: 30 }).reason, 'no_change');
+  assert.equal(execute(game, { action: 'shipKeep', good: 'wood', keep: 0 }).ok, true);
+  assert.deepEqual(game.state.ship.keep, {}, 'nothing kept back is not written down');
+  for (const keep of [-1, 1.5, 1000, '10']) assert.equal(execute(game, { action: 'shipKeep', good: 'wood', keep }).reason, 'bad_command', String(keep));
+  assert.equal(execute(game, { action: 'shipKeep', good: 'gold', keep: 10 }).reason, 'unknown_good');
+});
+
+test('the second island\'s harbour panel sets the level to keep back with − and +', () => {
+  const game = smallGame();
+  const { harbour } = settleSmall(game);
+  order(game, 'wood', 'out');
+  let row = panelModel(game, buildingById(game, harbour.id)).ship.find((r) => r.good === 'wood');
+  assert.equal(row.keep, 'keeps 0');
+  assert.equal(row.keepWhere, 'at home');
+  assert.equal(row.down, null);
+  assert.equal(row.up, 'keep:wood:10');
+  const [, good, keep] = row.up.split(':');
+  assert.equal(execute(game, { action: 'shipKeep', good, keep: Number(keep) }).ok, true);
+  row = panelModel(game, buildingById(game, harbour.id)).ship.find((r) => r.good === 'wood');
+  assert.equal(row.keep, 'keeps 10');
+  assert.equal(row.down, 'keep:wood:0');
+  // Brought home, the level is kept on the second island. A good that stays has no level.
+  order(game, 'wood', 'back');
+  row = panelModel(game, buildingById(game, harbour.id)).ship.find((r) => r.good === 'wood');
+  assert.equal(row.keep, 'keeps 10');
+  assert.equal(row.keepWhere, 'on the second island');
+  const fish = panelModel(game, buildingById(game, harbour.id)).ship.find((r) => r.good === 'fish');
+  assert.deepEqual([fish.keep, fish.down, fish.up], [null, null, null]);
+  // The + stops at the island's storage room.
+  game.state.ship.keep.wood = 100;
+  row = panelModel(game, buildingById(game, harbour.id)).ship.find((r) => r.good === 'wood');
+  assert.equal(row.up, null);
+});
+
+test('a game saved before levels to keep back loads, keeping nothing back', () => {
+  const game = smallGame();
+  settleSmall(game);
+  order(game, 'wood', 'out');
+  const save = throughText(saveGame(game));
+  delete save.state.ship.keep;
+  const loaded = loadGame(loadData(), save);
+  assert.equal(loaded.ok, true, `${loaded.reason}: ${loaded.detail}`);
+  assert.deepEqual(loaded.game.state.ship.keep, {});
+  for (const bad of [{ wood: 0 }, { wood: -5 }, { gold: 10 }, { wood: 1000 }, null]) {
+    const tampered = throughText(saveGame(game));
+    tampered.state.ship.keep = bad;
+    assert.equal(loadGame(loadData(), tampered).reason, 'damaged', JSON.stringify(bad));
+  }
+});
+
+test('a build order can give your ship an order with a level to keep back', () => {
+  const game = smallGame();
+  settleSmall(game);
+  const start = game.state.tick / game.rules.ticksPerMinute;
+  runBot(game, { name: 'keep', steps: [{ ship: 'wood', way: 'out', keep: 30 }] }, { pastWin: true, maxMinutes: start + 1 });
+  assert.equal(game.state.ship.orders.wood, 'out');
+  assert.equal(game.state.ship.keep.wood, 30);
+});

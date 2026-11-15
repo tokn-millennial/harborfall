@@ -1708,4 +1708,47 @@ Date: 2026-11-14. Status: approved by Colin, keeping wine as it is ("Keep and ap
 - **The bot plays the island one way only:** grapes home, winery at home.
 - **Not done:** your notes from playing, and a Mac test.
 
-**After the gate:** committed on your "Keep and approve". Not pushed.
+**After the gate:** committed on your "Keep and approve". Pushed on your "Push to github".
+
+## Phase 24: What your ship leaves behind
+
+Date: 2026-11-14. Status: approved by Colin with no changes (he asked to commit it).
+
+**Turns used:** 1 (your "keep building"). Built by Claude Opus 5.5.
+
+**What was built** (`SPEC.md` section 25)
+- A **level to keep back** for each good your ship carries, on the island it loads from, set with − and + in the second island's harbour panel. Undoable, and saved.
+- A **paused test page** (`?fresh&paused`), so the click-through test always starts at the first tick (D332).
+
+**Automated tests: 593 pass, 0 fail.** That is 588 from before plus 5 new in `tests/islands.test.js`: the level at home and on the second island, undo and wrong levels, the panel's − and +, an older save and broken saves, and a build order setting a level. No older test changed.
+
+**Did the tests mean anything?** I broke it on purpose in five ways.
+
+| Break | Tests that failed |
+|---|---|
+| The ship ignores the level | 1 |
+| The level is kept on the wrong island | 2 |
+| Undoing a level does nothing | 1 |
+| Older saves are not given a level | 1 |
+| Any level is accepted | 1 |
+
+**Balance.** Unchanged: the bot sets no levels (D330). Standard 28.9, merchant 31.9, 100 Artisans 30.5 minutes after the win.
+
+**Browser checks** (on the test page, which never saves)
+
+| Check | How | Result |
+|---|---|---|
+| A whole game through the real buttons | UI playthrough on `?fresh&paused`, three times, one after waiting 8 seconds first | Pass: each started at tick 0 and won at 28.92 minutes. |
+| The level in the panel | Clicked + twice on the Wood row of the second island's harbour | Pass: "Wood keeps 20", undo ready. See `docs/screenshots/phase24-keep-back.png`. |
+| The panel's height at 800 pixels | Measured | Rows two lines high; the panel scrolls 36 pixels (95 before D331). |
+
+**Found along the way:** the click-through test was not quite repeatable. Two of its runs won at 29.52 and 29.35: the page's clock had run a second before the script began. Fixed with the paused page (D332). Every earlier figure I reported (28.92) came from runs that started at tick 0.
+
+**Decisions made:** 6 (D327 to D332).
+
+**Weak or unfinished**
+- **Nobody has played it.**
+- **The panel still scrolls a little** at 800 pixels high when every good is carried.
+- **Not done:** your notes from playing, and a Mac test.
+
+**After the gate:** committed on your "Commit the working tree changes with a sensible message." Not pushed.

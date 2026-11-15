@@ -143,6 +143,9 @@ async function start() {
     camera.zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, savedView.zoom));
   }
   const loop = createLoop({ ticksPerSecond: game.rules.ticksPerSecond, onTick: () => step(game) });
+  // ?fresh&paused opens the test page with the clock stopped, so a test script
+  // started some seconds later still begins at the very first tick.
+  if (fresh && params.has('paused')) loop.setSpeed(0);
   const ui = createGameUi({
     game, camera, renderer, loop, canvas,
     onSound: (name) => audio.play(name),

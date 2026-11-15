@@ -606,3 +606,9 @@ Phase 21 changed only `src/render/`, two files in `src/ui/` and `ui.css`. No rul
 - **Settlers.** `rules.settlers`: `grantMilli` added once in `checkWin`, and `incomeMilliPerMinute` added to the base income in `incomeRates` once `paysFrom(game, SECOND)` is the second island.
 - **Saves.** A seventh round in `addedLater`, with two new kinds of entry: `tierNeeds` ("artisan:wine") and `tierSettings` ("capacityWithout"), plus `config: ["settlers"]`. Phase 22's stamp `57f32b31a0a7ccda` is named in `tests/staff.test.js`. Loading gives every house the needs its tier has gained since.
 - **The bot.** New steps: `{ "found": "second" }` (a harbour at home facing the island, then the island's warehouse and harbour), `{ "build": ..., "island": "second" }`, and `{ "ship": good, "way": ... }`. In a game with no second island, those steps and the trade orders are skipped. A new habit: short of staff (under 90%) with 300 coins to spare, it builds a house, at most every two minutes, after the win only.
+
+## 27. Levels your ship keeps back
+
+- `state.ship.keep`: good to level, only for levels above 0. Kept apart from `state.ship.orders` so that orders saved before Phase 24 need no change; loading adds an empty `keep`.
+- `load` in `src/sim/ship.js` skips a good once its stock is at its level. Command `{ action: 'shipKeep', good, keep }`, 0 to 999, undoable.
+- **The test page `?fresh&paused`** opens with the clock stopped, and `tools/ui-playthrough.js` stops the clock when it starts and reports `startedAtTick`. Before this, a run started a second or two after the page opened ended differently.

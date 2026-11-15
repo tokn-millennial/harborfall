@@ -746,3 +746,12 @@ Added in Phase 23. This gives the second island its purpose.
 | Every scenario | gold | gold |
 
 **Saved games.** A game saved before this phase loads with no grapes or wine. In a game already won, Artisan houses start wanting wine: they go down to 8 each until the second island sends it. Games saved in Phase 22 load.
+
+## 25. What your ship leaves behind
+
+Added in Phase 24.
+
+- Every good your ship carries has a **level to keep back** on the island it loads from: at home for a good it takes over, on the second island for a good it brings home. It never takes a good below that level. With no level set it takes all it can, as before.
+- In the second island's harbour panel, a good that is carried shows "keeps 20" beside its name, with − and + in steps of 10, up to that island's storage room. Hovering over − or + says where it is kept: "Leave more at home".
+- The level stays when the order changes direction, and setting it can be undone.
+- A game saved before this phase keeps nothing back.
