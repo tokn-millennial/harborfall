@@ -165,6 +165,8 @@ export function placementText(rules, id) {
     return `Needs ${r.minTiles} or more ${name(r.terrain)} tiles within ${r.radius} tiles.`;
   }
   if (rule.adjacentTerrain) return `Must touch a ${name(rule.adjacentTerrain)} tile.`;
+  if (rule.island === 'second' && rule.footprintTerrain) return `Grows only on the second island, entirely on ${name(rule.footprintTerrain)}.`;
+  if (rule.island === 'second') return 'Only on the second island.';
   if (rule.footprintTerrain) return `Must stand entirely on ${name(rule.footprintTerrain)}.`;
   return null;
 }

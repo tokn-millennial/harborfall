@@ -1,6 +1,6 @@
 {
   "name": "Artisans",
-  "description": "The standard order to the win, then on to the goal after it: a second sawmill, wool and cloth, more food as the town grows, and Worker houses upgraded to Artisans three at a time.",
+  "description": "The standard order to the win, then on to the goal after it: a second sawmill, then the second island settled, with two vineyards whose grapes your ship brings home to a winery; wool and cloth; more food as the town grows; and Worker houses upgraded to Artisans three at a time.",
   "pastWin": true,
   "steps": [
     {
@@ -65,6 +65,47 @@
     },
     {
       "build": "sawmill"
+    },
+    {
+      "found": "second"
+    },
+    {
+      "trade": "fish",
+      "mode": "sell",
+      "level": 60
+    },
+    {
+      "trade": "wood",
+      "mode": "sell",
+      "level": 150
+    },
+    {
+      "ship": "wood",
+      "way": "out"
+    },
+    {
+      "ship": "planks",
+      "way": "out"
+    },
+    {
+      "build": "vineyard",
+      "island": "second",
+      "count": 2
+    },
+    {
+      "ship": "grapes",
+      "way": "back"
+    },
+    {
+      "ship": "wood",
+      "way": "off"
+    },
+    {
+      "ship": "planks",
+      "way": "off"
+    },
+    {
+      "build": "winery"
     },
     {
       "build": "sheepfarm",

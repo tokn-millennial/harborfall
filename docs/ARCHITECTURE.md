@@ -597,3 +597,12 @@ Phase 21 changed only `src/render/`, two files in `src/ui/` and `ui.css`. No rul
 - **Saves.** A sixth round in `addedLater`: `{ "mapSettings": ["second"], "config": ["fleet"] }`. 'mapSettings' is new: it names entries added to `map.json`. Loading an older save widens its map (`widenForSecondIsland`), adds an empty second stock and a ship at rest.
 - **Drawing.** `src/render/life.js` imports nothing, so the renderer hands it `islandAt`, `seaPath` and `shipHarbour` when it is made. Your ship follows `seaPath` by the share of its crossing done.
 - **The bot** builds on one island at a time: `createPlanner(game, { island })`, home if not given. Before this, after the win its planner could pick a site on the second island.
+
+## 26. Grapes and wine
+
+- **Data.** Two goods (`grapes`, `wine`), two buildings (`vineyard`, `winery`), a need for wine on the Artisan tier, and `capacityWithout: { "wine": 8 }` on that tier. `wine` is marked `neededOnceSecondIslandOpens` in `goods.json`.
+- **Placement.** A new rule, `placement.island: "second"`, checked in `siteReason` (`needs_second_island`).
+- **Houses.** `needCounts(game, good)` says whether a need counts yet. `houseCapacity(game, house)` is the tier's capacity, or the `capacityWithout` number while a counted need there is unmet. `stepHouses` grows a house only to that, and lets residents above it leave one at a time. Such a need never makes a house "unsatisfied", and `upgradeReason` does not wait for it.
+- **Settlers.** `rules.settlers`: `grantMilli` added once in `checkWin`, and `incomeMilliPerMinute` added to the base income in `incomeRates` once `paysFrom(game, SECOND)` is the second island.
+- **Saves.** A seventh round in `addedLater`, with two new kinds of entry: `tierNeeds` ("artisan:wine") and `tierSettings` ("capacityWithout"), plus `config: ["settlers"]`. Phase 22's stamp `57f32b31a0a7ccda` is named in `tests/staff.test.js`. Loading gives every house the needs its tier has gained since.
+- **The bot.** New steps: `{ "found": "second" }` (a harbour at home facing the island, then the island's warehouse and harbour), `{ "build": ..., "island": "second" }`, and `{ "ship": good, "way": ... }`. In a game with no second island, those steps and the trade orders are skipped. A new habit: short of staff (under 90%) with 300 coins to spare, it builds a house, at most every two minutes, after the win only.

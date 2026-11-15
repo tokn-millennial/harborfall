@@ -444,7 +444,9 @@ test('GATE: the second act and every scenario still reach their goals with carts
   const second = runBot(createGame(loadData()), loadOrder('artisans'), { pastWin: true });
   assert.notEqual(second.milestones[0].reachedAtMinutes, null);
   const after = second.milestones[0].reachedAtMinutes - second.wonAtMinutes;
-  assert.ok(after >= 15 && after <= 30, `the goal after the win came ${after.toFixed(1)} minutes after it`);
+  // Moved in Phase 23 from 15 to 30 to 25 to 45: the second act now settles the second
+  // island and waits for its wine before Artisan houses fill.
+  assert.ok(after >= 25 && after <= 45, `the goal after the win came ${after.toFixed(1)} minutes after it`);
   for (const [scenario, order] of [['fishing-village', 'village'], ['weavers-guild', 'guild'], ['short-handed', 'standard']]) {
     const game = createGame(loadData(), { scenario });
     const result = runBot(game, loadOrder(order));

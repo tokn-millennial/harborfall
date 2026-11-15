@@ -1,5 +1,5 @@
 {
-  "_about": "Population tiers and how residents behave. 'needs' are units of a good eaten per resident per minute. Tax is coins per resident per minute. Keys starting with _ are notes and are ignored by the game.",
+  "_about": "Population tiers and how residents behave. 'needs' are units of a good eaten per resident per minute. A need named in 'capacityWithout' only limits how full the house gets. Tax is coins per resident per minute. Keys starting with _ are notes and are ignored by the game.",
 
   "_growthIntervalSeconds": "A house with all needs met gains one resident this often, up to its capacity.",
   "growthIntervalSeconds": 6,
@@ -37,7 +37,10 @@
       "name": "Artisan",
       "capacity": 12,
       "taxPerResidentPerMinute": 1.2,
-      "needs": { "fish": 0.2, "bread": 0.075, "cloth": 0.05 },
+      "needs": { "fish": 0.2, "bread": 0.075, "cloth": 0.05,
+ "wine": 0.04 },
+   "_capacityWithout": "A need listed here is not needed to live in the house, only to fill it: without it the house holds this many at most. Wine comes only from the second island, so before that island is open it is not missed at all.",
+   "capacityWithout": { "wine": 8 },
       "visual": { "art": "guildhouse", "color": "#5d6f8c", "height": 2.0 }
     }
   }

@@ -73,7 +73,13 @@ export function createAdvisor(rules, { patienceSeconds = 30 } = {}) {
       if (types.length === 0) return `You are out of ${lower(good)}.`;
       const typeName = types[0].name.toLowerCase();
       const built = state.buildings.filter((b) => rules.buildings[b.type].production?.outputs[good] !== undefined);
-      if (built.length === 0) return `Nobody is making ${lower(good)}. Build ${article(typeName)} ${typeName}.`;
+      // A building for the second island only (the vineyard) says where it goes.
+      const where = types[0].placement?.island === 'second' ? ' on the second island' : '';
+      if (built.length === 0) return `Nobody is making ${lower(good)}. Build ${article(typeName)} ${typeName}${where}.`;
+      // Made only on the second island, and short at home: the ship has to bring it.
+      if (built.every((b) => islandOf(game, b) === SECOND) && game.state.ship?.orders[good] !== 'back') {
+        return `You make ${lower(good)} only on the second island. Set your ship to bring ${lower(good)} home, in the panel of the harbour there.`;
+      }
 
       const connected = built.filter((b) => b.connected);
       if (connected.length === 0) return `Your ${typeName} is not connected to a warehouse by road.`;

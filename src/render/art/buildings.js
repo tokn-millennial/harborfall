@@ -272,6 +272,43 @@ export const BUILDING_ART = {
     crate(g, 1.5, 1.74, 0.16, '#e8e2d0');
   },
 
+  // Rows of vines on trellis posts, the grapes darkening as the cycle runs,
+  // with a small press shed at the back.
+  vineyard(g, { h, color, progress }) {
+    g.ground(0.04, 0.04, 1.96, 1.96, SOIL);
+    const wall = h * 0.9;
+    g.box(0.12, 0.12, 0.7, 0.62, 0, wall, WOOD, { top: false });
+    g.onLit(0.3, 0.5, 0, wall * 0.75, 0.62, DARK_WOOD);
+    g.gable(0.12, 0.12, 0.7, 0.62, wall, h * 0.7, '#9a4a3a', { axis: 'u', wall: WOOD, lines: 2 });
+    const grape = mix('#8fae5a', '#5b2a52', Math.min(1, progress * 1.1));
+    for (let i = 0; i < 5; i++) {
+      const v = 0.3 + i * 0.34;
+      const u0 = v < 0.75 ? 0.85 : 0.12;
+      // The leafy row, then its posts and a few bunches on the near side.
+      g.box(u0, v, 1.88, v + 0.12, 0, 6, color, { top: tone(color, 1.15), outline: false });
+      g.post(u0, v + 0.12, 0, 7, DARK_WOOD, 0.9);
+      g.post(1.88, v + 0.12, 0, 7, DARK_WOOD, 0.9);
+      for (let k = 0; k < 3; k++) g.dot(u0 + 0.2 + k * ((1.88 - u0 - 0.4) / 2), v + 0.13, 3, 1.1, grape);
+    }
+  },
+
+  // A stone winery with a dark red roof, a cellar door and barrels by the wall.
+  winery(g, { h, color, working }) {
+    const wall = h * 0.55;
+    g.box(0.22, 0.28, 1.78, 1.66, 0, wall, STONE, { top: false });
+    door(g, 0.86, 1.18, wall * 0.75, 1.66);
+    windowLit(g, 0.36, 0.66, wall * 0.35, wall * 0.75, 1.66, working);
+    windowLit(g, 1.36, 1.64, wall * 0.35, wall * 0.75, 1.66, working);
+    windowShade(g, 0.6, 1.0, wall * 0.35, wall * 0.75, 1.78, working);
+    g.gable(0.22, 0.28, 1.78, 1.66, wall, h * 0.5, color, { axis: 'u', wall: STONE, overhang: 0.1, lines: 4 });
+    // Barrels lying by the near wall.
+    for (const u of [0.3, 0.55]) {
+      g.oval(u, 1.82, 3.2, 3.4, 2.4, '#6b4a32');
+      g.oval(u, 1.82, 3.2, 2.2, 1.5, '#8a6440');
+    }
+    crate(g, 1.5, 1.74, 0.16, '#7a3a4a');
+  },
+
   // A tall three-storey house on a stone ground floor, with a slate roof, for Artisans.
   guildhouse(g, { h, color, residents, variant = 0 }) {
     const wall = h * 0.68;
@@ -357,6 +394,8 @@ export const ART_USES = {
   townhouse: ['residents', 'variant'],
   guildhouse: ['residents', 'variant'],
   weaver: ['working'],
+  vineyard: ['progress'],
+  winery: ['working'],
 };
 
 // Moving parts, drawn fresh every frame on top of the building: while a

@@ -52,7 +52,9 @@ test('the harbour is a coast building with no staff, and every good has a price 
   assert.equal(h.placement.adjacentTerrain, 'coast');
   assert.equal(h.requiresRoad, true);
   assert.deepEqual(rules.trade, { shipTicks: SHIP, unitsPerHarbor: 30 });
-  assert.deepEqual(Object.keys(rules.prices), rules.goodIds, 'every good can be traded');
+  // Every good the home island can make. Grapes and wine (Phase 23) come only from
+  // the second island, and the ship brings nothing the home island cannot make (D245).
+  assert.deepEqual(Object.keys(rules.prices), rules.goodIds.filter((g) => g !== 'grapes' && g !== 'wine'), 'every good of the home island can be traded');
   for (const [good, price] of Object.entries(rules.prices)) {
     assert.ok(price.buyMilli > price.sellMilli, `${good}: buying is not dearer than selling`);
     // A good further along a chain is worth more than what it is made from.
@@ -504,6 +506,8 @@ test('GATE: trade is a help, not a coin machine: no trading order beats the stan
   for (const def of Object.values(rules.buildings)) {
     if (!def.production) continue;
     const perMinute = rules.ticksPerMinute / def.production.cycleTicks;
+    // Grapes and wine cannot be traded: such a producer earns nothing by selling.
+    if ([...Object.keys(def.production.outputs), ...Object.keys(def.production.inputs)].some((g) => !rules.prices[g])) continue;
     const value = (goods, price) => Object.entries(goods).reduce((sum, [g, n]) => sum + n * rules.prices[g][price], 0);
     const earned = perMinute * (value(def.production.outputs, 'sellMilli') - value(def.production.inputs, 'sellMilli')) - def.upkeepMilliPerMinute;
     const housesWorth = (def.staff / rules.workforce.perResidentMilli) * 1000 * farmerTaxPerResident;

@@ -7,7 +7,7 @@
 // The planner only reads the game. It uses the same public checks a player's
 // mouse would (siteReason), so it cannot cheat.
 
-import { HOME, buildingIssue, islandAt, siteReason } from '../../src/sim/index.js';
+import { HOME, buildingIssue, islandAt, siteReason, stockOf } from '../../src/sim/index.js';
 
 const CELL = 3; // a 2-tile building cell plus a 1-tile lane
 const OFF_LANE_COST = 4; // a road tile off the lanes is allowed but discouraged
@@ -201,7 +201,7 @@ export function createPlanner(game, { island = HOME } = {}) {
     let nearest = Infinity;
     for (const b of state.buildings) {
       const w = rules.buildings[b.type];
-      if (w.category === 'storage') nearest = Math.min(nearest, Math.hypot(b.x + w.w / 2 - cx, b.y + w.h / 2 - cy));
+      if (w.category === 'storage' && islandAt(state.map, b.x, b.y) === island) nearest = Math.min(nearest, Math.hypot(b.x + w.w / 2 - cx, b.y + w.h / 2 - cy));
     }
     return nearest > FAR_FROM_WAREHOUSE;
   }
@@ -213,13 +213,14 @@ export function createPlanner(game, { island = HOME } = {}) {
   function cartsStruggling() {
     if (!rules.carts) return null;
     const waiting = [];
+    const goods = stockOf(game, island).goods;
     for (const b of state.buildings) {
       const p = b.production;
-      if (!p || !b.connected || !p.haul) continue;
+      if (!p || !b.connected || !p.haul || islandAt(state.map, b.x, b.y) !== island) continue;
       if (buildingIssue(game, b) === 'yard_full') waiting.push(b);
       else if (rules.materials && p.status === 'missing_input') {
         const inputs = Object.entries(rules.buildings[b.type].production.inputs);
-        if (inputs.every(([good, n]) => state.goods[good] >= n)) waiting.push(b);
+        if (inputs.every(([good, n]) => goods[good] >= n)) waiting.push(b);
       }
     }
     if (waiting.length < STRUGGLING_PRODUCERS) return null;
@@ -227,7 +228,7 @@ export function createPlanner(game, { island = HOME } = {}) {
     // the town to save up for one.
     const storage = Object.values(rules.buildings).find((d) => d.category === 'storage');
     if (state.coinsMilli < storage.cost.coinsMilli + 10 * rules.buildings.road.cost.coinsMilli) return null;
-    if (!Object.entries(storage.cost.goods).every(([good, n]) => state.goods[good] >= n)) return null;
+    if (!Object.entries(storage.cost.goods).every(([good, n]) => goods[good] >= n)) return null;
     // The worst served: the farthest from its warehouse, the oldest on a tie.
     const worst = waiting.reduce((a, b) => (b.production.haul.tiles > a.production.haul.tiles ? b : a));
     return [worst.x, worst.y];

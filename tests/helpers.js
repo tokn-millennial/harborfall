@@ -70,6 +70,12 @@ export function withoutCarts(data) {
   delete data.config.materials;
   delete data.config.fleet;
   delete data.map.second;
+  // And the second island's good (Phase 23).
+  for (const id of ['grapes', 'wine']) delete data.goods[id];
+  for (const id of ['vineyard', 'winery']) delete data.buildings[id];
+  delete data.population.tiers.artisan.needs.wine;
+  delete data.population.tiers.artisan.capacityWithout;
+  delete data.config.settlers;
   for (const b of Object.values(data.buildings)) if (b !== null && typeof b === 'object') delete b.carts;
   return data;
 }
@@ -162,6 +168,13 @@ export function dataBefore(rounds) {
       for (const g of Object.values(data.goods)) if (g !== null && typeof g === 'object') delete g[key];
     }
     for (const key of added.mapSettings ?? []) delete data.map[key];
+    for (const key of added.tierSettings ?? []) {
+      for (const t of Object.values(data.population.tiers)) if (t !== null && typeof t === 'object') delete t[key];
+    }
+    for (const pair of added.tierNeeds ?? []) {
+      const [tier, good] = pair.split(':');
+      delete data.population.tiers[tier]?.needs?.[good];
+    }
   }
   // Scenarios came in Phase 17, after staff (round 2) and before trade, and one of them needs Artisans.
   if (rounds < 2) delete data.config.scenarios;

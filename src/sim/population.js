@@ -6,7 +6,7 @@
 // it buys its first unit of everything at once. That first purchase is what
 // lets people move in.
 
-import { islandOf, paysFrom, stockOfBuilding } from './islands.js';
+import { islandOf, paysFrom, secondIsOpen, stockOfBuilding } from './islands.js';
 import { footprintCenter, footprintWithinRadius } from './grid.js';
 import { affordReason, pay } from './economy.js';
 
@@ -72,10 +72,32 @@ export function recomputeCoverage(game) {
 }
 
 // True when the house is served and its last purchase of every need succeeded.
-export function isSatisfied(house) {
+// Needs that only limit how full it gets (capacityWithout) are left out when
+// the tier is given.
+export function isSatisfied(house, tier = null) {
   if (!house.served) return false;
-  for (const good in house.met) if (!house.met[good]) return false;
+  for (const good in house.met) {
+    if (tier && good in tier.capacityWithout) continue;
+    if (!house.met[good]) return false;
+  }
   return true;
+}
+
+// How many residents a house holds right now: its tier's capacity, or less
+// while it goes without a need that limits it (an Artisan house without wine).
+export function houseCapacity(game, house) {
+  const tier = game.rules.tiers[house.tier];
+  let cap = tier.capacity;
+  for (const [good, without] of Object.entries(tier.capacityWithout)) {
+    if (needCounts(game, good) && !house.met[good]) cap = Math.min(cap, without);
+  }
+  return cap;
+}
+
+// Whether residents need a good yet. A good only the second island makes
+// (goods.json, neededOnceSecondIslandOpens) is needed only once it is open.
+export function needCounts(game, good) {
+  return !game.rules.goods[good]?.neededOnceSecondIslandOpens || secondIsOpen(game);
 }
 
 export function stepHouses(game) {
@@ -91,6 +113,10 @@ export function stepHouses(game) {
 
     let satisfied = h.served;
     for (const good in tier.needs) {
+      if (!needCounts(game, good)) {
+        h.met[good] = true; // not wanted yet, so not missed
+        continue;
+      }
       const threshold = tier.needs[good].hungerThreshold;
       if (h.hunger[good] < threshold) h.hunger[good] += h.residents;
       if (h.hunger[good] >= threshold) {
@@ -102,12 +128,22 @@ export function stepHouses(game) {
           h.met[good] = false;
         }
       }
-      if (!h.met[good]) satisfied = false;
+      // A need that only limits how full the house gets is not needed to live there.
+      if (!h.met[good] && !(good in tier.capacityWithout)) satisfied = false;
     }
 
-    if (satisfied) {
+    const cap = houseCapacity(game, h);
+    if (satisfied && h.residents > cap) {
+      // Too many for a house going without: they leave, one at a time, down to what it holds.
+      h.growTimer = 0;
+      h.declineTimer++;
+      if (h.declineTimer >= declineTicks) {
+        h.residents--;
+        h.declineTimer = 0;
+      }
+    } else if (satisfied) {
       h.declineTimer = 0;
-      if (h.residents < tier.capacity) {
+      if (h.residents < cap) {
         h.growTimer++;
         if (h.growTimer >= growthTicks) {
           h.residents++;
@@ -140,13 +176,14 @@ export function upgradeReason(game, building) {
   if (!tier.upgrade) return 'max_tier';
   if (h.residents < tier.capacity) return 'house_not_full';
   if (!h.served) return 'no_market';
-  if (!isSatisfied(h)) return 'needs_unmet';
+  if (!isSatisfied(h, tier)) return 'needs_unmet';
   // The next tier's extra needs must be in stock, so the house does not
   // upgrade straight into a shortage.
   const next = rules.tiers[tier.upgrade.to];
   const goods = stockOfBuilding(game, building).goods;
   for (const good of Object.keys(next.needs)) {
-    if (!(good in tier.needs) && goods[good] < 1) return `no_${good}`;
+    // (Not one that only limits how full the house gets: it can come later.)
+    if (!(good in tier.needs) && !(good in next.capacityWithout) && needCounts(game, good) && goods[good] < 1) return `no_${good}`;
   }
   return affordReason(game, tier.upgrade.cost, paysFrom(game, islandOf(game, building)));
 }

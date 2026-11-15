@@ -37,7 +37,9 @@ function twoIslands() {
       if (!land) terrain.push('water');
       else {
         const edge = y === 1 || y === 10 || x === 1 || x === 10 || x === 15 || x === 24;
-        terrain.push(edge ? 'coast' : 'grass');
+        // A patch of fertile land on the second island, at x 21..22, y 8..9 (Phase 23).
+        const fertile = inSecond && x >= 21 && x <= 22 && y >= 8 && y <= 9;
+        terrain.push(edge ? 'coast' : fertile ? 'fertile' : 'grass');
       }
     }
   }
@@ -90,23 +92,28 @@ test('GATE: the first game is exactly the same with the second island on the map
   const b = runBot(without, loadOrder('standard'));
   assert.equal(a.won, true);
   assert.equal(a.wonAtMinutes, b.wonAtMinutes);
-  // The same town, goods and coins. Only the map is bigger.
+  // The same town and goods. Only the map is bigger, and since Phase 23 the
+  // win brings the settlers' grant.
   assert.equal(JSON.stringify(withIsland.state.buildings), JSON.stringify(without.state.buildings));
   assert.deepEqual(withIsland.state.goods, without.state.goods);
-  assert.equal(withIsland.state.coinsMilli, without.state.coinsMilli);
+  assert.equal(withIsland.state.coinsMilli, without.state.coinsMilli + withIsland.rules.settlers.grantMilli);
   assert.equal(withIsland.state.buildings.every((b2) => islandAt(withIsland.state.map, b2.x, b2.y) === HOME), true);
 });
 
-test('GATE: the second act on the home island is the same with the second island on the map', () => {
-  const withIsland = createGame(loadData());
-  const data = loadData();
-  delete data.map.second;
-  delete data.config.fleet;
-  const without = createGame(data);
-  const a = runBot(withIsland, loadOrder('artisans'), { pastWin: true });
-  const b = runBot(without, loadOrder('artisans'), { pastWin: true });
-  assert.equal(JSON.stringify(withIsland.state.buildings), JSON.stringify(without.state.buildings));
-  assert.equal(a.log.length, b.log.length);
+test('GATE: the second act needs the second island: without its wine the town does not reach 100 Artisans', () => {
+  // The Artisans order as it is, settling the island at once: reached.
+  const order = loadOrder('artisans');
+  const settled = runBot(createGame(loadData()), order, { maxMinutes: 120 });
+  assert.notEqual(settled.milestones[0].reachedAtMinutes, null);
+  // The same order with every step for the island left out: two hours, and not reached.
+  const isIsland = (step) => step.found || step.ship || step.island || step.build === 'winery' || step.trade;
+  const game = createGame(loadData());
+  const without = runBot(game, { ...order, steps: order.steps.filter((step) => !isIsland(step)) }, { maxMinutes: 120 });
+  assert.equal(without.milestones[0].reachedAtMinutes, null, 'reached 100 Artisans with no wine');
+  // Its Artisan houses hold 8 each, as many as a Worker house.
+  const houses = game.state.buildings.filter((b) => b.house?.tier === 'artisan');
+  assert.ok(houses.length > 0);
+  assert.ok(houses.every((b) => b.house.residents <= 8));
 });
 
 test('the second island cannot be built on before the win, and can after', () => {
@@ -429,7 +436,8 @@ test('a game saved before the second island loads, with the island added across 
   run(before, 3000);
   run(game, 3000);
   assert.equal(JSON.stringify(game.state.buildings), JSON.stringify(before.state.buildings));
-  assert.deepEqual(game.state.goods, before.state.goods);
+  // (The goods added since, grapes and wine, are none.)
+  for (const good of Object.keys(before.state.goods)) assert.equal(game.state.goods[good], before.state.goods[good], good);
   assert.equal(game.state.coinsMilli, before.state.coinsMilli);
 });
 
@@ -467,4 +475,158 @@ test('after the win, the tip line says how to settle the second island, until yo
   // Before the win it says nothing about the island.
   const early = smallGame({ won: false });
   assert.equal(createAdvisor(early.rules).update(early), null);
+});
+
+// ---- Phase 23: grapes and wine ---------------------------------------------------
+
+// A house of Artisans on the small map's home island, full, by a market.
+function artisanHouse(game) {
+  place(game, 'market', 7, 3);
+  road(game, [[6, 4], [6, 5]]);
+  const house = place(game, 'house', 7, 1);
+  house.house.tier = 'artisan';
+  house.house.residents = 12;
+  for (const good of Object.keys(game.rules.tiers.artisan.needs)) {
+    house.house.hunger[good] = 0;
+    house.house.met[good] = true;
+  }
+  game.state.goods.fish = 100;
+  game.state.goods.bread = 100;
+  game.state.goods.cloth = 100;
+  return house;
+}
+
+test('grapes grow only on the second island\'s fertile land, and wine is made from them anywhere', () => {
+  const { rules } = createGame(loadData());
+  assert.deepEqual(rules.buildings.vineyard.placement, { footprintTerrain: 'fertile', island: 'second' });
+  assert.deepEqual(rules.buildings.vineyard.production.outputs, { grapes: 1 });
+  assert.deepEqual(rules.buildings.winery.production.inputs, { grapes: 2 });
+  assert.deepEqual(rules.buildings.winery.production.outputs, { wine: 1 });
+  assert.equal(rules.buildings.winery.placement, null);
+  assert.equal(rules.prices.grapes, undefined, 'the trade ship brings nothing the home island cannot make');
+  assert.equal(rules.prices.wine, undefined);
+  // On the real map: every fertile site at home is refused, and the second island has room for vineyards.
+  const game = createGame(loadData());
+  game.state.won = true;
+  game.state.wonAtTick = 0;
+  const m = game.state.map;
+  let home = 0;
+  let second = 0;
+  for (let y = 0; y < m.height; y++) {
+    for (let x = 0; x < m.width; x++) {
+      const reason = siteReason(game, 'vineyard', x, y);
+      if (reason === 'needs_second_island') home++;
+      if (reason === null) {
+        assert.equal(islandAt(m, x, y), SECOND);
+        second++;
+      }
+    }
+  }
+  assert.ok(home > 20, 'fertile sites at home are refused');
+  assert.ok(second >= 5, `${second} vineyard sites on the second island`);
+  assert.equal(reasonText(game, 'needs_second_island', { building: 'vineyard' }), 'Grows only on the second island, entirely on fertile land.');
+});
+
+test('before the second island opens, Artisans do not miss wine', () => {
+  const game = smallGame({ won: false });
+  const house = artisanHouse(game);
+  run(game, 3000);
+  assert.equal(house.house.residents, 12);
+  assert.equal(house.house.met.wine, true);
+  assert.equal(game.state.goods.wine, 0);
+  const model = panelModel(game, house);
+  assert.ok(model.lines.some((l) => l.label === 'Wine' && l.value === 'Wanted once the second island opens'));
+});
+
+test('once it is open, an Artisan house holds 8 without wine, and 12 with it', () => {
+  const game = smallGame();
+  const house = artisanHouse(game);
+  run(game, 3000);
+  assert.equal(house.house.residents, 8, 'without wine it holds 8');
+  let model = panelModel(game, house);
+  assert.ok(model.lines.some((l) => l.label === 'Residents' && l.value === '8 of 8 (12 with wine)'));
+  assert.ok(model.lines.some((l) => l.label === 'Wine' && l.value === 'None in stock. Holds 8 without it'));
+  assert.equal(getSummary(game).housing.artisan, 8);
+  // With wine it fills again, and drinks it.
+  game.state.goods.wine = 50;
+  run(game, 1500);
+  assert.equal(house.house.residents, 12);
+  assert.ok(game.state.goods.wine < 50);
+  model = panelModel(game, house);
+  assert.ok(model.lines.some((l) => l.label === 'Wine' && l.value === 'Supplied'));
+});
+
+test('a Worker house can become an Artisan house before there is any wine', () => {
+  const game = smallGame();
+  place(game, 'market', 7, 3);
+  road(game, [[6, 4], [6, 5]]);
+  const house = place(game, 'house', 7, 1);
+  house.house.tier = 'worker';
+  house.house.residents = 8;
+  for (const good of Object.keys(game.rules.tiers.worker.needs)) house.house.met[good] = true;
+  game.state.goods.cloth = 10;
+  const check = execute(game, { action: 'upgrade', id: house.id });
+  assert.equal(check.ok, true, check.reason);
+  assert.equal(house.house.tier, 'artisan');
+});
+
+test('the win brings 700 coins to settle the second island, and a settled island 10 coins a minute', async () => {
+  const { incomeRates } = await import('../src/sim/economy.js');
+  const game = createGame(loadData());
+  runBot(game, loadOrder('standard'));
+  const withIsland = game.state.coinsMilli;
+  const data = loadData();
+  delete data.map.second;
+  const plain = createGame(data);
+  runBot(plain, loadOrder('standard'));
+  assert.equal(withIsland - plain.state.coinsMilli, 700 * 1000, 'the grant, once, at the win');
+  // A settled island adds to the base income.
+  const small = smallGame();
+  const before = incomeRates(small).baseMilli;
+  settleSmall(small);
+  assert.equal(incomeRates(small).baseMilli - before, 10 * 1000);
+});
+
+test('the tip line says where grapes grow, and that your ship must bring them home', async () => {
+  const { createAdvisor } = await import('../src/ui/advice.js');
+  const game = smallGame();
+  artisanHouse(game);
+  settleSmall(game);
+  const advisor = createAdvisor(game.rules, { patienceSeconds: 1 });
+  const tipAfter = (ticks) => {
+    let tip = null;
+    for (let i = 0; i < ticks; i++) {
+      step(game);
+      tip = advisor.update(game);
+    }
+    return tip;
+  };
+  assert.equal(tipAfter(1500), 'Nobody is making wine. Build a winery.');
+  // A winery at home, joined to the warehouse: now it is the grapes.
+  place(game, 'winery', 2, 7);
+  road(game, [[4, 7]]);
+  assert.equal(tipAfter(40), 'Nobody is making grapes. Build a vineyard on the second island.');
+  // A vineyard there: its grapes stay there until the ship is told to bring them.
+  game.state.second.goods.wood = 20;
+  game.state.second.goods.planks = 20;
+  place(game, 'vineyard', 21, 8);
+  road(game, [[21, 6], [21, 7]]);
+  assert.equal(tipAfter(400), 'You make grapes only on the second island. Set your ship to bring grapes home, in the panel of the harbour there.');
+  order(game, 'grapes', 'back');
+  assert.notEqual(tipAfter(40), 'You make grapes only on the second island. Set your ship to bring grapes home, in the panel of the harbour there.');
+});
+
+test('a game saved in Phase 22, before grapes and wine, loads and plays on', () => {
+  const before = createGame(dataBefore(6));
+  runBot(before, loadOrder('standard'), { maxMinutes: 12 });
+  const save = throughText(saveGame(before));
+  assert.equal(save.rulesStamp, '57f32b31a0a7ccda');
+  const loaded = loadGame(loadData(), save);
+  assert.equal(loaded.ok, true, `${loaded.reason}: ${loaded.detail}`);
+  assert.equal(loaded.game.state.goods.grapes, 0);
+  assert.equal(loaded.game.state.goods.wine, 0);
+  assert.equal(loaded.game.state.second.goods.wine, 0);
+  run(loaded.game, 600);
+  const again = loadGame(loadData(), throughText(saveGame(loaded.game)));
+  assert.equal(again.ok, true);
 });

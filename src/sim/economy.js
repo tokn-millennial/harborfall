@@ -2,7 +2,7 @@
 // Coins are held in whole thousandths ("milli-coins") so nothing ever drifts.
 
 import { MILLI } from './rules.js';
-import { HOME, SECOND, islandOf, stockOf } from './islands.js';
+import { HOME, SECOND, islandOf, paysFrom, stockOf } from './islands.js';
 
 // Coins are shared by the islands. Goods come from one island's stock:
 // `from` is the island (see islands.js), the home island if not given.
@@ -61,7 +61,9 @@ export function incomeRates(game) {
     upkeepMilli += rules.buildings[b.type].upkeepMilliPerMinute;
     if (b.house) taxesMilli += b.house.residents * rules.tiers[b.house.tier].taxMilliPerMinute;
   }
-  const baseMilli = rules.economy.baseIncomeMilliPerMinute;
+  // A settled second island (a warehouse and a harbour there) adds to the base income (config.json, "settlers").
+  const settled = rules.settlers && paysFrom(game, SECOND) === SECOND ? rules.settlers.incomeMilliPerMinute : 0;
+  const baseMilli = rules.economy.baseIncomeMilliPerMinute + settled;
   return { taxesMilli, baseMilli, upkeepMilli, netMilli: taxesMilli + baseMilli - upkeepMilli };
 }
 

@@ -91,6 +91,12 @@
     "loadSeconds": 10
   },
 
+  "_settlers": "Help to settle the second island, in a game that has one: 'grantCoins' given at the win, when it opens, and 'incomePerMinute' added to the base income once it has both a warehouse and a harbour. Remove this entry for neither.",
+  "settlers": {
+    "grantCoins": 700,
+    "incomePerMinute": 10
+  },
+
   "_win": "The win: this many residents of this tier, or of any tier above it.",
   "win": {
     "tier": "worker",
@@ -102,7 +108,7 @@
     { "tier": "artisan", "residents": 100, "title": "A city of Artisans" }
   ],
 
-  "_addedLater": "What has been added to the game since saved games first existed, one entry per round of additions, oldest first. A game saved before any of them can still be continued: it simply has none of what came after. If you add a good, a building or a tier of your own, add an entry at the end and older saved games keep working. 'buildingSettings' names a setting added to buildings, such as 'staff', and 'goodSettings' one added to goods, such as 'trade', and 'mapSettings' one added to map.json, such as 'second'.",
+  "_addedLater": "What has been added to the game since saved games first existed, one entry per round of additions, oldest first. A game saved before any of them can still be continued: it simply has none of what came after. If you add a good, a building or a tier of your own, add an entry at the end and older saved games keep working. 'buildingSettings' names a setting added to buildings, such as 'staff', and 'goodSettings' one added to goods, such as 'trade', 'mapSettings' one added to map.json, such as 'second', 'tierNeeds' a need added to a tier that already existed, as 'tier:good', and 'tierSettings' a setting added to tiers.",
   "addedLater": [
     {
       "goods": ["wool", "cloth"],
@@ -130,6 +136,13 @@
     {
       "mapSettings": ["second"],
       "config": ["fleet"]
+    },
+    {
+      "goods": ["grapes", "wine"],
+      "buildings": ["vineyard", "winery"],
+      "tierNeeds": ["artisan:wine"],
+      "tierSettings": ["capacityWithout"],
+      "config": ["settlers"]
     }
   ]
 }

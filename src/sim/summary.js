@@ -1,5 +1,6 @@
 // A read-only snapshot of the numbers the HUD, the bot and the reports need.
 
+import { houseCapacity } from './population.js';
 import { hasSecondIsland, secondIsOpen, stockOfBuilding } from './islands.js';
 import { MILLI } from './rules.js';
 import { incomeRates } from './economy.js';
@@ -17,7 +18,7 @@ export function getSummary(game) {
   const housing = {};
   for (const id of Object.keys(rules.tiers)) housing[id] = 0;
   for (const b of state.buildings) {
-    if (b.house) housing[b.house.tier] += rules.tiers[b.house.tier].capacity;
+    if (b.house) housing[b.house.tier] += houseCapacity(game, b.house);
   }
 
   return {

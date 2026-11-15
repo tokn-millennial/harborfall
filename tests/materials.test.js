@@ -32,7 +32,7 @@ test('a workshop keeps a store of materials, room for 6 of each', () => {
   const { rules } = createGame(loadData());
   assert.deepEqual(rules.materials, { store: 6 });
   const workshops = Object.values(rules.buildings).filter((d) => d.production && Object.keys(d.production.inputs).length > 0).map((d) => d.id);
-  assert.deepEqual(workshops.sort(), ['bakery', 'sawmill', 'weaver']);
+  assert.deepEqual(workshops.sort(), ['bakery', 'sawmill', 'weaver', 'winery']);
   assert.deepEqual(createGame(loadData()).state.buildings[0].production, undefined, 'a warehouse keeps no store');
 });
 
@@ -247,14 +247,16 @@ test('tips: workshops starved of materials the stockpile has count as carts not 
 
 // ---- the whole game -----------------------------------------------------------------------------
 
-test('GATE: the second act reaches 100 Artisans 15 to 30 minutes after the win, on four islands', () => {
+test('GATE: the second act reaches 100 Artisans 25 to 45 minutes after the win, on four islands', () => {
   for (const seed of [undefined, 42, 7, 2025]) {
     const game = createGame(loadData(), { seed });
     const result = runBot(game, loadOrder('artisans'), { pastWin: true, maxMinutes: 120 });
     const goal = result.milestones[0].reachedAtMinutes;
     assert.notEqual(goal, null, `island ${seed ?? 'standard'}: stuck on ${result.stuckOn?.label} (${result.stuckOn?.waitedFor})`);
     const after = goal - result.wonAtMinutes;
-    assert.ok(after >= 15 && after <= 30, `island ${seed ?? 'standard'}: ${after.toFixed(1)} minutes after the win`);
+    // Moved in Phase 23 from 15 to 30 to 25 to 45: the second act now settles the second
+    // island and waits for its wine before Artisan houses fill.
+    assert.ok(after >= 25 && after <= 45, `island ${seed ?? 'standard'}: ${after.toFixed(1)} minutes after the win`);
   }
 });
 

@@ -254,7 +254,11 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
     if (tool.mode === 'build') {
       const terrain = requiredTerrain(rules, tool.building);
       if (terrain) {
-        for (const [x, y] of (terrainCache[terrain] ??= terrainTiles(game, terrain))) overlay.tints.push({ x, y, color: TINT.terrain });
+        // A building for one island only (the vineyard) lights that island's ground.
+        const only = rules.buildings[tool.building].placement?.island === 'second' ? 1 : null;
+        const key = only === null ? terrain : `${terrain}|${only}`;
+        terrainCache[key] ??= terrainTiles(game, terrain).filter(([x, y]) => only === null || islandAt(map, x, y) === only);
+        for (const [x, y] of terrainCache[key]) overlay.tints.push({ x, y, color: TINT.terrain });
       }
     }
 

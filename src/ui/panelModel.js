@@ -2,7 +2,7 @@
 // buttons. Plain data, built from the game, so it is tested in Node.
 // infoPanel.js turns this into page elements.
 
-import { SECOND, buildingIssue, canUpgrade, hasSecondIsland, housesInRangeOf, islandOf, paysFrom, shipSummary, staffing, stockOfBuildingFor } from '../sim/index.js';
+import { SECOND, buildingIssue, canUpgrade, hasSecondIsland, houseCapacity, housesInRangeOf, islandOf, needCounts, paysFrom, shipSummary, staffing, stockOfBuildingFor } from '../sim/index.js';
 import { MILLI } from '../sim/rules.js';
 import { SHIP_WAY_TEXT, amountText, cartTimeText, clock, costText, issueLevel, reasonText, refundText, shipStatusText, tradeCallText, tradeOrderText } from './text.js';
 import { MAX_TRADE_LEVEL } from '../sim/trade.js';
@@ -25,13 +25,22 @@ export function panelModel(game, building, options = {}) {
     const h = building.house;
     const tier = rules.tiers[h.tier];
     title = `${tier.name} house`;
-    lines.push({ label: 'Residents', value: `${h.residents} of ${tier.capacity}` });
+    const cap = houseCapacity(game, h);
+    // Going without a need that limits how full it gets (an Artisan house without wine).
+    const limited = cap < tier.capacity ? ` (${tier.capacity} with ${Object.keys(tier.capacityWithout).map((g) => rules.goods[g].name.toLowerCase()).join(' and ')})` : '';
+    lines.push({ label: 'Residents', value: `${h.residents} of ${cap}${limited}` });
     lines.push({ label: 'Market', value: h.served ? 'In range' : 'None in range', level: h.served ? 'ok' : 'bad' });
     for (const good of Object.keys(tier.needs)) {
+      // A need that only fills the house: wanted once the second island is open.
+      if (good in tier.capacityWithout && !needCounts(game, good)) {
+        lines.push({ label: rules.goods[good].name, value: 'Wanted once the second island opens' });
+        continue;
+      }
       const met = h.served && h.met[good];
+      const without = good in tier.capacityWithout ? `. Holds ${tier.capacityWithout[good]} without it` : '';
       lines.push({
         label: rules.goods[good].name,
-        value: met ? 'Supplied' : h.served ? 'None in stock' : 'Not supplied',
+        value: met ? 'Supplied' : (h.served ? 'None in stock' : 'Not supplied') + without,
         level: met ? 'ok' : 'warn',
       });
     }
@@ -43,7 +52,7 @@ export function panelModel(game, building, options = {}) {
       actions.push({
         id: 'upgrade',
         label: `Upgrade to ${next.name} house`,
-        detail: `${costText(rules, tier.upgrade.cost)}. Holds ${next.capacity}.`,
+        detail: `${costText(rules, tier.upgrade.cost)}. Holds ${next.capacity}${Object.entries(next.capacityWithout).filter(([g]) => needCounts(game, g)).map(([g, n]) => `, ${n} without ${rules.goods[g].name.toLowerCase()}`).join('')}.`,
         enabled: check.ok,
         reason: check.ok ? null : reasonText(game, check.reason, { cost: tier.upgrade.cost, from: paysFrom(game, island) }),
       });

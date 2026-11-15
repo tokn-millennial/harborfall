@@ -115,6 +115,16 @@ export function validateData(data) {
         number(rate, `${where}.needs.${good}`, { min: 0, minExclusive: true });
       }
     }
+    if (tier.capacityWithout !== undefined) {
+      if (!isObject(tier.capacityWithout)) err(`${where}.capacityWithout must be an object of good: residents`);
+      else {
+        for (const [good, n] of Object.entries(tier.capacityWithout)) {
+          if (!isObject(tier.needs) || !(good in tier.needs)) err(`${where}.capacityWithout names "${good}", which is not one of its needs`);
+          number(n, `${where}.capacityWithout.${good}`, { min: 1, integer: true });
+          if (isNumber(n) && isNumber(tier.capacity) && n >= tier.capacity) err(`${where}.capacityWithout.${good} must be less than its capacity`);
+        }
+      }
+    }
     if (tier.upgrade !== undefined) {
       if (!isObject(tier.upgrade)) err(`${where}.upgrade must be an object`);
       else {
@@ -185,7 +195,7 @@ export function validateData(data) {
       else {
         const p = b.placement;
         for (const key of Object.keys(p)) {
-          if (!['terrainInRadius', 'adjacentTerrain', 'footprintTerrain'].includes(key)) err(`${where}.placement has an unknown rule "${key}"`);
+          if (!['terrainInRadius', 'adjacentTerrain', 'footprintTerrain', 'island'].includes(key)) err(`${where}.placement has an unknown rule "${key}"`);
         }
         if (p.terrainInRadius !== undefined) {
           if (!isObject(p.terrainInRadius)) err(`${where}.placement.terrainInRadius must be an object`);
@@ -197,6 +207,8 @@ export function validateData(data) {
         }
         if (p.adjacentTerrain !== undefined) knownTerrain(p.adjacentTerrain, `${where}.placement.adjacentTerrain`);
         if (p.footprintTerrain !== undefined) knownTerrain(p.footprintTerrain, `${where}.placement.footprintTerrain`);
+        // A building that may stand on one island only. "second" is the only one there is.
+        if (p.island !== undefined && p.island !== 'second') err(`${where}.placement.island must be "second"`);
       }
     }
   }
@@ -343,6 +355,13 @@ export function validateData(data) {
       number(config.trade.unitsPerHarbor, 'config.trade.unitsPerHarbor', { min: 1, integer: true });
     }
   }
+  if (config.settlers !== undefined) {
+    if (!isObject(config.settlers)) err('config.settlers must be an object');
+    else {
+      number(config.settlers.grantCoins, 'config.settlers.grantCoins', { min: 0 });
+      if (config.settlers.incomePerMinute !== undefined) number(config.settlers.incomePerMinute, 'config.settlers.incomePerMinute', { min: 0 });
+    }
+  }
   if (config.fleet !== undefined) {
     if (!isObject(config.fleet)) err('config.fleet must be an object');
     else {
@@ -374,7 +393,7 @@ export function validateData(data) {
       const where = Array.isArray(config.addedLater) ? `config.addedLater[${i}]` : 'config.addedLater';
       if (!isObject(step)) { err(`${where} must be an object`); return; }
       for (const [key, list] of Object.entries(step)) {
-        if (!['goods', 'buildings', 'tiers', 'upgradesFrom', 'config', 'buildingSettings', 'goodSettings', 'mapSettings'].includes(key)) err(`${where} has an unknown entry "${key}"`);
+        if (!['goods', 'buildings', 'tiers', 'upgradesFrom', 'config', 'buildingSettings', 'goodSettings', 'mapSettings', 'tierNeeds', 'tierSettings'].includes(key)) err(`${where} has an unknown entry "${key}"`);
         else if (!Array.isArray(list) || !list.every((id) => typeof id === 'string')) err(`${where}.${key} must be a list of names`);
       }
     });

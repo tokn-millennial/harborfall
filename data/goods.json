@@ -1,5 +1,5 @@
 {
-  "_about": "The goods in the game. The order here is the order shown in the HUD. Colors are placeholder colors for icons. The optional singular entry is the word for exactly one, where it differs from the name. 'trade' gives the coins the trade ship pays for one (sell) and charges for one (buy); buy must be the higher. A good with no 'trade' entry cannot be traded.",
+  "_about": "The goods in the game. The order here is the order shown in the HUD. Colors are placeholder colors for icons. The optional singular entry is the word for exactly one, where it differs from the name. 'trade' gives the coins the trade ship pays for one (sell) and charges for one (buy); buy must be the higher. A good with no 'trade' entry cannot be traded. 'neededOnceSecondIslandOpens' marks a good only the second island makes: a need for it counts only once that island is open.",
 
   "wood":   { "name": "Wood",   "color": "#8b5a2b", "trade": { "sell": 0.4, "buy": 2 } },
   "planks": { "name": "Planks", "singular": "Plank", "color": "#d9a760", "trade": { "sell": 2, "buy": 6 } },
@@ -7,5 +7,7 @@
   "grain":  { "name": "Grain",  "color": "#e3c84a", "trade": { "sell": 2, "buy": 6 } },
   "bread":  { "name": "Bread",  "color": "#c9853d", "trade": { "sell": 4, "buy": 12 } },
   "wool":   { "name": "Wool",   "color": "#e8e2d0", "trade": { "sell": 1.5, "buy": 5 } },
-  "cloth":  { "name": "Cloth",  "color": "#7d6fb3", "trade": { "sell": 6, "buy": 18 } }
+  "cloth":  { "name": "Cloth",  "color": "#7d6fb3", "trade": { "sell": 6, "buy": 18 } },
+  "grapes": { "name": "Grapes", "singular": "Grape", "color": "#7b3f6e" },
+  "wine":   { "name": "Wine",   "color": "#8e2a3c", "neededOnceSecondIslandOpens": true }
 }

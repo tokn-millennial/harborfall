@@ -706,4 +706,43 @@ Added in Phase 22. The new good grown there comes in Phase 23.
 
 **Saved games.** A game saved before this phase loads with the second island added and the map widened. Every building and road on the home island stays where it was, and the home island plays on exactly as before.
 
-**Not in this phase:** a new good grown only on the second island (Phase 23), a level to keep at home before the ship takes a good, more than one ship, and the trade ship calling at the second island.
+**Not in this phase:** a level to keep at home before the ship takes a good, more than one ship, and the trade ship calling at the second island. The new good came in Phase 23 (section 24).
+
+## 24. Grapes and wine
+
+Added in Phase 23. This gives the second island its purpose.
+
+**The chain**
+- A **Vineyard** grows grapes, 1 every 15 seconds. It stands only on **fertile land on the second island**. Costs 60 coins, 10 wood, 5 planks; upkeep 1 a minute; 2 staff.
+- A **Winery** turns 2 grapes into 1 wine every 15 seconds. It can stand on either island. Costs 90 coins, 15 planks; upkeep 2 a minute; 3 staff.
+- So a town either ships grapes home to a winery there, or makes wine on the second island and ships the wine. Grapes and wine cannot be traded: the trade ship brings nothing the home island cannot make.
+
+**What wine is for**
+- **Once the second island is open, an Artisan house holds 12 only with wine. Without it, it holds 8,** as many as a Worker house. Artisans drink 0.04 wine each a minute.
+- Wine does not stop a house becoming an Artisan house, and Artisans do not leave altogether for want of it: they go down to 8, and fill up again when wine comes.
+- Before the second island opens, Artisans do not miss wine. So the first game, the scenarios and anything before the win are as they were.
+- In practice the goal of 100 Artisans needs the island: the bot's town without it stays far short after two hours (a test checks this). A player who upgraded 13 houses or more could get there without wine.
+
+**Help to settle** (`config.json`, "settlers")
+- The win brings **700 coins** to settle the second island.
+- Once the second island has a warehouse and a harbour, it adds **10 coins a minute** to the base income.
+
+**On screen**
+- A house's panel: "Residents 8 of 8 (12 with wine)", and "Wine: None in stock. Holds 8 without it". Before the island opens: "Wanted once the second island opens".
+- The upgrade button: "Holds 12, 8 without wine."
+- Picking the Vineyard lights the fertile land of the second island only.
+- The tip line: "Nobody is making grapes. Build a vineyard on the second island.", and "You make grapes only on the second island. Set your ship to bring grapes home, in the panel of the harbour there."
+- The top bar shows nine goods. To fit at 1280 wide, it shows the storage limit only on screens wider than 2300 pixels; hover over a good to see it. The tools slimmed so eighteen fit one row.
+
+**How it plays, measured by the bot.** The Artisans build order now builds a second sawmill straight after the win, settles the second island, plants two vineyards, has the ship bring the grapes home to a winery, and sells surplus fish and wood to the trade ship. Then cloth and upgrades as before. It also builds a house when short of staff with coins to spare, as the tip asks.
+
+| | Phase 22 | Phase 23 |
+|---|---|---|
+| Standard game, the win | 28.9 | 28.9 |
+| 100 Artisans, after the win | +26.3 | +30.5 |
+| On islands 42, 7 and 2025 | +22.4, +22.5, +23.4 | +31.6, +30.6, +32.5 |
+| Easy, after the win | | +29.9 |
+| Hard, after the win | +41.3 | +42.3 |
+| Every scenario | gold | gold |
+
+**Saved games.** A game saved before this phase loads with no grapes or wine. In a game already won, Artisan houses start wanting wine: they go down to 8 each until the second island sends it. Games saved in Phase 22 load.

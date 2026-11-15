@@ -104,6 +104,19 @@ export function loadGame(rawData, save) {
     // None of the new goods, and, if the goals after the win are new to it, none reached yet.
     if (state.goods !== null && typeof state.goods === 'object') for (const good of rules.goodIds) state.goods[good] ??= 0;
     if (state.second?.goods !== null && typeof state.second?.goods === 'object') for (const good of rules.goodIds) state.second.goods[good] ??= 0;
+    // A house whose tier has gained a need since: it starts wanting it, as a new house would.
+    if (Array.isArray(state.buildings)) {
+      for (const b of state.buildings) {
+        const h = b?.house;
+        const tier = h && typeof h === 'object' && Object.hasOwn(rules.tiers, h.tier) ? rules.tiers[h.tier] : null;
+        if (!tier || h.hunger === null || typeof h.hunger !== 'object' || h.met === null || typeof h.met !== 'object') continue;
+        for (const [good, need] of Object.entries(tier.needs)) {
+          if (good in h.hunger) continue;
+          h.hunger[good] = need.hungerThreshold;
+          h.met[good] = false;
+        }
+      }
+    }
     if (older.configAdded.includes('milestones')) state.milestones = rules.milestones.map(() => null);
   }
   let problem = stateProblem(rules, state);

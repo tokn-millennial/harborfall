@@ -232,9 +232,12 @@ test('the stamps that saved games out in the world carry are still recognised', 
   // Phase 19 a fourth: games saved in Phase 18, before carts.
   // Phase 20 a fifth: games saved in Phase 19, before materials travelled.
   // Phase 22 a sixth: games saved in Phases 20 and 21, before the second island.
-  assert.deepEqual(rules.olderStamps.map((o) => o.stamp), ['6fe08f1bee9bb754', 'b16fd0a9142282c9', '10d0dc80671f7e66', 'fc1b9e1dd0f19bb7', 'c7dd0d43d8d2ffb8', 'e6ebd7221f59fd55']);
-  assert.deepEqual(rules.olderStamps.map((o) => o.configAdded), [['milestones', 'workforce', 'trade', 'carts', 'materials', 'fleet'], ['workforce', 'trade', 'carts', 'materials', 'fleet'], ['trade', 'carts', 'materials', 'fleet'], ['carts', 'materials', 'fleet'], ['materials', 'fleet'], ['fleet']]);
-  assert.deepEqual(rules.olderStamps.map((o) => o.mapAdded), [['second'], ['second'], ['second'], ['second'], ['second'], ['second']]);
+  // Phase 23 a seventh: games saved in Phase 22, before grapes and wine.
+  assert.deepEqual(rules.olderStamps.map((o) => o.stamp), ['6fe08f1bee9bb754', 'b16fd0a9142282c9', '10d0dc80671f7e66', 'fc1b9e1dd0f19bb7', 'c7dd0d43d8d2ffb8', 'e6ebd7221f59fd55', '57f32b31a0a7ccda']);
+  const later = ['fleet', 'settlers'];
+  assert.deepEqual(rules.olderStamps.map((o) => o.configAdded), [['milestones', 'workforce', 'trade', 'carts', 'materials', ...later], ['workforce', 'trade', 'carts', 'materials', ...later], ['trade', 'carts', 'materials', ...later], ['carts', 'materials', ...later], ['materials', ...later], later, ['settlers']]);
+  assert.deepEqual(rules.olderStamps.map((o) => o.mapAdded), [['second'], ['second'], ['second'], ['second'], ['second'], ['second'], []]);
+  assert.equal(createGame(dataBefore(6)).rules.stamp, '57f32b31a0a7ccda');
   assert.equal(createGame(dataBefore(5)).rules.stamp, 'e6ebd7221f59fd55');
   assert.equal(createGame(dataBefore(4)).rules.stamp, 'c7dd0d43d8d2ffb8');
   assert.equal(createGame(dataBefore(2)).rules.stamp, '10d0dc80671f7e66');
@@ -305,7 +308,8 @@ test('a finished game from before staff keeps its win, its Artisans goal and its
   assert.equal(game.state.won, true);
   assert.deepEqual(game.state.milestones, before.state.milestones, 'a goal already reached is not taken back');
   assert.notEqual(game.state.milestones[0], null);
-  assert.deepEqual(game.state.goods, before.state.goods);
+  // Its goods, and none of the goods added since (grapes and wine, Phase 23).
+  assert.deepEqual(game.state.goods, { ...before.state.goods, grapes: 0, wine: 0 });
   // This town has more workshops than its residents can run: it is told so, and it still works.
   const staff = getSummary(game).staff;
   assert.equal(staff.short, true);
@@ -317,7 +321,14 @@ test('a finished game from before staff keeps its win, its Artisans goal and its
   const answered = runBot(game, { name: 'answer the tips', steps: [{ upgrade: 30, to: 'artisan' }] }, { pastWin: true, maxMinutes: start + 10 });
   assert.ok(answered.log.some((e) => /warehouse/.test(e.label)), 'no warehouse was built where the carts struggled');
   assert.ok(game.state.coinsMilli > coins || getSummary(game).income.net > 0, 'the town stopped earning');
-  assert.ok(getSummary(game).milestones[0].current >= 100, 'the Artisans left');
+  // Since Phase 23 the second island is open in a won game, and Artisans want its
+  // wine: without it each Artisan house holds 8. The goal already reached stays reached.
+  // (One house the bot upgraded during these ten minutes may still be filling.)
+  const full = game.state.buildings.filter((b) => b.house?.tier === 'artisan' && b.house.residents >= 8).length;
+  const all = game.state.buildings.filter((b) => b.house?.tier === 'artisan').length;
+  assert.ok(full >= all - 1, `only ${full} of ${all} Artisan houses hold 8`);
+  assert.ok(game.state.buildings.every((b) => b.house?.tier !== 'artisan' || b.house.residents <= 8), 'an Artisan house holds more than 8 without wine');
+  assert.notEqual(game.state.milestones[0], null);
 });
 
 test('a game saved before Artisans existed still loads, two rounds of additions later', () => {

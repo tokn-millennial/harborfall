@@ -8,7 +8,7 @@ import { stepProduction } from './production.js';
 import { settleIncome } from './economy.js';
 import { checkWin } from './win.js';
 import { getSummary, buildingIssue, medalFor } from './summary.js';
-import { stepHouses, upgradeReason, countResidents, isSatisfied, inMarketRange, housesInRangeOf } from './population.js';
+import { stepHouses, upgradeReason, countResidents, isSatisfied, inMarketRange, housesInRangeOf, houseCapacity, needCounts } from './population.js';
 import { saveGame, loadGame, SAVE_FORMAT } from './save.js';
 import { undoStatus } from './undo.js';
 import { staffing } from './staff.js';
@@ -21,7 +21,7 @@ export {
   createGame, execute, canPlace, siteReason, buildingAt, buildingById,
   countResidents, isSatisfied, getSummary, buildingIssue, inMarketRange, housesInRangeOf,
   saveGame, loadGame, SAVE_FORMAT, undoStatus, staffing, medalFor, tradeSummary, cartsSummary, servedByCarts,
-  shipSummary, seaPath, shipHarbour, HOME, SECOND, islandAt, islandOf, secondIsOpen, hasSecondIsland, paysFrom, stockOf,
+  houseCapacity, needCounts, shipSummary, seaPath, shipHarbour, HOME, SECOND, islandAt, islandOf, secondIsOpen, hasSecondIsland, paysFrom, stockOf,
 };
 
 // The goods of the island a building stands on: { goods, storageCap }.

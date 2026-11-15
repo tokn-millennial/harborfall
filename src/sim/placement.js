@@ -25,6 +25,7 @@ export function siteReason(game, type, x, y) {
 
   const rule = def.placement;
   if (rule) {
+    if (rule.island === 'second' && !tiles.every(([tx, ty]) => islandAt(map, tx, ty) === SECOND)) return 'needs_second_island';
     if (rule.footprintTerrain && !tiles.every(([tx, ty]) => terrainAt(map, tx, ty) === rule.footprintTerrain)) {
       return `needs_${rule.footprintTerrain}`;
     }

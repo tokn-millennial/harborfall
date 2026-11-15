@@ -126,6 +126,13 @@ export function rulesStamp(rawData, without = null) {
       for (const b of Object.values(data.buildings ?? {})) if (b !== null && typeof b === 'object') delete b[key];
     }
     for (const key of step.mapSettings ?? []) delete data.map?.[key];
+    for (const key of step.tierSettings ?? []) {
+      for (const t of Object.values(data.population?.tiers ?? {})) if (t !== null && typeof t === 'object') delete t[key];
+    }
+    for (const pair of step.tierNeeds ?? []) {
+      const [tier, good] = String(pair).split(':');
+      delete data.population?.tiers?.[tier]?.needs?.[good];
+    }
     for (const key of step.goodSettings ?? []) {
       for (const g of Object.values(data.goods ?? {})) if (g !== null && typeof g === 'object') delete g[key];
     }
@@ -224,6 +231,8 @@ export function compileRules(rawData) {
       id,
       name: t.name,
       capacity: t.capacity,
+      // Needs that only limit how full a house gets: good -> residents it holds without it.
+      capacityWithout: { ...(t.capacityWithout ?? {}) },
       taxMilliPerMinute: toMilli(t.taxPerResidentPerMinute),
       needs,
       upgrade: t.upgrade ? { to: t.upgrade.to, cost: compileCost(t.upgrade.cost) } : null,
@@ -270,6 +279,9 @@ export function compileRules(rawData) {
     // Materials: how much of each material a workshop's store holds. null:
     // workshops take their materials straight from the stockpile.
     materials: config.materials && config.carts ? { store: config.materials.store } : null,
+    // Coins granted at the win to settle the second island, or null.
+    // and coins a minute once that island has a warehouse and a harbour.
+    settlers: config.settlers ? { grantMilli: toMilli(config.settlers.grantCoins), incomeMilliPerMinute: toMilli(config.settlers.incomePerMinute ?? 0) } : null,
     // Your own ship between the two islands (see ship.js), or null.
     fleet: config.fleet
       ? {

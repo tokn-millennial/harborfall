@@ -1585,7 +1585,7 @@ Roofs and walls are drawn once into kept pictures, so their extra detail costs n
 **What I would change**
 - I would have measured the ground shading with numbers before looking at it, not after; the first version looked fine zoomed out and blocky zoomed in.
 
-**After the gate:** committed on your "Approve and proceed". Not pushed.
+**After the gate:** committed on your "Approve and proceed". Pushed with Phase 22 on your "Push to github".
 
 ## Phase 22: The second island and your ship
 
@@ -1649,4 +1649,63 @@ Date: 2026-11-14. Status: approved by Colin with no changes (he asked to commit 
 - **Staff are shared** between islands (D303), which is not how Anno does it.
 - **Not done:** your notes from playing, and a Mac test.
 
-**After the gate:** committed on your "Commit the working tree changes with a sensible message." Not pushed.
+**After the gate:** committed on your "Commit the working tree changes with a sensible message." Pushed with Phase 21 on your "Push to github".
+
+## Phase 23: Grapes and wine
+
+Date: 2026-11-14. Status: approved by Colin, keeping wine as it is ("Keep and approve").
+
+**Turns used:** 1 (your "Ok great, keep going"). Built by Claude Opus 5.5.
+
+**What was built** (all in `SPEC.md` section 24)
+- **Vineyards**, only on the second island's fertile land, and a **winery** anywhere: grapes into wine.
+- **Wine fills Artisan houses:** 12 with it, 8 without, once the second island is open.
+- **Help to settle:** 700 coins at the win, and 10 coins a minute from a settled island.
+- **On screen:** house panel lines, the upgrade button, the vineyard's ground highlight, two tips, icons, drawings for both buildings. The top bar and tools fit one row again with nine goods and eighteen tools.
+- **The bot** settles the island in its second act, and builds a house when short of staff.
+
+**Automated tests: 588 pass, 0 fail.** That is 581 from before plus 7 new in `tests/islands.test.js`. One island test was replaced: "the second act is the same with the island" became "the second act needs the island". Older tests changed: the goods and buildings lists, four time windows (D324), one income floor (D324), the workshops list, the save stamps, a finished town from before (its Artisan houses now hold 8 without wine), and the trade checks (grapes and wine have no price).
+
+**Did the tests mean anything?** I broke the new rules on purpose in eight ways, running every test each time.
+
+| Break | Tests that failed |
+|---|---|
+| Vineyards allowed on the home island | 1 |
+| Wine wanted before the island opens | 4 |
+| Houses fill without wine | 3 |
+| Upgrades wait for wine | 2 |
+| No grant at the win | 5 |
+| No income from a settled island | 3 |
+| The bot not skipping island steps on a map without one | 1 |
+| The tip not saying where vines grow | 1 |
+
+**What the bot found, and what I did about it.** Most of this phase was balance, and it changed the design.
+
+1. **A strict need broke the second act.** With wine required to be an Artisan at all, no house could upgrade until the whole island chain worked. Income fell below zero by minute 42 and the town collapsed. I tried settling earlier, settling later, lower upkeep, more staff, higher Artisan tax and a grant: none reached the goal in reasonable time.
+2. **So wine fills houses instead** (D317). Upgrades pay for the island again.
+3. **Still too tight.** At minute 60 upkeep was 106 a minute against 115 of income. The settlers' grant and income fixed it without touching any number older saves depend on (D320).
+4. **Staff.** The first vineyard and winery numbers made the town short of staff, then of bread (D321). Island 2025 then stalled for cloth until the bot learned to build a house when short of staff (D323).
+5. **Planks.** The founding waited 5 minutes for planks until the second sawmill came first (D322).
+6. **Bugs of mine along the way:** a shell quoting slip turned a line of the bot into a bare `return`, so its founding step reported success while building nothing. Found because the island stayed empty; fixed. And the first tip read "Your grapes is made…"; reworded.
+
+**Balance, by the bot.** All in `SPEC.md` section 24. The first game is untouched on every build order: standard 28.9, careless 31.9, merchant 31.9, bread first 58.7. The second act takes 30 to 33 minutes after the win on all four islands (it was 22 to 27), 29.9 on Easy and 42.3 on Hard. Every scenario still earns gold.
+
+**Browser checks** (on the test page and the demo, which never save)
+
+| Check | How | Result |
+|---|---|---|
+| Eighteen tools and the top bar on one row | Measured at 1280, 1366, 1440 and 1920 wide, reloading at each | Pass at all four, after the fix (D325). Before it, both wrapped. |
+| A whole game through the real buttons | UI playthrough of the standard order | Pass. Won at 28.92 minutes, as before. |
+| Settling the second island and making wine | The bot's island steps, played in the won game in the page | Pass: warehouse, harbour, two vineyards, a winery at home, 20 wine in store within 12 minutes. See `docs/screenshots/phase23-vineyards.jpg`. |
+| The upgrade button's words | Read in the same screenshot | Pass: "Holds 12, 8 without wine." |
+
+**Decisions made:** 13 (D314 to D326). **D317 softens your answer to Q8**, so it is the first thing in the report.
+
+**Weak or unfinished**
+- **Wine is not strictly needed** (D317). A player could reach 100 Artisans without the island by upgrading more houses.
+- **Nobody has played it.** Whether settling feels worth it, and whether the tips are enough, I cannot tell.
+- **A finished town from before** loses a third of its Artisans until it sends wine home.
+- **The bot plays the island one way only:** grapes home, winery at home.
+- **Not done:** your notes from playing, and a Mac test.
+
+**After the gate:** committed on your "Keep and approve". Not pushed.

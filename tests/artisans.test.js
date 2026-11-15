@@ -21,9 +21,9 @@ const olderData = () => dataBefore(0);
 
 test('the new goods, buildings and tier are in the data, with a key and a drawing each', () => {
   const { rules } = createGame(loadData());
-  assert.deepEqual(rules.goodIds, ['wood', 'planks', 'fish', 'grain', 'bread', 'wool', 'cloth']);
+  assert.deepEqual(rules.goodIds, ['wood', 'planks', 'fish', 'grain', 'bread', 'wool', 'cloth', 'grapes', 'wine']);
   assert.deepEqual(Object.keys(rules.tiers), ['farmer', 'worker', 'artisan']);
-  for (const id of ['sheepfarm', 'weaver']) {
+  for (const id of ['sheepfarm', 'weaver', 'vineyard', 'winery']) {
     const def = rules.buildings[id];
     assert.equal(def.category, 'producer');
     assert.ok(def.visual.art && def.key, `${id} needs a drawing and a key`);
@@ -257,14 +257,16 @@ const artisansGame = () => (played ??= (() => {
   return { game, result };
 })());
 
-test('GATE: the bot still wins in 25 to 40 minutes, then reaches 100 Artisans 15 to 30 minutes later', () => {
+test('GATE: the bot still wins in 25 to 40 minutes, then reaches 100 Artisans 25 to 45 minutes later', () => {
   const { result } = artisansGame();
   assert.equal(result.won, true);
   assert.ok(result.wonAtMinutes >= 25 && result.wonAtMinutes <= 40, `won at ${result.wonAtMinutes.toFixed(1)} minutes`);
   const goal = result.milestones[0];
   assert.notEqual(goal.reachedAtMinutes, null, `only ${goal.current} Artisans after ${result.endedAtMinutes.toFixed(0)} minutes`);
   const after = goal.reachedAtMinutes - result.wonAtMinutes;
-  assert.ok(after >= 15 && after <= 30, `the goal came ${after.toFixed(1)} minutes after the win`);
+  // Moved in Phase 23 from 15 to 30 to 25 to 45: the second act now settles the second
+  // island and waits for its wine before Artisan houses fill.
+  assert.ok(after >= 25 && after <= 45, `the goal came ${after.toFixed(1)} minutes after the win`);
   assert.equal(result.stepsDone, result.stepsTotal);
 });
 
@@ -283,7 +285,9 @@ test('the second act never runs the town out of coins, and it ends richer than i
   assert.equal(result.lossMinutes, 0);
   const afterWin = result.samples.filter((s) => s.minute > Math.ceil(result.wonAtMinutes));
   const lowest = Math.min(...afterWin.map((s) => s.net));
-  assert.ok(lowest >= 10, `income fell to ${lowest.toFixed(1)} a minute after the win`);
+  // Loosened in Phase 23 from 10: settling the second island brings upkeep before
+  // its wine brings fuller Artisan houses, and the income dips while it does.
+  assert.ok(lowest >= 3, `income fell to ${lowest.toFixed(1)} a minute after the win`);
   const atWin = result.samples.find((s) => s.minute === Math.ceil(result.wonAtMinutes)).net;
   assert.ok(result.summary.income.net > atWin, `income ended at ${result.summary.income.net.toFixed(1)}, no better than ${atWin.toFixed(1)} at the win`);
   assert.equal(result.stalls.filter((s) => s.doneAtSeconds / 60 > result.wonAtMinutes).length, 0, 'a step after the win waited more than 5 minutes');
@@ -295,7 +299,7 @@ test('the second act also works on other islands', () => {
     const result = runBot(game, loadOrder('artisans'), { maxMinutes: 120 });
     const goal = result.milestones[0];
     assert.notEqual(goal.reachedAtMinutes, null, `island ${seed}: only ${goal.current} Artisans, stuck on ${result.stuckOn?.label} (${result.stuckOn?.waitedFor})`);
-    assert.ok(goal.reachedAtMinutes - result.wonAtMinutes <= 35, `island ${seed}: ${(goal.reachedAtMinutes - result.wonAtMinutes).toFixed(1)} minutes after the win`);
+    assert.ok(goal.reachedAtMinutes - result.wonAtMinutes <= 45, `island ${seed}: ${(goal.reachedAtMinutes - result.wonAtMinutes).toFixed(1)} minutes after the win`);
   }
 });
 
@@ -359,7 +363,8 @@ test('a won game from before can go on to the new goal', () => {
   assert.deepEqual(game.state.milestones, [null]);
   // The second act of the build order, played from here.
   const order = loadOrder('artisans');
-  const second = { ...order, steps: order.steps.slice(order.steps.findIndex((s) => s.build === 'sheepfarm') - 1) };
+  // (Since Phase 23 the second act begins by settling the second island.)
+  const second = { ...order, steps: order.steps.slice(order.steps.findIndex((s) => s.found)) };
   const result = runBot(game, second, { maxMinutes: 120 });
   assert.notEqual(result.milestones[0].reachedAtMinutes, null, `only ${result.milestones[0].current} Artisans: stuck on ${result.stuckOn?.label} (${result.stuckOn?.waitedFor})`);
 });
