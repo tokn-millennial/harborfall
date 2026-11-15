@@ -8,8 +8,8 @@ import assert from 'node:assert/strict';
 import { loadData } from '../src/platform/loadData.node.js';
 import { createGame } from '../src/sim/index.js';
 import { createKit, tone, mix, hash2 } from '../src/render/art/kit.js';
-import { ART_USES, BUILDING_ART, LIVE_ART, artFor, artIdFor, artStateKey, houseLook } from '../src/render/art/buildings.js';
-import { sharpnessFor } from '../src/render/art/sprites.js';
+import { ART_USES, BUILDING_ART, LIVE_ART, artFor, artIdFor, artStateKey, houseLook, isLight, showsLight } from '../src/render/art/buildings.js';
+import { lightsOnly, sharpnessFor } from '../src/render/art/sprites.js';
 import { paintBox } from '../src/render/art/box.js';
 import { ROUND, WARMTH_LEVELS, createForestPainter, createRoadPainter, createTerrainPainter, grassWarmth, gridLines, groundShade, paintGrid, paintTree, paintTrees, paintWater, shorePieces, treesOnTile, waterBackground } from '../src/render/art/terrain.js';
 import { buildingVisual } from '../src/render/visuals.js';
@@ -973,7 +973,7 @@ test('the harbour has a jetty, a crane with a jib, round bollards and a lantern'
   const calls = kitCalls('harbor', { h: 27.5 });
   assert.ok(calls.some((c) => c.name === 'ground' && c.args[4] === '#9a7350'), 'no jetty');
   assert.ok(calls.filter((c) => c.name === 'cylinder').length >= 6, 'bollards or barrels are not round');
-  assert.ok(calls.some((c) => c.name === 'box' && c.args[6] === '#f2d68a'), 'no lantern');
+  assert.ok(calls.some((c) => c.name === 'dot' && c.args[4] === '#f2d68a'), 'no lantern');
 });
 
 test('sheep have legs, and the pasture a hay rack and a trough', () => {
@@ -989,4 +989,62 @@ test('the vineyard has bunches of grapes and the fisherman fish drying', () => {
   assert.equal(grapes, 5 * 3 * 3, 'grapes are not in bunches of three');
   const fish = kitCalls('fisherman').filter((c) => c.name === 'poly' && c.args[1] === '#9fb3bd').length;
   assert.equal(fish, 4);
+});
+
+// ---- lights (Phase 33) ---------------------------------------------------------------
+
+// The colors a drawing paints with, fills and strokes alike.
+function paintedColors(id, info) {
+  const { ctx, colors } = recorder();
+  BUILDING_ART[id](createKit(ctx, 0, 0), { h: 30, color: '#b9553a', working: false, progress: 0, residents: 0, time: 0, variant: 0, ...info });
+  return colors;
+}
+
+test('windows are dark by day and light up once the lamps are lit', () => {
+  for (const id of ['cottage', 'townhouse', 'guildhouse']) {
+    assert.ok(!paintedColors(id, { residents: 4, lights: false }).some(isLight), `${id} has lit windows by day`);
+    assert.ok(paintedColors(id, { residents: 4, lights: true }).some(isLight), `${id} has no lit windows at night`);
+    assert.ok(!paintedColors(id, { residents: 0, lights: true }).some(isLight), `an empty ${id} has lit windows`);
+    // Left out, the lamps are lit, as before there was a night.
+    assert.ok(paintedColors(id, { residents: 4 }).some(isLight));
+    assert.notEqual(artStateKey(id, { residents: 4, variant: 0, lights: true }), artStateKey(id, { residents: 4, variant: 0, lights: false }), `${id}: day and night would share a picture`);
+  }
+  for (const id of ['weaver', 'winery']) {
+    assert.ok(!paintedColors(id, { working: true, lights: false }).some(isLight), `${id} lights its windows by day`);
+    assert.ok(paintedColors(id, { working: true, lights: true }).some(isLight), `${id} works in the dark`);
+  }
+  // The oven glows while it bakes, day or night.
+  assert.ok(paintedColors('bakery', { working: true, lights: false }).some(isLight));
+});
+
+test('which buildings shine at night', () => {
+  const at = (id, info) => showsLight(id, { residents: 0, working: false, lights: true, ...info });
+  assert.equal(at('townhouse', { residents: 3 }), true);
+  assert.equal(at('townhouse', {}), false, 'an empty house shines');
+  assert.equal(at('townhouse', { residents: 3, lights: false }), false, 'a house shines by day');
+  assert.equal(at('bakery', { working: true, lights: false }), true, 'the oven only glows at night');
+  assert.equal(at('weaver', { working: true }), true);
+  assert.equal(at('weaver', {}), false);
+  assert.equal(at('harbor', {}), true);
+  assert.equal(at('market', {}), true);
+  for (const id of ['warehouse', 'sawmill', 'farm', 'lumberjack']) assert.equal(at(id, { working: true }), false, id);
+  // Every building that can shine has a light in its drawing.
+  for (const [id, info] of [['harbor', {}], ['market', {}], ['bakery', { working: true }], ['cottage', { residents: 2 }]]) {
+    assert.ok(paintedColors(id, { ...info, lights: true }).some(isLight), `${id} shines but has no light to show`);
+  }
+});
+
+test('the lights picture paints everything but the lights black, keeping how see-through it was', () => {
+  const set = [];
+  const target = { fill() {}, stroke() {}, beginPath() {} };
+  const watched = new Proxy(target, { set: (t, key, value) => { set.push([key, value]); t[key] = value; return true; } });
+  const dark = lightsOnly(watched, isLight);
+  dark.fillStyle = '#ffe6a0';
+  dark.fillStyle = '#b9553a';
+  dark.strokeStyle = 'rgba(35, 22, 12, 0.18)';
+  dark.fillStyle = { gradient: true };
+  dark.lineWidth = 3;
+  assert.deepEqual(set, [['fillStyle', '#ffe6a0'], ['fillStyle', '#000000'], ['strokeStyle', 'rgba(0, 0, 0, 0.18)'], ['fillStyle', '#000000'], ['lineWidth', 3]]);
+  // Its drawing calls reach the real canvas.
+  assert.equal(typeof dark.fill, 'function');
 });

@@ -832,3 +832,12 @@ Added in Phase 32. Only the look changed. No rule, number or data file changed, 
 - **The harbour** has a paved quay, a wooden jetty along the water with round bollards and a coiled rope, a crane with a jib, a brace and a pulley, and a lantern by the harbourmaster's house.
 - **The sheep farm**'s sheep have woolly bodies, heads and legs, and the pasture has a hay rack and a water trough.
 - **The fisherman** hangs fish to dry beside the net and keeps a barrel for the catch. **The vineyard**'s rows are leafy along the top, with grapes in bunches.
+
+## 34. Windows that light up at dusk, and light at night
+
+Added in Phase 33. Only the look changed. No rule, number or data file changed, and saved games are untouched.
+
+- **By day, windows are dark glass.** Before, a lived-in house showed bright yellow windows at noon.
+- **From dusk** (once it is about a third of the way to night) the lamps are lit: lived-in houses light their windows, and the weaver and winery light theirs while they work. At dawn they go out at the same point. The bakery's oven glows while it bakes, day or night.
+- **At night the lights shine through the dark**: lit windows, the oven's mouth, the harbour's lantern and a new lantern at each market stall stay bright while the rest of the town goes blue and dim, and warm light spills onto the ground in front of every lit building, workshops and markets included, not only houses.
+- **With day and night switched off** (the box in the ? panel), the lamps are always lit, so the town looks as it did before.

@@ -9,6 +9,8 @@
 //          progress  how far through its cycle a producer is, 0 to 1
 //          residents how many people live in a house
 //          variant   0 to 3: which of a house's four looks to draw
+//          lights    whether lamps are lit (from dusk to dawn; always, with
+//                    day and night switched off). Leave it out for lit.
 //          time      seconds, for small animations
 //
 // A building type with no entry here is drawn as a plain box, so a building
@@ -69,6 +71,12 @@ function windowShade(g, v0, v1, z0, z1, u, lit) {
   g.onShade(v0, v1, z0, z1, u, lit ? tone(GLOW, 0.85) : tone(GLASS, 0.85), null);
   glazing(g, { length: v1 - v0, at: (t, z) => g.P(u, v0 + (v1 - v0) * t, z) }, z0, z1, trim);
   g.line(g.P(u, v0 - 0.045, z0 - 1), g.P(u, v1 + 0.045, z0 - 1), tone(TRIM, 0.5), 1);
+}
+// A small lantern at height z: its glass is a light color, so it shines at night.
+const LANTERN = '#f2d68a';
+function lantern(g, u, v, z) {
+  g.dot(u, v, z, 1.7, LANTERN, 'rgba(60, 45, 30, 0.8)');
+  g.line(g.P(u, v, z + 1.7), g.P(u, v, z + 2.6), '#3b342c', 1.4);
 }
 // A round-topped door on the lit wall, `z` pixels to the top of the arch.
 function archedDoor(g, u0, u1, z, v, fill = DOOR) {
@@ -300,14 +308,15 @@ export const BUILDING_ART = {
   },
 
   // A brick bakehouse with a tall chimney that smokes while it bakes.
-  bakery(g, { h, color, working }) {
+  bakery(g, { h, color, working, lights = true }) {
     const wall = h * 0.55;
+    const lamp = working && lights;
     g.box(0.2, 0.24, 1.8, 1.72, 0, wall, BRICK, { top: false, base: STONE });
     for (let i = 1; i < 4; i++) g.line(g.P(0.2, 1.72, (wall * i) / 4), g.P(1.8, 1.72, (wall * i) / 4), tone(BRICK, 0.82), 0.5);
     door(g, 0.86, 1.14, wall * 0.72, 1.72);
-    windowLit(g, 0.36, 0.66, wall * 0.35, wall * 0.75, 1.72, working);
-    windowLit(g, 1.34, 1.64, wall * 0.35, wall * 0.75, 1.72, working);
-    windowShade(g, 0.6, 0.95, wall * 0.35, wall * 0.75, 1.8, working);
+    windowLit(g, 0.36, 0.66, wall * 0.35, wall * 0.75, 1.72, lamp);
+    windowLit(g, 1.34, 1.64, wall * 0.35, wall * 0.75, 1.72, lamp);
+    windowShade(g, 0.6, 0.95, wall * 0.35, wall * 0.75, 1.8, lamp);
     // A round bread sign over the door.
     g.dot(1.0, 1.72, wall * 0.9, 2.4, '#e2b56b', 'rgba(60, 40, 20, 0.7)');
     g.gable(0.2, 0.24, 1.8, 1.72, wall, h * 0.55, color, { axis: 'u', wall: BRICK, lines: 4 });
@@ -323,9 +332,9 @@ export const BUILDING_ART = {
   },
 
   // A thatched cottage. Its windows glow once someone lives there.
-  cottage(g, { h, color, residents, variant = 0 }) {
+  cottage(g, { h, color, residents, variant = 0, lights = true }) {
     const wall = h * 0.5;
-    const lived = residents > 0;
+    const lived = residents > 0 && lights;
     const roof = variedRoof(color, variant);
     const plaster = variedWall(PLASTER, variant);
     g.box(0.3, 0.36, 1.7, 1.62, 0, wall, plaster, { top: false, base: STONE, baseHeight: 2 });
@@ -360,9 +369,9 @@ export const BUILDING_ART = {
   },
 
   // A taller two-storey house with a tiled roof, for Workers.
-  townhouse(g, { h, color, residents, variant = 0 }) {
+  townhouse(g, { h, color, residents, variant = 0, lights = true }) {
     const wall = h * 0.62;
-    const lived = residents > 0;
+    const lived = residents > 0 && lights;
     const roof = variedRoof(color, variant);
     const plaster = variedWall('#e3d2b0', variant);
     g.box(0.26, 0.3, 1.74, 1.68, 0, wall, plaster, { top: false, base: STONE });
@@ -417,13 +426,14 @@ export const BUILDING_ART = {
   },
 
   // A weaver's workshop, with dyed cloth hung out to dry and a bale of wool by the wall.
-  weaver(g, { h, color, working }) {
+  weaver(g, { h, color, working, lights = true }) {
     const wall = h * 0.55;
+    const lamp = working && lights;
     g.box(0.22, 0.28, 1.78, 1.66, 0, wall, PLASTER, { top: false, base: STONE });
     g.line(g.P(0.22, 1.66, wall * 0.55), g.P(1.78, 1.66, wall * 0.55), DARK_WOOD, 0.8);
     door(g, 0.4, 0.64, wall * 0.75, 1.66);
-    windowLit(g, 0.9, 1.6, wall * 0.3, wall * 0.8, 1.66, working); // the wide workshop window
-    windowShade(g, 0.6, 1.0, wall * 0.35, wall * 0.8, 1.78, working);
+    windowLit(g, 0.9, 1.6, wall * 0.3, wall * 0.8, 1.66, lamp); // the wide workshop window
+    windowShade(g, 0.6, 1.0, wall * 0.35, wall * 0.8, 1.78, lamp);
     g.gable(0.22, 0.28, 1.78, 1.66, wall, h * 0.5, color, { axis: 'u', wall: PLASTER, overhang: 0.1, lines: 4 });
     // A lean-to on the side, open at the front, where the wool is kept.
     leanTo(g, 1.78, 0.5, 1.98, 1.4, wall * 0.62, wall * 0.9, WOOD, color);
@@ -464,22 +474,23 @@ export const BUILDING_ART = {
   },
 
   // A stone winery with a dark red roof, a cellar door and barrels by the wall.
-  winery(g, { h, color, working }) {
+  winery(g, { h, color, working, lights = true }) {
     const wall = h * 0.55;
+    const lamp = working && lights;
     g.box(0.22, 0.28, 1.78, 1.66, 0, wall, STONE, { top: false, base: DARK_STONE });
     // Stone courses.
     for (let i = 1; i < 4; i++) g.line(g.P(0.22, 1.66, (wall * i) / 4), g.P(1.78, 1.66, (wall * i) / 4), tone(STONE, 0.85), 0.45);
     archedDoor(g, 0.86, 1.18, wall * 0.85, 1.66, '#3f2a1e');
-    windowLit(g, 0.36, 0.66, wall * 0.35, wall * 0.75, 1.66, working);
-    windowLit(g, 1.36, 1.64, wall * 0.35, wall * 0.75, 1.66, working);
-    windowShade(g, 0.6, 1.0, wall * 0.35, wall * 0.75, 1.78, working);
+    windowLit(g, 0.36, 0.66, wall * 0.35, wall * 0.75, 1.66, lamp);
+    windowLit(g, 1.36, 1.64, wall * 0.35, wall * 0.75, 1.66, lamp);
+    windowShade(g, 0.6, 1.0, wall * 0.35, wall * 0.75, 1.78, lamp);
     g.gable(0.22, 0.28, 1.78, 1.66, wall, h * 0.5, color, { axis: 'u', wall: STONE, overhang: 0.1, lines: 4 });
     // A gable over the cellar door, with a round window.
     g.dormer({ v0: 0.28, v1: 1.66, z: wall, rise: h * 0.5, overhang: 0.1 }, 0.78, 1.26, {
       at: 1.66, height: h * 0.32, rise: h * 0.2, color, wall: STONE,
       window: (u0, u1, z0, z1, v) => {
         g.dot((u0 + u1) / 2, v, (z0 + z1) / 2, 3.3, TRIM, FRAME_LINE);
-        g.dot((u0 + u1) / 2, v, (z0 + z1) / 2, 2.4, working ? GLOW : GLASS);
+        g.dot((u0 + u1) / 2, v, (z0 + z1) / 2, 2.4, lamp ? GLOW : GLASS);
       },
     });
     // A vine trained up the wall beside the door.
@@ -492,9 +503,9 @@ export const BUILDING_ART = {
   },
 
   // A tall three-storey house on a stone ground floor, with a slate roof, for Artisans.
-  guildhouse(g, { h, color, residents, variant = 0 }) {
+  guildhouse(g, { h, color, residents, variant = 0, lights = true }) {
     const wall = h * 0.68;
-    const lived = residents > 0;
+    const lived = residents > 0 && lights;
     const roof = variedRoof(color, variant);
     const upper = variedWall('#efe6cf', variant);
     g.box(0.22, 0.26, 1.78, 1.72, 0, wall * 0.34, STONE, { top: false });
@@ -553,10 +564,9 @@ export const BUILDING_ART = {
     g.dot(1.62, 1.3, h * 1.1, 1.3, '#4a3322');
     g.line(g.P(1.62, 1.3, h * 1.1), g.P(1.62, 1.3, h * 0.62), 'rgba(60, 45, 30, 0.8)', 0.5);
     crate(g, 1.54, 1.22, 0.16, '#c29a66');
-    // A lantern on a post by the house.
-    g.post(1.08, 0.9, 0, h * 0.9, '#3b342c', 0.9);
-    g.box(1.05, 0.87, 1.11, 0.93, h * 0.82, h * 0.95, '#f2d68a', { outline: false });
-    g.line(g.P(1.04, 0.86, h * 0.96), g.P(1.12, 0.94, h * 0.96), '#3b342c', 1);
+    // A lantern on a post by the house: a flame-colored glass under a little cap.
+    g.post(1.08, 0.9, 0, h * 0.86, '#3b342c', 0.9);
+    lantern(g, 1.08, 0.9, h * 0.9);
     // Goods waiting for the ship: crates, barrels and sacks along the front.
     crate(g, 0.16, 1.2, 0.24);
     crate(g, 0.44, 1.26, 0.18, '#c29a66');
@@ -589,6 +599,8 @@ export const BUILDING_ART = {
         g.cylinder(u, v1 - 0.14, h * 0.28, h * 0.28 + 1.6, 2.2, '#9a7a4a', { top: goods[i % goods.length] });
       }
       for (const [u, v] of [[u0, v0], [u1, v0], [u0, v1], [u1, v1]]) g.post(u, v, 0, h * 0.6, DARK_WOOD, 1);
+      // A lantern hung from the front corner post.
+      lantern(g, u0 + 0.05, v1 + 0.02, h * 0.5);
       g.stripedPyramid(u0 - 0.05, v0 - 0.05, u1 + 0.05, v1 + 0.05, h * 0.6, h * 0.45, color, cream, 6);
     };
     stall(0.14, 0.14, 0.86, 0.74, ['#d98c3a', '#e0c04a', '#b5503a']);
@@ -611,13 +623,13 @@ export const BUILDING_ART = {
 // same whatever the building is doing.
 export const ART_USES = {
   farm: ['progress'],
-  bakery: ['working'],
-  cottage: ['residents', 'variant'],
-  townhouse: ['residents', 'variant'],
-  guildhouse: ['residents', 'variant'],
-  weaver: ['working'],
+  bakery: ['working', 'lights'],
+  cottage: ['residents', 'variant', 'lights'],
+  townhouse: ['residents', 'variant', 'lights'],
+  guildhouse: ['residents', 'variant', 'lights'],
+  weaver: ['working', 'lights'],
   vineyard: ['progress'],
-  winery: ['working'],
+  winery: ['working', 'lights'],
 };
 
 // Moving parts, drawn fresh every frame on top of the building: while a
@@ -644,6 +656,21 @@ export const LIVE_ART = {
   },
 };
 
+// Lights: the colors of things that give light (lit windows, the oven's
+// mouth, a lantern), and whether a building shows any at the moment. At
+// night a second picture of each lit building, with everything but its
+// lights painted black, is added over the darkened town, so the lights shine
+// while anything in front of them still hides them.
+export const LIGHT_COLORS = new Set([GLOW, tone(GLOW, 0.85), '#f2a64a', '#f2d68a']);
+export const isLight = (color) => LIGHT_COLORS.has(color);
+export function showsLight(id, info) {
+  const lamps = info.lights !== false;
+  if (id === 'cottage' || id === 'townhouse' || id === 'guildhouse') return info.residents > 0 && lamps;
+  if (id === 'bakery') return info.working;
+  if (id === 'weaver' || id === 'winery') return info.working && lamps;
+  return id === 'harbor' || id === 'market';
+}
+
 // The name of the art a building uses: the tier's for a house, otherwise the
 // building's own. Null if it has none, or names one that does not exist.
 export function artIdFor(rules, building) {
@@ -666,6 +693,7 @@ export function artStateKey(id, info) {
     else if (use === 'working') parts.push(info.working ? 1 : 0);
     else if (use === 'residents') parts.push(info.residents > 0 ? 1 : 0);
     else if (use === 'variant') parts.push(info.variant ?? 0);
+    else if (use === 'lights') parts.push(info.lights === false ? 0 : 1);
   }
   return parts.join('.');
 }

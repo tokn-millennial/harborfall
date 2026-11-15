@@ -1,6 +1,6 @@
 # Harborfall: Handoff Guide
 
-Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 32. Phases 0 to 17 by Claude Fable 5.2; Phases 18 to 32 by Claude Opus 5.5.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 33. Phases 0 to 17 by Claude Fable 5.2; Phases 18 to 33 by Claude Opus 5.5.
 
 This is the one document to read when you come back to the project, or when you hand it to a new helper, human or AI. It says what exists, how to run and check it, how we worked, and what is still unproven. `ROADMAP.md` says what could come next.
 
@@ -9,7 +9,7 @@ This is the one document to read when you come back to the project, or when you 
 - **What it is:** a small Anno-style city builder that runs in a desktop browser. Two islands, 13 buildings, 9 goods, three kinds of resident. You win at 100 Workers, in about 30 minutes, and can play on to 100 Artisans in about 20 more. Workshops need staff, who come from your residents, and can be closed for a while. Four scenarios offer other goals, with medals for speed. A harbour brings a trade ship to sell surplus and buy what is short, at prices that fall as you sell. Carts carry goods by road to the warehouses and materials to the workshops, so where you build matters. After the win a second island opens across the water, with its own goods, and your own ship carries goods between the two. Vineyards grow only there, and Artisans want the wine. The game saves itself.
 - **How it is made:** plain JavaScript, with no framework, no build step and nothing to install except Node. All game rules are in five data files. All art is drawn by code.
 - **Size:** about 21,400 lines of code, tests, tools and data. The whole project is 196 files, counting documents and screenshots.
-- **State:** Phases 0 to 32 are done. 632 automated tests pass.
+- **State:** Phases 0 to 33 are done. 635 automated tests pass.
 - **Where:** the folder `Harborfall` in your Documents, and the private GitHub repository `tokn-millennial/harborfall`, branch `main`.
 
 ## 2. What to read, in order
@@ -22,7 +22,7 @@ This is the one document to read when you come back to the project, or when you 
 | `docs/BRIEF.md` | Your original brief, word for word. The working rules come from here. | A helper is new to the project. |
 | `docs/SPEC.md` | Every rule of the game in plain words, with the data file each number lives in. | You want to know how something works, or tune it. |
 | `docs/ARCHITECTURE.md` | How the code is put together, folder by folder, and the test plan. | A helper is about to change code. |
-| `docs/DECISIONS.md` | Every choice made, numbered Q1 to Q11 (yours) and D1 to D377 (mine), with the reason and how to change it. | You wonder "why is it like this?" |
+| `docs/DECISIONS.md` | Every choice made, numbered Q1 to Q11 (yours) and D1 to D382 (mine), with the reason and how to change it. | You wonder "why is it like this?" |
 | `docs/TESTLOG.md` | Per phase: what was built, tested, broken and fixed, and what is weak. | You want the honest history. |
 | `docs/PLAYTEST.md` | The 73-point checklist from Phase 5 and the ranked problem list. | Planning a playtest. |
 | `docs/FINAL_REPORT.md` | The scorecard for the original test, as written at the end of Phase 5, with short notes for Phases 6 and 7. | You want the verdict on the original brief. |
@@ -43,7 +43,7 @@ These are typed in a terminal opened in the project folder. A helper runs them f
 
 | Command | What it does | A good result |
 |---|---|---|
-| `node --test` | Runs all 632 automated tests. A few seconds. | `pass 632`, `fail 0` |
+| `node --test` | Runs all 635 automated tests. A few seconds. | `pass 635`, `fail 0` |
 | `node tools/bot.mjs` | A bot plays a whole game with no screen and prints a report. | Wins in 28.9 minutes, no long waits. |
 | `node tools/bot.mjs careless` | The same, with a sloppier build order. | Wins in 31.9 minutes. |
 | `node tools/bot.mjs bread-first` | The same, with a reckless opening. | Wins in 58.7 minutes. Slower than the target, which is a known open issue. The point is that it recovers. |
@@ -153,7 +153,7 @@ If the helper starts in a different folder, tell it the project is in `Documents
 
 | Claim | Status | Evidence |
 |---|---|---|
-| The rules work as the spec says | **Proven** | 632 automated tests. |
+| The rules work as the spec says | **Proven** | 635 automated tests. |
 | A saved game comes back exactly | **Proven** | Saved, loaded and played-on games end identical to never-saved ones, in tests and in the browser. |
 | The game cannot leave you permanently stuck | **Proven** for the cases tested | Tests for zero coins, and bot wins from three bad openings. |
 | A win takes 25 to 40 minutes | **Proven for a bot,** estimated for a person | Bot: 28.9 minutes since materials travel (29.3 in Phase 19, 28.6 before carts). With guessed human delays, before carts: 29 to 35. |

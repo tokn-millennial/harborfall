@@ -1875,7 +1875,7 @@ Date: 2026-11-15. Status: approved by Colin with no changes ("Keep going, just k
 - **The numbers are a first guess,** measured only by the bot's merchant order. Nobody has traded by hand.
 - **The ship's call message does not say prices moved.** The panel does.
 
-**After the gate:** committed on your "Keep going, just keep going." Not pushed.
+**After the gate:** committed on your "Keep going, just keep going." Pushed with Phases 27 to 32 on your "Commit everything and push to github".
 
 ## Phase 28: Your best time, and an island by number
 
@@ -1924,7 +1924,7 @@ Date: 2026-11-15. Status: approved by Colin with no changes (his next request, "
 - **There is no list of best times** beyond the one on each button, and no way to clear them other than clearing the browser's storage.
 - **Records from before this phase:** none existed for the standard game, so a game you won before today has no time kept.
 
-**After the gate:** committed on your "Improve the art more". Not pushed.
+**After the gate:** committed on your "Improve the art more". Pushed with Phases 27 to 32 on your "Commit everything and push to github".
 
 ## Phase 29: A second art pass: rounded ground, smooth roads, houses that differ
 
@@ -1986,7 +1986,7 @@ Date: 2026-11-15. Status: approved by Colin with no changes (his next request, "
 - **The green and red road tint while placing** is still a tile-shaped diamond over each road tile, now over rounder roads.
 - **Not touched:** the panels and title screen, the figures, the sea.
 
-**After the gate:** committed on your "Make the art even better". Not pushed.
+**After the gate:** committed on your "Make the art even better". Pushed with Phases 27 to 32 on your "Commit everything and push to github".
 
 ## Phase 30: A third art pass: forests and meadows
 
@@ -2043,7 +2043,7 @@ Date: 2026-11-15. Status: approved by Colin with no changes (his next request, "
 - **Opening a game is about a quarter of a second slower** in the test pane, and drawing a town ringed by forest costs a few milliseconds more a frame. Neither was measured on a real visible window.
 - **Not touched:** panels, figures, buildings other than houses.
 
-**After the gate:** committed on your "Make the art even better. Focus on the buildings". Not pushed.
+**After the gate:** committed on your "Make the art even better. Focus on the buildings". Pushed with Phases 27 to 32 on your "Commit everything and push to github".
 
 ## Phase 31: A fourth art pass: the buildings
 
@@ -2103,7 +2103,7 @@ Date: 2026-11-15. Status: approved by Colin with no changes ("Keep building", ta
 - **Not changed:** the market, the harbour quay and crane, the sheep farm, the vineyard, the fisherman's hut (apart from footings), the figures.
 - **Fertile land** is still as it was (D366).
 
-**After the gate:** committed on your "Keep building". Not pushed.
+**After the gate:** committed on your "Keep building". Pushed with Phases 27 to 32 on your "Commit everything and push to github".
 
 ## Phase 32: A fifth art pass: people, and the rest of the buildings
 
@@ -2166,3 +2166,59 @@ Date: 2026-11-15. Status: approved by Colin with no changes ("Commit everything 
 - **Fertile land** is still as it was (D366).
 
 **After the gate:** committed on your "Commit everything and push to github", and pushed with Phases 27 to 31.
+
+## Phase 33: Windows that light up at dusk, and light at night
+
+Date: 2026-11-15. Status: approved by Colin with no changes ("Commit, push, and continue").
+
+**Turns used:** 1 (your "Keep building"). Built by Claude Opus 5.5.
+
+**How I chose.** What is left on the roadmap mostly needs your say (a way to lose, a fourth tier, more ships). The last art leftover needed none: "windows that come on at dusk, and real lighting at night" (D378).
+
+**What was built** (`SPEC.md` section 34)
+- Dark windows by day; windows lit from dusk to dawn in lived-in houses and working workshops.
+- Lights that shine through the night: windows, the oven, the harbour lantern and new market lanterns, with warm light on the ground in front of every lit building.
+- Day and night switched off: the town looks as before.
+- Before-and-after pictures: `docs/screenshots/phase33-before-after-night.jpg`, `-night-close.jpg` and `-day.jpg`.
+- Also: Phases 27 to 31 are now marked pushed in this log.
+
+**Automated tests: 635 pass, 0 fail.** 632 from before plus 3 new in `tests/art.test.js`: windows dark by day and lit at night (and day and night kept as different pictures); which buildings shine, and each has a light to show; the lights filter paints all but lights black, keeping see-through amounts. Changed: the harbour test looks for its lantern as a light dot.
+
+**Did the tests mean anything?** Seven breaks, each caught at the first try:
+
+| Break | Tests that failed |
+|---|---|
+| Houses lit by day | 1 |
+| The weaver lit by day | 1 |
+| Day and night sharing one picture | 1 |
+| The market staying dark | 1 |
+| The lantern back to a box (whose shaded sides are not light colors) | 2 |
+| The filter letting every color through | 1 |
+| The filter making shadows solid | 1 |
+
+**Not tested automatically:** the renderer's part (when the lamps come on, adding the lights picture) runs only in the browser. I checked it there, by day, at dusk, at night and with day and night off.
+
+**Balance.** Nothing in the rules changed. The click-through game still wins at 28.92.
+
+**Browser checks** (my own copy on port 5174)
+
+| Check | How | Result |
+|---|---|---|
+| Day, dusk, night | Pictures of the demo town | Dark windows by day, lamps lighting at dusk, a lit town at night. |
+| Day and night off | Picture | Windows lit, as before. |
+| The lights pictures | Each lit building drawn through the filter onto black | Only windows, the oven's mouth and lanterns show; glazing bars stay dark. |
+| Frame times | Phase 32's code and this phase's in turns, by day and at night | The same within the noise (about 23 to 30 ms either way in the hidden pane). |
+| A whole game through the real buttons | UI playthrough on `?fresh&paused` | Pass: tick 0, won at 28.92. |
+| Random input | 2500 actions on `?fresh` and `?demo` | No errors. |
+| The error console | Read it | Empty. |
+
+**Found along the way:** the harbour's lantern, drawn as a small box, would not have shone, because a box shades its color into others; lanterns are drawn as light dots now.
+
+**Decisions made:** 5 (D378 to D382).
+
+**Weak or unfinished**
+- **Judged by my eye**, in a slow hidden window, never at real speed: how the lamps coming on at dusk feels while playing is untested.
+- **No street lamps** along the roads; light comes from buildings, the harbour and the markets.
+- **Fertile land** is still as it was (D366).
+
+**After the gate:** committed and pushed on your "Commit, push, and continue".

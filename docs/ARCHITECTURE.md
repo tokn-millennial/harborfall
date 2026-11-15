@@ -682,3 +682,14 @@ Phase 32 changed `src/render/art/actors.js`, `src/render/art/buildings.js` and `
 - `paintActors` saves and restores the canvas state, because people now set line widths and ends.
 - **The kit** gains `stripedPyramid` for the market's awnings.
 - **Measured:** frame times old and new overlap at normal zoom; close up, perhaps one to three milliseconds more, within the noise of the hidden test pane.
+
+## 36. Lights
+
+Phase 33 changed `src/render/art/buildings.js`, `src/render/art/sprites.js` and `src/render/renderer.js`.
+
+- **`lights` in the drawings' info**: houses light their windows only when lived in and `lights` is true; the weaver and winery only when working and `lights` is true. It is in `ART_USES` for those, so day and night are kept as different pictures. Left out, it counts as true.
+- **The renderer** sets `lights` from how dark it is (`LIGHTS_ON`, 0.3 of the way to night), or always true with day and night off. `artInfo` builds a drawing's info in one place for both pictures. `nightNow` is worked out at the start of each frame, since the buildings now need it.
+- **Light colors and who shines**: `LIGHT_COLORS`, `isLight` and `showsLight(id, info)` in `buildings.js`. A light must be painted in one of those colors exactly; a light drawn with `box` would be shaded into other colors, so lanterns are drawn with `dot` (`lantern`).
+- **The lights picture**: `lightsOnly(ctx, isLight)` in `sprites.js` wraps a canvas so that any fill or stroke color that is not a light becomes black, keeping its see-through amount. A building drawn through it gives a picture of only its lights, with anything in front of them still in front. `sprites.get` takes it as an optional last argument (`through`), and the picture is stored like any other, under its key plus "lights".
+- **At night** the renderer adds each lit building's lights picture over the tinted town with the "lighter" blend at `LIGHTS_STRENGTH` (0.85) times how dark it is, then the warm ground glow in front of each lit building.
+- **Measured** in the hidden test pane, Phase 32's code and this phase's in turns: frame times by day and at night the same within the noise.

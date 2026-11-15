@@ -15,7 +15,7 @@ A small Anno-style city builder that runs in a desktop browser. Settle one islan
 - **Plain JavaScript and Canvas.** No framework, no build step, nothing to install besides Node, and no image or sound files. The art is drawn by code and the sounds are made by code.
 - **Three separate layers.** The simulation (`src/sim/`) holds every rule and has no screen or browser code. The renderer (`src/render/`) draws it. The UI (`src/ui/`) turns clicks into commands.
 - **All rules in data.** Every cost, speed and tax is in five JSON files in `data/`. Change a number, refresh, and the game changes.
-- **Tested without a browser.** 632 automated tests, and a bot that plays whole games to check the balance.
+- **Tested without a browser.** 635 automated tests, and a bot that plays whole games to check the balance.
 
 ## Check it
 

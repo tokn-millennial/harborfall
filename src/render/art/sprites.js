@@ -34,7 +34,9 @@ export function createSpriteCache() {
     // w, h      the footprint in tiles
     // risePx    the building's height from the data
     // paint(g)  draws it with a kit placed at tile (0, 0)
-    get(key, w, h, risePx, wantedSharpness, paint) {
+    // through    optional: a function that wraps the picture's canvas before
+    //            painting, such as lightsOnly below
+    get(key, w, h, risePx, wantedSharpness, paint, through = null) {
       if (wantedSharpness !== sharpness) {
         pictures.clear();
         sharpness = wantedSharpness;
@@ -51,11 +53,33 @@ export function createSpriteCache() {
         canvas.height = Math.ceil((bottom - top) * sharpness);
         const ctx = canvas.getContext('2d');
         ctx.setTransform(sharpness, 0, 0, sharpness, -left * sharpness, -top * sharpness);
-        paint(createKit(ctx, 0, 0));
+        paint(createKit(through ? through(ctx) : ctx, 0, 0));
         picture = { canvas, left, top, width: right - left, height: bottom - top };
         pictures.set(key, picture);
       }
       return picture;
     },
   };
+}
+
+// A canvas that paints only lights: any color for which isLight(color) is
+// false is painted black instead, keeping how see-through it was. Drawn with
+// the "lighter" blend, black adds nothing, so only the lights show, and
+// whatever stands in front of a light still hides it.
+export function lightsOnly(ctx, isLight) {
+  const dark = (value) => {
+    if (typeof value === 'string' && isLight(value)) return value;
+    const alpha = typeof value === 'string' ? value.match(/^rgba\([^)]*,\s*([\d.]+)\s*\)$/) : null;
+    return alpha ? `rgba(0, 0, 0, ${alpha[1]})` : '#000000';
+  };
+  return new Proxy(ctx, {
+    get(target, key) {
+      const value = target[key];
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+    set(target, key, value) {
+      target[key] = key === 'fillStyle' || key === 'strokeStyle' ? dark(value) : value;
+      return true;
+    },
+  });
 }

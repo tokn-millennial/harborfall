@@ -1,6 +1,6 @@
 # Harborfall: Roadmap
 
-Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 32. Phases 0 to 17 by Claude Fable 5.2; Phases 18 to 32 by Claude Opus 5.5.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 33. Phases 0 to 17 by Claude Fable 5.2; Phases 18 to 33 by Claude Opus 5.5.
 
 This is a list of what could come next, in the order I would do it. **Nothing here is decided.** Every item is a proposal, and you choose. The working rule from the brief still stands: nothing gets built that you did not ask for.
 
@@ -8,8 +8,8 @@ Read `HANDOFF.md` first if you are picking the project up after a break.
 
 ## Where the project stands
 
-- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), undo with a first-game guide (Phase 11), a third kind of resident with a goal after the win (Phase 12), difficulty settings with two touches to the look (Phase 13), dust, chimney smoke and day and night (Phase 14), staff for buildings (Phase 15), closing a building for now (Phase 16), three scenarios with medals (Phase 17), a harbour with a trade ship (Phase 18), carts that carry goods by road (Phase 19), materials carried to workshops (Phase 20), an art and design pass (Phase 21), a second island with your own ship (Phase 22), grapes and wine from that island (Phase 23), a level your ship keeps back (Phase 24), cart reach shown while placing (Phase 25), a fourth scenario, the vintners (Phase 26), trade prices that move (Phase 27), a best time with an island number box (Phase 28), rounded ground, smooth roads and varied houses (Phase 29), natural forests and meadows (Phase 30), more detailed buildings (Phase 31), and people with character and the rest of the buildings redrawn (Phase 32).
-- **Proven by machines:** 632 automated tests pass. A bot wins in 28.9 minutes. A script wins through the real UI and ends in exactly the bot's game.
+- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), undo with a first-game guide (Phase 11), a third kind of resident with a goal after the win (Phase 12), difficulty settings with two touches to the look (Phase 13), dust, chimney smoke and day and night (Phase 14), staff for buildings (Phase 15), closing a building for now (Phase 16), three scenarios with medals (Phase 17), a harbour with a trade ship (Phase 18), carts that carry goods by road (Phase 19), materials carried to workshops (Phase 20), an art and design pass (Phase 21), a second island with your own ship (Phase 22), grapes and wine from that island (Phase 23), a level your ship keeps back (Phase 24), cart reach shown while placing (Phase 25), a fourth scenario, the vintners (Phase 26), trade prices that move (Phase 27), a best time with an island number box (Phase 28), rounded ground, smooth roads and varied houses (Phase 29), natural forests and meadows (Phase 30), more detailed buildings (Phase 31), people with character and the rest of the buildings redrawn (Phase 32), and windows that light at dusk with light at night (Phase 33).
+- **Proven by machines:** 635 automated tests pass. A bot wins in 28.9 minutes. A script wins through the real UI and ends in exactly the bot's game.
 - **Checked by you:** you played for about 40 minutes on 2026-11-12. The game runs smoothly and the figures move well.
 - **Still not known:** whether you won and how long it took, how the sounds are, whether the guide helps someone new, and how any of it works on a Mac.
 
@@ -55,7 +55,8 @@ Each phase so far took one long working session. The sizes compare with that.
 | 30 | **Done, unplayed.** A third art pass: forests and meadows | Small | You asked: "Make the art even better". |
 | 31 | **Done, unplayed.** A fourth art pass: the buildings | Medium | You asked: "Make the art even better. Focus on the buildings". |
 | 32 | **Done, unplayed.** A fifth art pass: people, and the rest of the buildings | Medium | Your "Keep building", after the art passes. |
-| 33 onward | Your notes from playing, or the rest of the list below | | What is left needs your say, and the game most needs a person to play it. |
+| 33 | **Done, unplayed.** Windows that light up at dusk, and light at night (the rest of C3) | Small | Your "Keep building"; the last art item needing no choice. |
+| 34 onward | Your notes from playing, or the rest of the list below | | What is left needs your say, and the game most needs a person to play it. |
 | Any time | Put it online (E1) | Small | Independent of the rest. Read the privacy note there first. |
 
 ---
@@ -119,7 +120,7 @@ Each phase so far took one long working session. The sizes compare with that.
 ## Stage C: Make it feel alive
 
 ### C1. People, carts and boats on the map (done in Phase 9)
-- **Left over:** walkers with real errands, carts that bring inputs as well as take goods away, figures that avoid each other, and better-drawn figures. None is planned.
+- **Left over:** walkers with real errands, carts that bring inputs as well as take goods away, and figures that avoid each other. None is planned. Better-drawn figures came in Phase 32.
 - **What you get:** small figures walking the roads, carts between producers and the warehouse, a fishing boat off each fisherman's hut.
 - **Important:** this is decoration only. Goods would still move instantly, as they do now. The figures would be drawn by the renderer from what the simulation already reports, and the rules, the bot and the balance would not change.
 - **Do not confuse with D3**, which makes carriers real and changes the game.
@@ -138,7 +139,8 @@ Each phase so far took one long working session. The sizes compare with that.
 ### C3. A second art pass (done in Phases 13 and 14)
 - **Done:** three looks for each kind of house, four since Phase 29, with rounded ground and smooth roads (Phase 29).
 - **Done in Phase 14:** dust when something is built or removed, smoke from lived-in houses, and day and night.
-- **Left over:** windows that come on at dusk, and real lighting at night.
+- **Done in Phase 33:** windows that come on at dusk, and lights that shine at night.
+- **Left over:** street lamps along the roads.
 - Ideas, none of them urgent: two or three variants of each house so a town looks less uniform, a building-site look for the first seconds after placing, smoke from house chimneys, a day and night tint.
 - **Bigger decision:** whether to keep code-drawn art or bring in painted pictures. The drawings are swappable one building at a time (decision D78).
 - **Size:** small to medium for the ideas. Painted art depends on who makes it.
@@ -226,10 +228,10 @@ These are not features. They are debts and loose ends, smallest first.
 
 One line is enough. For example:
 
-> Phase 33: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
+> Phase 34: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
 
 or
 
-> Phase 33: a way to lose (D5). Ask me what you need first.
+> Phase 34: a way to lose (D5). Ask me what you need first.
 
 The helper should then follow the working rules in `HANDOFF.md` section 6: plan first, one feature at a time, test everything itself, stop at the gate with the five-part report, and commit only after you approve.

@@ -22,9 +22,9 @@ import { TILE_H, boxSilhouette, depthOf, footprintCorners, mapBounds, tileToWorl
 import { visibleTileRange } from './camera.js';
 import { buildingVisual } from './visuals.js';
 import { createKit } from './art/kit.js';
-import { BUILDING_ART, LIVE_ART, artIdFor, artStateKey, houseLook } from './art/buildings.js';
+import { BUILDING_ART, LIVE_ART, artIdFor, artStateKey, houseLook, isLight, showsLight } from './art/buildings.js';
 import { paintBox } from './art/box.js';
-import { createSpriteCache, sharpnessFor } from './art/sprites.js';
+import { createSpriteCache, lightsOnly, sharpnessFor } from './art/sprites.js';
 import { paintActors } from './art/actors.js';
 import { paintDust } from './art/dust.js';
 import { createBuildEffects, popScale } from './effects.js';
@@ -66,6 +66,10 @@ const LIVE_MIN_ZOOM = 0.5;       // smoke and sawdust are too small to see below
 const NIGHT_TINT = [18, 28, 72];
 const NIGHT_TINT_STRENGTH = 0.36;
 const GLOW_SIZE = 96;
+// Lamps are lit once dusk is this far on, and put out at the same point at dawn.
+const LIGHTS_ON = 0.3;
+// How strongly the lights picture is added over the darkened town.
+const LIGHTS_STRENGTH = 0.85;
 const TREE_REACH = 2; // trees this close to a building are drawn in order with it
 const ACTOR_MIN_ZOOM = 0.5; // walkers, carts and boats are too small to see below this
 
@@ -180,18 +184,7 @@ export function createRenderer(canvas, rules) {
     }
     ctx.globalAlpha = alpha;
     if (artId) {
-      const p = building.production;
-      const info = {
-        h: visual.risePx,
-        color: visual.color,
-        working: p ? p.active && p.status === 'working' : false,
-        progress: p ? p.progress / def.production.cycleTicks : 0,
-        residents: building.house?.residents ?? 0,
-        // Which of its four looks a house has (see houseLook).
-        variant: houseLook(building.id),
-        seed: Number.isInteger(building.id) ? building.id : 0,
-        time,
-      };
+      const info = artInfo(building, time);
       const key = `${artId}|${visual.color}|${visual.risePx}|${artStateKey(artId, info)}`;
       const picture = sprites.get(key, def.w, def.h, visual.risePx, sharpness, (g) => BUILDING_ART[artId](g, info));
       const origin = tileToWorld(building.x, building.y);
@@ -202,6 +195,42 @@ export function createRenderer(canvas, rules) {
     }
     ctx.globalAlpha = 1;
     if (size !== 1) ctx.restore();
+  }
+
+  // What a building's drawing is told: see src/render/art/buildings.js.
+  function artInfo(building, time) {
+    const def = rules.buildings[building.type];
+    const visual = buildingVisual(rules, building);
+    const p = building.production;
+    return {
+      h: visual.risePx,
+      color: visual.color,
+      working: p ? p.active && p.status === 'working' : false,
+      progress: p ? p.progress / def.production.cycleTicks : 0,
+      residents: building.house?.residents ?? 0,
+      // Which of its four looks a house has (see houseLook).
+      variant: houseLook(building.id),
+      seed: Number.isInteger(building.id) ? building.id : 0,
+      // Lamps are lit from dusk to dawn. With day and night switched off,
+      // they are always lit, as before there was a night.
+      lights: !dayAndNight || nightNow >= LIGHTS_ON,
+      time,
+    };
+  }
+
+  // The lights of one building, added over the darkened town at night.
+  function drawLights(building, sharpness, time) {
+    const artId = artIdFor(rules, building);
+    if (!artId) return false;
+    const info = artInfo(building, time);
+    if (!showsLight(artId, info)) return false;
+    const def = rules.buildings[building.type];
+    const visual = buildingVisual(rules, building);
+    const key = `${artId}|${visual.color}|${visual.risePx}|${artStateKey(artId, info)}|lights`;
+    const picture = sprites.get(key, def.w, def.h, visual.risePx, sharpness, (g) => BUILDING_ART[artId](g, info), (c) => lightsOnly(c, isLight));
+    const origin = tileToWorld(building.x, building.y);
+    ctx.drawImage(picture.canvas, origin.x + picture.left, origin.y + picture.top, picture.width, picture.height);
+    return true;
   }
 
   // A small plate above a house showing how many people live there.
@@ -260,6 +289,8 @@ export function createRenderer(canvas, rules) {
     const map = state.map;
     const zoom = camera.zoom;
     const time = performance.now() / 1000;
+    // How dark it is: needed by the buildings, whose windows light at dusk.
+    nightNow = dayAndNight ? nightAmount(state.tick / rules.ticksPerSecond) : 0;
 
     // 1. Open water, in screen pixels.
     ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
@@ -399,10 +430,11 @@ export function createRenderer(canvas, rules) {
     // Dust from anything just built or removed, on top of the buildings.
     if (effects.length) paintDust(ctx, effects);
 
-    // Night: the picture so far goes blue and dim, and lived-in houses show a
-    // warm light. Everything drawn after this (numbers, outlines, marks, the
-    // building being placed) stays at full brightness, so the game reads the same.
-    nightNow = dayAndNight ? nightAmount(state.tick / rules.ticksPerSecond) : 0;
+    // Night: the picture so far goes blue and dim, and lit windows, the oven
+    // and the lanterns shine through it, with warm light spilling onto the
+    // ground in front of lit buildings. Everything drawn after this (numbers,
+    // outlines, marks, the building being placed) stays at full brightness, so
+    // the game reads the same.
     if (nightNow > 0) {
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -411,10 +443,13 @@ export function createRenderer(canvas, rules) {
       ctx.restore();
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = nightNow * LIGHTS_STRENGTH;
+      const lit = new Set();
+      for (const { building } of buildings) if (drawLights(building, sharpness, time)) lit.add(building);
       ctx.globalAlpha = nightNow;
       const light = glowPicture();
       for (const { building } of buildings) {
-        if (!building.house || building.house.residents === 0) continue;
+        if (!lit.has(building)) continue;
         const def = rules.buildings[building.type];
         const at = tileToWorld(building.x + def.w / 2, building.y + def.h / 2);
         const rise = buildingVisual(rules, building).risePx;
