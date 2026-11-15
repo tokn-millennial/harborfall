@@ -28,7 +28,7 @@ Harborfall is a small Anno-style city builder for desktop browsers. The owner is
 
 ## Commands
 
-- `node --test` runs all tests (611 at the end of Phase 28).
+- `node --test` runs all tests (616 at the end of Phase 29).
 - Before measuring anything on screen, call `window.harborfall.ui.frame(0)`: a hidden pane may not have drawn yet, and an empty top bar always seems to fit.
 - Port 5173 is Colin's server. If it is down, serve a copy on another port (`PORT=5174 node serve.mjs`, in the background) and stop it after.
 - Run the click-through test on `?fresh&paused`, so it starts at tick 0. Its result reports `startedAtTick`. They must all pass before a gate.
@@ -55,6 +55,8 @@ Update these in the same phase as the change, before the gate:
 
 - A game server may already be running on port 5173, started by the owner. Use it. Never stop a server you did not start.
 - On this Windows machine, shell commands containing apostrophes or nested quotes get mangled. Write a script file and run it.
+- Never call `getImageData` on the game's own canvas to time it: after a read-back the browser may draw that canvas in software for the rest of the page's life, which showed a false 110 ms frame in Phase 29. Read back from a tiny copy, as below, and reload the page before timing.
+- To look at the art closely, the pane's screenshots are shrunk. Copy the game canvas (or part of it) into another canvas and save it as a picture instead; a small helper server in the scratchpad that receives a posted PNG does this.
 - An embedded or hidden test browser may draw about one frame a second. Do not judge smoothness there, and do not trust timings unless you force the browser to finish drawing (draw the game canvas into a tiny canvas and read a pixel back). Unforced timings measure almost nothing.
 - Compare drawing speeds by running the old way and the new way in turns, many times, and subtracting the cost of the measuring itself. Runs taken one after another drift by more than most differences.
 - Never show a stored picture with `imageSmoothingQuality` above `'low'`. Shrinking with `'medium'` was measured at over twenty times the cost.

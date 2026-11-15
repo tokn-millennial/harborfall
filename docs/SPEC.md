@@ -376,7 +376,7 @@ What the bot found, in minutes to the win:
 - **Easy does not make a good player faster.** With a sensible order, planks and people set the pace, not coins. What Easy does is forgive a bad start: the reckless opening wins in 33 minutes, not 53.
 - **Hard punishes a bad start.** The reckless opening builds farms and a bakery before any house, runs out of coins, and then loses 7 coins a minute with nothing coming in. It does not recover unless something is demolished. The game says "You are losing money. Build houses, or demolish something", and a test shows that demolishing the farms and bakery and then building a market and houses leads to a win.
 
-**Houses come in three looks.** Each cottage, townhouse and Artisan house has a roof a shade darker or lighter, a chimney on one side or the other, and for some a flower bed, flower boxes or a banner. Which look a house has follows from when it was built, so it is the same every time the game is opened. It changes nothing about the house.
+**Houses come in four looks** (three until Phase 29; see section 30). Each cottage, townhouse and Artisan house has a roof of the usual red, dark brown, warm terracotta or weathered grey, walls to match, a chimney on one side or the other, and for some a flower bed, firewood, flower boxes, green shutters or a banner. Which look a house has follows from when it was built, so it is the same every time the game is opened. It changes nothing about the house.
 
 **The ground is sharp when zoomed in.** Zoomed past about 1.4 times the ground picture's own size, the ground on screen is redrawn at exactly the size shown, a fifth of a second after the view stops moving. While the view moves, the stretched picture is used as before.
 
@@ -794,3 +794,13 @@ Added in Phase 28. Both are on the title screen. Neither changes the rules.
 - Random islands keep no record, because their times say nothing about each other. The standard island chosen by its number (1407) counts as the standard island.
 - **"Or island number"** under the difficulty buttons: type a whole number from 1 to 999999 and press Play or Enter, for a new game on that island at the difficulty picked above. The same number always makes the same island, so an island you liked can be played again or shared. Anything else is answered with "Type a whole number from 1 to 999999." Like any new game it must be pressed twice when it would replace a saved game.
 - A saved game on an island other than the standard one says which on the Continue button: "…, 351 coins, Hard, island 42". The ? panel in the game already names the island.
+
+## 30. A second art pass: rounded ground, smooth roads, houses that differ
+
+Added in Phase 29. Only the look changed. No rule, number or data file changed, and saved games are untouched.
+
+- **The edges of the ground are rounded.** The coast, the beach against the grass, fields and forest floors used to show every tile as a step. Now, wherever a kind of ground ends, the corner of its last tile is rounded off, and where it wraps round a corner a small curve fills in. A coast laid in steps of one tile reads as a gentle wave. The tiles are exactly where they were: the rounding never reaches the middle of a tile, so what looks like land is land, and what can be built where is unchanged.
+- **The shallows follow the coast** in five soft bands of paler water, out to about two tiles, instead of tile-shaped patches. Foam runs unbroken round the curves.
+- **Roads bend.** Where a road turns a corner it curves instead, so a road laid in steps reads as a smooth bend and a winding country road looks like one. Four road tiles in a square still make a square of road. A road that runs past a building no longer sends a short arm into it; a road that ends at a building still has a short straight drive to it.
+- **Houses come in four looks**, chosen from the house's building number in a shuffled way, so neighbours built one after another do not repeat in order. Houses in a saved game may change look once, since there are now four looks, not three. That is all.
+- Speed is unchanged when playing. Building the picture of the ground when a game opens takes about 0.1 of a second instead of 0.03.

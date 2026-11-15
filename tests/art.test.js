@@ -8,10 +8,10 @@ import assert from 'node:assert/strict';
 import { loadData } from '../src/platform/loadData.node.js';
 import { createGame } from '../src/sim/index.js';
 import { createKit, tone, mix, hash2 } from '../src/render/art/kit.js';
-import { ART_USES, BUILDING_ART, LIVE_ART, artFor, artIdFor, artStateKey } from '../src/render/art/buildings.js';
+import { ART_USES, BUILDING_ART, LIVE_ART, artFor, artIdFor, artStateKey, houseLook } from '../src/render/art/buildings.js';
 import { sharpnessFor } from '../src/render/art/sprites.js';
 import { paintBox } from '../src/render/art/box.js';
-import { createForestPainter, createRoadPainter, createTerrainPainter, gridLines, groundShade, paintGrid, paintTree, paintWater, shallowsOf, waterBackground } from '../src/render/art/terrain.js';
+import { ROUND, createForestPainter, createRoadPainter, createTerrainPainter, gridLines, groundShade, paintGrid, paintTree, paintWater, shorePieces, waterBackground } from '../src/render/art/terrain.js';
 import { buildingVisual } from '../src/render/visuals.js';
 import { paintActors } from '../src/render/art/actors.js';
 import { paintDust } from '../src/render/art/dust.js';
@@ -57,12 +57,18 @@ globalThis.Path2D ??= class {
   arc(x, y) { this.points.push([x, y]); }
   ellipse(x, y) { this.points.push([x, y]); }
   rect(x, y, w, h) { this.points.push([x, y], [x + w, y + h]); }
-  quadraticCurveTo(cx, cy, x, y) { this.points.push([x, y]); }
+  quadraticCurveTo(cx, cy, x, y) { this.points.push([x, y]); this.curves = (this.curves ?? 0) + 1; }
   closePath() {}
 };
 // How many points were handed to fill() or stroke() as ready-made shapes.
 const shapePoints = (calls) => calls.reduce((sum, path) => sum + (path?.points?.length ?? 0), 0);
 
+// Whether an "rgb(r, g, b)" color is a light or dark shade of a hex color.
+function colorNear(rgb, hex) {
+  const [r, g, b] = rgb.match(/\d+/g).map(Number);
+  const [hr, hg, hb] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return Math.abs(r - hr) <= 14 && Math.abs(g - hg) <= 14 && Math.abs(b - hb) <= 14;
+}
 const validColor = (c) => typeof c !== 'string' || /^#[0-9a-f]{6}$/i.test(c) || /^rgba?\((\s*\d+(\.\d+)?\s*,){2,3}\s*\d+(\.\d+)?\s*\)$/.test(c);
 
 // ---- colors ---------------------------------------------------------------------
@@ -173,15 +179,84 @@ test('an unknown art name in the data also falls back, and does not fail', () =>
 
 // ---- ground, trees, roads, water ------------------------------------------------
 
-test('shallows mark water near land, and nothing on land', () => {
-  const game = richGame();
-  const map = game.state.map;
-  const near = shallowsOf(map);
-  for (let i = 0; i < map.terrain.length; i++) {
-    if (map.terrain[i] !== 'water') assert.equal(near[i], 0);
+// A small map from rows of text: # is beach, . is water.
+function sketchMap(rows) {
+  const terrain = rows.join('').split('').map((c) => (c === '#' ? 'coast' : 'water'));
+  return { width: rows[0].length, height: rows.length, terrain };
+}
+const wholeMap = (map) => ({ x0: 0, y0: 0, x1: map.width - 1, y1: map.height - 1 });
+
+test('a lone tile of land has a round shore, facing out to sea all the way round', () => {
+  const map = sketchMap(['...', '.#.', '...']);
+  const pieces = shorePieces(map, wholeMap(map));
+  // Four rounded corners and no straight sides left between them.
+  assert.equal(pieces.length, 24);
+  for (const { a, b, nx, ny } of pieces) {
+    // Every piece faces away from the middle of the tile.
+    const mx = (a[0] + b[0]) / 2 - 1.5;
+    const my = (a[1] + b[1]) / 2 - 1.5;
+    assert.ok(nx * mx + ny * my > 0, 'a piece of shore faces inland');
+    // And lies on the tile, inside its corners.
+    for (const [x, y] of [a, b]) assert.ok(x >= 1 && x <= 2 && y >= 1 && y <= 2);
   }
-  // On the test island, (0,5) is water beside the coast at (1,5).
-  assert.equal(near[5 * map.width + 0], 1);
+  // It touches the middle of each side.
+  for (const [x, y] of [[1.5, 1], [2, 1.5], [1.5, 2], [1, 1.5]]) {
+    assert.ok(pieces.some(({ a, b }) => [a, b].some(([px, py]) => Math.hypot(px - x, py - y) < 1e-9)), `the shore misses the side at ${x}, ${y}`);
+  }
+});
+
+test('a straight shore stays straight, and an inside corner is filled with a curve facing the water', () => {
+  const straight = sketchMap(['....', '####', '####']);
+  const sides = shorePieces(straight, { x0: 1, y0: 0, x1: 2, y1: 1 });
+  assert.ok(sides.length > 0);
+  for (const { a, b, nx, ny } of sides) {
+    assert.deepEqual([nx, ny], [0, -1]);
+    assert.equal(a[1], 1);
+    assert.equal(b[1], 1);
+  }
+  // Land on two sides of a water tile, and across its corner too.
+  const inside = sketchMap(['###', '##.', '...']);
+  const pieces = shorePieces(inside, wholeMap(inside));
+  const curve = pieces.filter(({ a }) => a[0] > 1.9 && a[0] < 2.6 && a[1] > 0.9 && a[1] < 1.6);
+  assert.ok(curve.length >= 6, 'no curve in the inside corner');
+  for (const { a, b, nx, ny } of curve) {
+    // Facing into the water tile (2, 1), away from the corner it fills.
+    assert.ok(nx * ((a[0] + b[0]) / 2 - 2) + ny * ((a[1] + b[1]) / 2 - 1) > 0);
+  }
+});
+
+test('rounding the shore never moves it over the middle of a tile, so what looks like land is land', () => {
+  for (const map of [createGame(loadData()).state.map, createGame(loadData(), { seed: 42 }).state.map]) {
+    const pieces = shorePieces(map, wholeMap(map));
+    assert.ok(pieces.length > 400);
+    for (const { a, b } of pieces) {
+      for (const [x, y] of [a, b, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]]) {
+        // The nearest tile middle is never closer than a third of a tile.
+        const cx = Math.floor(x - 0.5) + 0.5;
+        const cy = Math.floor(y - 0.5) + 0.5;
+        for (const [tx, ty] of [[cx, cy], [cx + 1, cy], [cx, cy + 1], [cx + 1, cy + 1]]) {
+          assert.ok(Math.hypot(x - tx, y - ty) >= 1 / 3, `the shore passes ${Math.hypot(x - tx, y - ty).toFixed(2)} from the middle of tile ${tx - 0.5}, ${ty - 0.5}`);
+        }
+      }
+    }
+  }
+  assert.ok(ROUND > 0 && ROUND <= 0.5, 'rounding more than half a tile would overlap the next corner');
+});
+
+test('where one kind of ground ends, its corners are rounded off', () => {
+  // A square of fertile land in grass: the fertile layer is drawn with curves,
+  // the grass around it with none of its own.
+  const terrain = Array(36).fill('grass');
+  for (const [x, y] of [[2, 2], [3, 2], [2, 3], [3, 3]]) terrain[y * 6 + x] = 'fertile';
+  const map = { width: 6, height: 6, terrain };
+  const colors = { water: '#3f7fae', coast: '#d9c38f', grass: '#7fb26a', fertile: '#a58a5a', forest: '#5d9a58' };
+  const r = styledRecorder();
+  createTerrainPainter(map, colors).paint(r.ctx, 1);
+  const curvesIn = (base) => r.drawn.filter((d) => d.path && d.color.startsWith('rgb') && d.path.curves && colorNear(d.color, base)).reduce((n, d) => n + d.path.curves, 0);
+  // Four outer corners, each drawn once as a fill and once as its hairline.
+  assert.equal(curvesIn(colors.fertile), 8, 'the patch of fertile land is not rounded at its four corners');
+  // Grass is rounded only where the land itself ends, at the corners of this little map.
+  assert.equal(curvesIn(colors.grass), curvesIn(colors.coast), 'grass was rounded against the fertile land beside it');
 });
 
 test('the ground, forest and water all draw on the real island without failing', () => {
@@ -234,11 +309,35 @@ test('roads draw only where there are roads, and are redrawn when something chan
   painter.paint(moved.ctx, game.state);
   assert.notDeepEqual(moved.shapes[0].points, some.shapes[0].points);
 
-  // A building next to a road gets an arm of road toward it.
+  // A building at the end of a road gets a short drive to it; one beside a
+  // road that runs on past it does not.
   place(game, 'house', 13, 10);
-  const joined = recorder();
-  painter.paint(joined.ctx, game.state);
-  assert.ok(shapePoints(joined.shapes) > shapePoints(moved.shapes));
+  const beside = recorder();
+  painter.paint(beside.ctx, game.state);
+  assert.equal(shapePoints(beside.shapes), shapePoints(moved.shapes), 'a road running past a house drew a drive');
+  execute(game, { action: 'demolish', x: 14, y: 9 });
+  execute(game, { action: 'demolish', x: 15, y: 9 });
+  road(game, [[13, 9]]);
+  const ending = recorder();
+  painter.paint(ending.ctx, game.state);
+  assert.ok(shapePoints(ending.shapes) > 0);
+  const drives = ending.shapes.filter((shape) => shape.points.length > 0 && !shape.curves);
+  assert.ok(drives.length >= 3, 'no drive where the road ends at the house');
+});
+
+test('a road laid in steps bends in curves; a straight road and a square of road do not', () => {
+  const curves = (tiles) => {
+    const game = richGame();
+    road(game, tiles);
+    const r = recorder();
+    createRoadPainter('#cdbb93').paint(r.ctx, game.state);
+    return r.shapes.reduce((n, shape) => n + (shape.curves ?? 0), 0);
+  };
+  assert.equal(curves(line(12, 9, 16, 9)), 0, 'a straight road bent');
+  // A staircase: every tile but the two ends turns a corner.
+  assert.ok(curves([[12, 6], [13, 6], [13, 7], [14, 7], [14, 8], [15, 8]]) >= 4 * 2, 'a road in steps did not bend');
+  // A square of four road tiles: no bends, and its middle is filled in.
+  assert.equal(curves([[12, 6], [13, 6], [13, 7], [12, 7]]), 0, 'a square of road bent round its middle');
 });
 
 test('each drawing declares what changes its look, and looks the same otherwise', () => {
@@ -361,19 +460,48 @@ test('walkers, carts and boats draw with valid colors, close to where they stand
   assert.equal(odd.points.length, 0);
 });
 
-// ---- three looks for each house --------------------------------------------------
+// ---- four looks for each house ---------------------------------------------------
 
-test('each kind of house has three looks, and nothing else changes with the look', () => {
+test('houses take each of the four looks about as often, not in the order they were built', () => {
+  const looks = Array.from({ length: 400 }, (_, i) => houseLook(i + 1));
+  for (let look = 0; look < 4; look++) {
+    const n = looks.filter((l) => l === look).length;
+    assert.ok(n > 70 && n < 130, `look ${look} comes up ${n} times in 400`);
+  }
+  // Not a repeating pattern: the next look is not simply the last plus one.
+  const inOrder = looks.slice(1).filter((l, i) => l === (looks[i] + 1) % 4).length;
+  assert.ok(inOrder < 150, `${inOrder} of 399 houses follow in order`);
+  assert.equal(houseLook(17), houseLook(17));
+  assert.equal(houseLook(undefined), 0);
+});
+
+test('each kind of house has four looks, and nothing else changes with the look', () => {
   const info = (variant) => ({ h: 30, color: '#b9553a', working: false, progress: 0, residents: 4, time: 0, variant });
   for (const id of ['cottage', 'townhouse', 'guildhouse']) {
-    const drawn = [0, 1, 2].map((variant) => {
+    const drawn = [0, 1, 2, 3].map((variant) => {
       const { ctx, points, colors } = recorder();
       BUILDING_ART[id](createKit(ctx, 0, 0), info(variant));
       for (const c of colors) assert.ok(validColor(c), `${id} look ${variant} used a broken color: ${c}`);
       return JSON.stringify([points, colors]);
     });
-    assert.equal(new Set(drawn).size, 3, `${id} does not have three different looks`);
-    assert.equal(new Set([0, 1, 2].map((variant) => artStateKey(id, info(variant)))).size, 3, `${id}: the stored pictures would be mixed up`);
+    assert.equal(new Set(drawn).size, 4, `${id} does not have four different looks`);
+    // Each look has a roof and walls of its own color, clearly apart, not only a detail moved.
+    const paint = [0, 1, 2, 3].map((variant) => {
+      const kit = createKit(recorder().ctx, 0, 0);
+      let roof = null;
+      let wall = null;
+      const watched = new Proxy(kit, { get: (t, key) => (key === 'gable' ? (...args) => { roof = args[6]; wall = args[7]?.wall; return t.gable(...args); } : t[key]) });
+      BUILDING_ART[id](watched, info(variant));
+      return { roof, wall };
+    });
+    const apart = (a, b) => [1, 3, 5].reduce((sum, i) => sum + Math.abs(parseInt(a.slice(i, i + 2), 16) - parseInt(b.slice(i, i + 2), 16)), 0);
+    for (let i = 0; i < 4; i++) {
+      for (let j = i + 1; j < 4; j++) {
+        assert.ok(apart(paint[i].roof, paint[j].roof) >= 30, `${id}: looks ${i} and ${j} have roofs of nearly the same color`);
+        assert.ok(apart(paint[i].wall, paint[j].wall) >= 15, `${id}: looks ${i} and ${j} have walls of nearly the same color`);
+      }
+    }
+    assert.equal(new Set([0, 1, 2, 3].map((variant) => artStateKey(id, info(variant)))).size, 4, `${id}: the stored pictures would be mixed up`);
     assert.ok(ART_USES[id].includes('variant'));
     // With no look given, it draws the first one.
     const { ctx, points, colors } = recorder();
@@ -572,18 +700,28 @@ test('the grid is not part of the ground picture; it is drawn on its own, over l
   }
 });
 
-test('foam runs along every side of the shore, the far sides too, with a wash further out', () => {
-  // One tile of sand in open water: four sides meet the sea.
+test('foam runs all the way round the shore, the far side too, with a wash further out', () => {
+  // One tile of sand in open water: it meets the sea all the way round.
   const terrain = Array(25).fill('water');
   terrain[2 * 5 + 2] = 'coast';
   const map = { width: 5, height: 5, terrain };
   const colors = { water: '#3f7fae', coast: '#d9c38f', grass: '#7fb26a', forest: '#5d9a58', fertile: '#a58a5a' };
   const r = styledRecorder();
   createTerrainPainter(map, colors).paint(r.ctx, 1);
-  assert.equal(r.pointsIn('rgba(255, 255, 255, 0.75)'), 8, 'foam: two ends of a line on each of four sides');
-  assert.equal(r.pointsIn('rgba(235, 250, 252, 0.28)'), 8, 'the wash: the same four sides, further out');
-  // Wet sand inside each side.
-  assert.equal(r.pointsIn(tone(colors.coast, 0.86)), 16, 'a strip of wet sand along each of the four sides');
+  const pointsOf = (color) => r.drawn.filter((d) => d.color === color).flatMap((d) => d.path?.points ?? []);
+  const middle = tileToWorld(2.5, 2.5);
+  const foam = pointsOf('rgba(255, 255, 255, 0.75)');
+  const wash = pointsOf('rgba(235, 250, 252, 0.28)');
+  // Foam on every side: above, below, left and right of the middle.
+  for (const [test, side] of [[([, y]) => y < middle.y - 8, 'far'], [([, y]) => y > middle.y + 8, 'near'], [([x]) => x < middle.x - 16, 'left'], [([x]) => x > middle.x + 16, 'right']]) {
+    assert.ok(foam.some(test), `no foam on the ${side} side`);
+    assert.ok(wash.some(test), `no wash on the ${side} side`);
+  }
+  // The wash lies further out than the foam.
+  const spread = (points) => points.reduce((sum, [x, y]) => sum + Math.hypot(x - middle.x, (y - middle.y) * 2), 0) / points.length;
+  assert.ok(spread(wash) > spread(foam) + 2, 'the wash is not further out than the foam');
+  // Wet sand along the water's edge.
+  assert.ok(pointsOf(tone(colors.coast, 0.86)).length >= 24, 'no wet sand along the edge');
 });
 
 test('roofs are lit at the ridge and darker toward the eaves, and laid in rows of tiles', () => {

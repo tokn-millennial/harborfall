@@ -1925,3 +1925,65 @@ Date: 2026-11-15. Status: approved by Colin with no changes (his next request, "
 - **Records from before this phase:** none existed for the standard game, so a game you won before today has no time kept.
 
 **After the gate:** committed on your "Improve the art more". Not pushed.
+
+## Phase 29: A second art pass: rounded ground, smooth roads, houses that differ
+
+Date: 2026-11-15. Status: approved by Colin with no changes (his next request, "Make the art even better", moved on without changes; taken as approval as at D254).
+
+**Turns used:** 1 (your "Improve the art more"). Built by Claude Opus 5.5.
+
+**How I chose what to change.** I photographed the demo town at three zoom levels at full size and asked what most gave it away as a grid of tiles. Three things: every edge of the ground was a staircase (coast, fields, forest floors, shallows); roads zigzagged and left green notches; and the houses, all Workers' houses in the demo, looked like one house repeated (D353).
+
+**What was built** (`SPEC.md` section 30)
+- Rounded edges for every kind of ground, with the beach, grass, fields and forest drawn as layers.
+- Shallows in five soft bands that follow the coast; foam unbroken round the curves.
+- Roads that bend where they turn, with drives only where a road ends at a building.
+- Four house looks with clearly different roofs and walls, shuffled.
+- Before-and-after pictures: `docs/screenshots/phase29-before-after-town.jpg`, `-close.jpg` and `-island.jpg`.
+
+**Automated tests: 616 pass, 0 fail.** 611 from before, less one, plus six. Removed: the test of tile-shaped shallows, which no longer exist. New in `tests/art.test.js`: a lone tile has a round shore facing out all the way round; a straight shore stays straight and an inside corner gets a curve facing the water; rounding never moves the shore over the middle of a tile, on two islands; a patch of one ground in another is rounded at its corners; a road in steps bends, a straight road and a square of road do not; the four house looks come up about equally and not in building order. Changed: the foam test (foam now goes all the way round, not along four straight sides), the road test (a drive only where a road ends at a building), and the house-look test (four looks, with roofs and walls clearly apart).
+
+**Did the tests mean anything?** Ten breaks, each caught:
+
+| Break | Tests that failed |
+|---|---|
+| No rounding at all | 3 |
+| Rounding past half a tile | 3 |
+| Inside corners not filled | 1 |
+| Patches of ground not rounded | 1 |
+| No foam on the far side | 1 |
+| Roads never bend | 1 |
+| Roads bend round a square of road | 1 |
+| A drive into every building beside a road | 1 |
+| House looks in building order | 1 |
+| Two looks with the same roof and walls | 1 (only after I made the test check the roof and wall colors themselves; at first it passed, because the two looks still differed in a small detail) |
+
+**Balance.** Nothing in the rules changed. The click-through game still wins at 28.92.
+
+**Browser checks** (my own copy on port 5174)
+
+| Check | How | Result |
+|---|---|---|
+| The look, far, normal and close | Full-size pictures of the demo town, compared with the same views before | Better at every zoom; see the three before-and-after pictures. Far out, broad steps of two or three tiles still show (D360). |
+| Night, and the second island | Pictures at midnight and of the second island | Fine. |
+| Frame times | The old code and the new in turns, each frame forced to finish, three rounds of 60 frames at three zooms | The same within the noise: medians 15 to 22 ms for both, in the hidden test pane. |
+| Building the ground picture | Timed in the page | 93 ms for the whole island (31 before), once when a game opens; 7 ms for a close-up (1 before). |
+| A whole game through the real buttons | UI playthrough on `?fresh&paused` | Pass: tick 0, won at 28.92. |
+| Random input | 2500 actions on `?fresh` and on `?demo` | No errors. |
+| The error console | Read it | Empty. |
+
+**Found along the way**
+- The first shallows were thousands of small ovals and took 0.37 s to build; now five strokes (ARCHITECTURE section 32).
+- Roads bent toward houses and made loops; drives left green slits (D357).
+- Foam broke where a curve turned away (D359).
+- A measuring mistake of mine: reading pixels straight back from the game's canvas made the browser draw it slowly for the rest of that page, and showed a false 110 ms frame. CLAUDE.md already says how to measure; I now follow it.
+
+**Decisions made:** 8 (D353 to D360).
+
+**Weak or unfinished**
+- **Judged by my eye**, in pictures. Whether you like it is the test.
+- **Far out, the coast and fields still show broad steps** where the island steps two or three tiles at a time (D360).
+- **The green and red road tint while placing** is still a tile-shaped diamond over each road tile, now over rounder roads.
+- **Not touched:** the panels and title screen, the figures, the sea.
+
+**After the gate:** committed on your "Make the art even better". Not pushed.

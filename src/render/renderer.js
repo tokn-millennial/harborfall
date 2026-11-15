@@ -22,7 +22,7 @@ import { TILE_H, boxSilhouette, depthOf, footprintCorners, mapBounds, tileToWorl
 import { visibleTileRange } from './camera.js';
 import { buildingVisual } from './visuals.js';
 import { createKit } from './art/kit.js';
-import { BUILDING_ART, LIVE_ART, artIdFor, artStateKey } from './art/buildings.js';
+import { BUILDING_ART, LIVE_ART, artIdFor, artStateKey, houseLook } from './art/buildings.js';
 import { paintBox } from './art/box.js';
 import { createSpriteCache, sharpnessFor } from './art/sprites.js';
 import { paintActors } from './art/actors.js';
@@ -61,7 +61,6 @@ const SMALL_PICTURE_BELOW_SCALE = 0.62;
 const CLOSE_UP_FROM = 1.35;         // how far the picture must be stretched before this is worth doing
 const CLOSE_UP_SETTLE_SECONDS = 0.2;
 const CACHE_PAD = 48; // room around the map for tree tops and the shoreline
-const HOUSE_LOOKS = 3;
 const LIVE_MIN_ZOOM = 0.5;       // smoke and sawdust are too small to see below this
 // Night: a blue tint over the picture, and a warm light at each lived-in house.
 const NIGHT_TINT = [18, 28, 72];
@@ -188,9 +187,8 @@ export function createRenderer(canvas, rules) {
         working: p ? p.active && p.status === 'working' : false,
         progress: p ? p.progress / def.production.cycleTicks : 0,
         residents: building.house?.residents ?? 0,
-        // Which of its three looks a house has. It follows the building's
-        // number, so a house looks the same every time the game is opened.
-        variant: Number.isInteger(building.id) ? building.id % HOUSE_LOOKS : 0,
+        // Which of its four looks a house has (see houseLook).
+        variant: houseLook(building.id),
         seed: Number.isInteger(building.id) ? building.id : 0,
         time,
       };

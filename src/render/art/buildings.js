@@ -8,7 +8,7 @@
 //          working   true while a producer is in a cycle
 //          progress  how far through its cycle a producer is, 0 to 1
 //          residents how many people live in a house
-//          variant   0, 1 or 2: which of a house's three looks to draw
+//          variant   0 to 3: which of a house's four looks to draw
 //          time      seconds, for small animations
 //
 // A building type with no entry here is drawn as a plain box, so a building
@@ -19,7 +19,7 @@
 // change each drawing. Anything that moves every frame, such as smoke, goes in
 // LIVE_ART and is drawn fresh on top.
 
-import { tone, mix } from './kit.js';
+import { hash2, tone, mix } from './kit.js';
 
 const WOOD = '#9a7350';
 const DARK_WOOD = '#6b4a32';
@@ -78,11 +78,29 @@ function wisp(g, u, v, z, time) {
 function crate(g, u, v, size, color = '#b08a5a') {
   g.box(u, v, u + size, v + size, 0, size * 16, color);
 }
-// Houses come in three looks, so a street is not one house repeated. The roof
-// is a shade darker or lighter, and one detail moves or is added.
+// Houses come in four looks, so a street is not one house repeated: the
+// roof is the usual red, a dark brown, a warm terracotta or a weathered grey;
+// the walls cream, whitewashed, ochre or a stony grey; and the chimney and one
+// detail move or change.
+export const HOUSE_LOOKS = 4;
+const ROOF_TINTS = [null, ['#4a2418', 0.34], ['#e39a52', 0.34], ['#6f6b66', 0.45]];
+const WALL_TINTS = [null, ['#ffffff', 0.45], ['#e2b56c', 0.35], ['#a9a39a', 0.3]];
 function variedRoof(color, variant) {
-  return variant === 1 ? mix(color, '#000000', 0.11) : variant === 2 ? mix(color, '#ffffff', 0.1) : color;
+  const tint = ROOF_TINTS[variant] ?? null;
+  return tint ? mix(color, tint[0], tint[1]) : color;
 }
+function variedWall(color, variant) {
+  const tint = WALL_TINTS[variant] ?? null;
+  return tint ? mix(color, tint[0], tint[1]) : color;
+}
+// Which look a house has, from its building number: the same every time the
+// game is opened, and shuffled so that houses built one after another do not
+// repeat in order.
+export function houseLook(id) {
+  return Number.isInteger(id) ? Math.floor(hash2(id, 0, 41) * HOUSE_LOOKS) : 0;
+}
+// Whether a house's chimney stands at the other end of its roof.
+const chimneyMoved = (variant) => variant === 1 || variant === 3;
 
 // One sheep: a woolly body and a dark head.
 function sheep(g, u, v) {
@@ -198,13 +216,14 @@ export const BUILDING_ART = {
     const wall = h * 0.5;
     const lived = residents > 0;
     const roof = variedRoof(color, variant);
-    g.box(0.3, 0.36, 1.7, 1.62, 0, wall, PLASTER, { top: false });
+    const plaster = variedWall(PLASTER, variant);
+    g.box(0.3, 0.36, 1.7, 1.62, 0, wall, plaster, { top: false });
     door(g, 0.9, 1.12, wall * 0.8, 1.62);
     windowLit(g, 0.46, 0.72, wall * 0.35, wall * 0.8, 1.62, lived);
     windowLit(g, 1.3, 1.56, wall * 0.35, wall * 0.8, 1.62, lived);
     windowShade(g, 0.8, 1.1, wall * 0.35, wall * 0.8, 1.7, lived);
-    g.gable(0.3, 0.36, 1.7, 1.62, wall, h * 0.7, roof, { axis: 'u', wall: PLASTER, overhang: 0.12, lines: 3 });
-    chimney(g, variant === 1 ? 1.3 : 0.5, 0.7, wall + h * 0.3, wall + h * 0.85);
+    g.gable(0.3, 0.36, 1.7, 1.62, wall, h * 0.7, roof, { axis: 'u', wall: plaster, overhang: 0.12, lines: 3 });
+    chimney(g, chimneyMoved(variant) ? 1.3 : 0.5, 0.7, wall + h * 0.3, wall + h * 0.85);
     // A little garden path, and for some a bed of flowers beside it.
     g.ground(0.9, 1.62, 1.12, 1.95, '#c9b68e');
     if (variant === 2) {
@@ -213,6 +232,11 @@ export const BUILDING_ART = {
       g.dot(0.6, 1.76, 1, 1.1, '#f2d24b');
       g.dot(0.72, 1.82, 1, 1.1, '#e06a7a');
     }
+    // Others keep a stack of firewood by the wall.
+    if (variant === 3) {
+      g.box(1.3, 1.64, 1.62, 1.8, 0, 4, '#8a5f3c');
+      g.box(1.3, 1.64, 1.62, 1.8, 4, 5.5, '#b08a5a');
+    }
   },
 
   // A taller two-storey house with a tiled roof, for Workers.
@@ -220,7 +244,8 @@ export const BUILDING_ART = {
     const wall = h * 0.62;
     const lived = residents > 0;
     const roof = variedRoof(color, variant);
-    g.box(0.26, 0.3, 1.74, 1.68, 0, wall, '#e3d2b0', { top: false });
+    const plaster = variedWall('#e3d2b0', variant);
+    g.box(0.26, 0.3, 1.74, 1.68, 0, wall, plaster, { top: false });
     // Timber framing.
     g.line(g.P(0.26, 1.68, wall * 0.5), g.P(1.74, 1.68, wall * 0.5), DARK_WOOD, 0.9);
     g.line(g.P(1.74, 1.68, wall * 0.5), g.P(1.74, 0.3, wall * 0.5), tone(DARK_WOOD, 0.8), 0.9);
@@ -234,8 +259,12 @@ export const BUILDING_ART = {
     windowShade(g, 1.1, 1.36, wall * 0.6, wall * 0.88, 1.74, lived);
     // Some have boxes of flowers under the ground-floor windows.
     if (variant === 2) for (const [u0, u1] of [[0.42, 0.66], [1.34, 1.58]]) g.onLit(u0, u1, wall * 0.08, wall * 0.14, 1.68, '#c9506b');
-    g.gable(0.26, 0.3, 1.74, 1.68, wall, h * 0.5, roof, { axis: 'u', wall: '#e3d2b0', overhang: 0.1, lines: 4 });
-    chimney(g, variant === 1 ? 0.55 : 1.3, 0.6, wall + h * 0.2, wall + h * 0.75, BRICK);
+    // Others have green shutters on the upper floor.
+    if (variant === 3) {
+      for (const u of [0.36, 0.66, 1.28, 1.58]) g.onLit(u, u + 0.06, wall * 0.6, wall * 0.88, 1.68, '#4f7a4a');
+    }
+    g.gable(0.26, 0.3, 1.74, 1.68, wall, h * 0.5, roof, { axis: 'u', wall: plaster, overhang: 0.1, lines: 4 });
+    chimney(g, chimneyMoved(variant) ? 0.55 : 1.3, 0.6, wall + h * 0.2, wall + h * 0.75, BRICK);
     g.ground(0.9, 1.68, 1.12, 1.95, '#c9b68e');
   },
 
@@ -314,7 +343,7 @@ export const BUILDING_ART = {
     const wall = h * 0.68;
     const lived = residents > 0;
     const roof = variedRoof(color, variant);
-    const upper = '#efe6cf';
+    const upper = variedWall('#efe6cf', variant);
     g.box(0.22, 0.26, 1.78, 1.72, 0, wall * 0.34, STONE, { top: false });
     g.box(0.22, 0.26, 1.78, 1.72, wall * 0.34, wall, upper, { top: false });
     g.line(g.P(0.22, 1.72, wall * 0.67), g.P(1.78, 1.72, wall * 0.67), DARK_WOOD, 0.9);
@@ -327,6 +356,7 @@ export const BUILDING_ART = {
     }
     // Some hang a guild banner by the door.
     if (variant === 2) g.onLit(1.2, 1.31, wall * 0.36, wall * 0.62, 1.72, '#c9a55a');
+    if (variant === 3) g.onLit(1.2, 1.31, wall * 0.36, wall * 0.62, 1.72, '#4a6fa5');
     g.gable(0.22, 0.26, 1.78, 1.72, wall, h * 0.42, roof, { axis: 'u', wall: upper, overhang: 0.1, lines: 5 });
     chimney(g, 0.45, 0.55, wall + h * 0.15, wall + h * 0.62, BRICK);
     if (variant !== 1) chimney(g, 1.4, 0.55, wall + h * 0.15, wall + h * 0.62, BRICK);
@@ -408,10 +438,10 @@ export const LIVE_ART = {
   // A wisp of smoke from the chimney of any house with people in it. `seed`
   // sets each house's wisp a little out of step with its neighbours'.
   cottage(g, { h, residents, time, variant = 0, seed = 0 }) {
-    if (residents > 0) wisp(g, variant === 1 ? 1.3 : 0.5, 0.7, h * 0.5 + h * 0.85, time + seed * 0.37);
+    if (residents > 0) wisp(g, chimneyMoved(variant) ? 1.3 : 0.5, 0.7, h * 0.5 + h * 0.85, time + seed * 0.37);
   },
   townhouse(g, { h, residents, time, variant = 0, seed = 0 }) {
-    if (residents > 0) wisp(g, variant === 1 ? 0.55 : 1.3, 0.6, h * 0.62 + h * 0.75, time + seed * 0.37);
+    if (residents > 0) wisp(g, chimneyMoved(variant) ? 0.55 : 1.3, 0.6, h * 0.62 + h * 0.75, time + seed * 0.37);
   },
   guildhouse(g, { h, residents, time, seed = 0 }) {
     if (residents > 0) wisp(g, 0.45, 0.55, h * 0.68 + h * 0.62, time + seed * 0.37);

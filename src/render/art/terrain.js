@@ -1,5 +1,5 @@
-// The ground: textured tiles, a raised shoreline with shallows, trees, roads
-// and open water.
+// The ground: textured ground with rounded edges, a raised shoreline with
+// shallows, trees, roads and open water.
 //
 // The ground and the forest never change, so their shapes are worked out once
 // per map and kept. Each frame then only has to fill those ready-made shapes
@@ -7,31 +7,177 @@
 // island looks the same every time.
 
 import { tileToWorld } from '../iso.js';
-import { hash2, tone } from './kit.js';
+import { hash2, mix, tone } from './kit.js';
 
 export const CLIFF = 6;          // pixels the island stands above the water
 const CLIFF_LIT = '#cdb58a';
 const CLIFF_SHADE = '#a8906a';
-const SHALLOW = ['rgba(150, 215, 225, 0.42)', 'rgba(130, 200, 220, 0.2)'];
 const CLIFF_FOOT = 'rgba(70, 55, 35, 0.35)';
 const FOAM = 'rgba(255, 255, 255, 0.75)';
 const WASH = 'rgba(235, 250, 252, 0.28)';
+// The shallows: bands of paler water around every shore, widest and faintest
+// first. `reach` is how far out each band goes, in tiles.
+export const SHALLOWS = [
+  { reach: 2.4, color: 'rgba(150, 215, 225, 0.07)' },
+  { reach: 1.9, color: 'rgba(150, 215, 225, 0.08)' },
+  { reach: 1.4, color: 'rgba(150, 215, 225, 0.1)' },
+  { reach: 0.95, color: 'rgba(160, 220, 228, 0.12)' },
+  { reach: 0.55, color: 'rgba(175, 228, 232, 0.16)' },
+];
 const GRID = 'rgba(0, 0, 0, 0.09)';
 const FLOWER_COLORS = ['rgba(255, 250, 225, 0.95)', '#f0d25a', '#e7a2b6'];
 const TREE = { pine: '#2f6b3f', pineShade: '#21502f', leaf: '#4f8f42', leafShade: '#3a7234', trunk: '#6b4a32', shadow: 'rgba(15, 35, 20, 0.22)' };
 
 const isLand = (map, x, y) => x >= 0 && y >= 0 && x < map.width && y < map.height && map.terrain[y * map.width + x] !== 'water';
 
-function diamond(path, x, y) {
-  const n = tileToWorld(x, y);
-  const e = tileToWorld(x + 1, y);
-  const s = tileToWorld(x + 1, y + 1);
-  const w = tileToWorld(x, y + 1);
-  path.moveTo(n.x, n.y);
-  path.lineTo(e.x, e.y);
-  path.lineTo(s.x, s.y);
-  path.lineTo(w.x, w.y);
+// ---- rounded edges ----------------------------------------------------------
+// Where one kind of ground ends, its corners are rounded off, and where it
+// wraps round a corner, a small curved piece fills in. A staircase of tiles
+// then reads as a soft, wavy edge. Only the look changes: the tiles, and what
+// can be built on them, are exactly as before.
+
+// How far from a corner the rounding begins, in tiles. A half rounds a lone
+// tile into a circle and a diagonal staircase into a gentle wave.
+export const ROUND = 0.5;
+const CURVE_STEPS = 6;
+// A tile's corners in tile units, clockwise from the north (the top on screen).
+const CORNER = [[0, 0], [1, 0], [1, 1], [0, 1]];
+// The side from corner i to corner i + 1 faces this way.
+const FACING = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+
+// The two neighbours that share corner i of a tile, and the one across it.
+function aroundCorner(x, y, i) {
+  const [ax, ay] = FACING[(i + 3) % 4];
+  const [bx, by] = FACING[i];
+  return { a: [x + ax, y + ay], b: [x + bx, y + by], d: [x + ax + bx, y + ay + by] };
+}
+
+// The point `ROUND` along each side from corner i, toward the corners before and after it.
+function cornerPoints(x, y, i) {
+  const [px, py] = CORNER[i];
+  const [qx, qy] = CORNER[(i + 3) % 4];
+  const [rx, ry] = CORNER[(i + 1) % 4];
+  return {
+    p: [x + px, y + py],
+    a: [x + px + (qx - px) * ROUND, y + py + (qy - py) * ROUND],
+    b: [x + px + (rx - px) * ROUND, y + py + (ry - py) * ROUND],
+  };
+}
+
+const world = ([tx, ty]) => tileToWorld(tx, ty);
+
+// A tile with some of its corners rounded off.
+function roundedTile(path, x, y, round) {
+  for (let i = 0; i < 4; i++) {
+    const { p, a, b } = cornerPoints(x, y, i);
+    const P = world(p);
+    if (!round[i]) {
+      if (i === 0) path.moveTo(P.x, P.y);
+      else path.lineTo(P.x, P.y);
+      continue;
+    }
+    const A = world(a);
+    const B = world(b);
+    if (i === 0) path.moveTo(A.x, A.y);
+    else path.lineTo(A.x, A.y);
+    path.quadraticCurveTo(P.x, P.y, B.x, B.y);
+  }
   path.closePath();
+}
+
+// The small curved piece that fills corner i of a tile from the ground around it.
+function fillet(path, x, y, i) {
+  const { p, a, b } = cornerPoints(x, y, i);
+  const P = world(p);
+  const A = world(a);
+  const B = world(b);
+  path.moveTo(A.x, A.y);
+  path.lineTo(P.x, P.y);
+  path.lineTo(B.x, B.y);
+  path.quadraticCurveTo(P.x, P.y, A.x, A.y);
+  path.closePath();
+}
+
+// The curve that rounds corner i, as short straight pieces in tile units.
+function cornerCurve(x, y, i) {
+  const { p, a, b } = cornerPoints(x, y, i);
+  const points = [];
+  for (let k = 0; k <= CURVE_STEPS; k++) {
+    const t = k / CURVE_STEPS;
+    const u = 1 - t;
+    points.push([u * u * a[0] + 2 * u * t * p[0] + t * t * b[0], u * u * a[1] + 2 * u * t * p[1] + t * t * b[1]]);
+  }
+  return points;
+}
+
+// The shore as short pieces, each with the direction it faces out to sea (in
+// tile units): straight along the sides of the tiles, curved at the corners.
+// `sand` marks pieces on a beach.
+export function shorePieces(map, area) {
+  const pieces = [];
+  const land = (x, y) => isLand(map, x, y);
+  const add = (a, b, nx, ny, sand) => {
+    if (a[0] !== b[0] || a[1] !== b[1]) pieces.push({ a, b, nx, ny, sand }); // a side rounded at both ends has no straight part left
+  };
+  // Adds a curve, facing away from (cx, cy) when `away`, toward it otherwise.
+  const addCurve = (points, cx, cy, away, sand) => {
+    for (let k = 0; k + 1 < points.length; k++) {
+      const [ax, ay] = points[k];
+      const [bx, by] = points[k + 1];
+      let nx = by - ay;
+      let ny = -(bx - ax);
+      const len = Math.hypot(nx, ny) || 1;
+      nx /= len;
+      ny /= len;
+      const mx = (ax + bx) / 2 - cx;
+      const my = (ay + by) / 2 - cy;
+      if ((nx * mx + ny * my > 0) !== away) {
+        nx = -nx;
+        ny = -ny;
+      }
+      add(points[k], points[k + 1], nx, ny, sand);
+    }
+  };
+
+  for (let y = area.y0; y <= area.y1; y++) {
+    for (let x = area.x0; x <= area.x1; x++) {
+      if (land(x, y)) {
+        const sand = map.terrain[y * map.width + x] === 'coast';
+        for (let i = 0; i < 4; i++) {
+          const [fx, fy] = FACING[i];
+          if (land(x + fx, y + fy)) continue;
+          // A straight side, cut short where a corner at either end is rounded.
+          const p0 = CORNER[i];
+          const p1 = CORNER[(i + 1) % 4];
+          const cut = (corner) => {
+            const { a, b, d } = aroundCorner(x, y, corner);
+            // The neighbour sharing this corner that is not across this side.
+            const other = corner === i ? a : b;
+            return !land(...other) || land(...d);
+          };
+          const s0 = cut(i) ? ROUND : 0;
+          const s1 = cut((i + 1) % 4) ? ROUND : 0;
+          const dx = p1[0] - p0[0];
+          const dy = p1[1] - p0[1];
+          add([x + p0[0] + dx * s0, y + p0[1] + dy * s0], [x + p1[0] - dx * s1, y + p1[1] - dy * s1], fx, fy, sand);
+        }
+        // Rounded corners, facing away from the tile.
+        for (let i = 0; i < 4; i++) {
+          const { a, b } = aroundCorner(x, y, i);
+          if (!land(...a) && !land(...b)) addCurve(cornerCurve(x, y, i), x + 0.5, y + 0.5, true, sand);
+        }
+      } else {
+        // Corners of water filled in by the land around them, facing into the water.
+        for (let i = 0; i < 4; i++) {
+          const { a, b, d } = aroundCorner(x, y, i);
+          if (land(...a) && land(...b) && land(...d)) {
+            addCurve(cornerCurve(x, y, i), x + 0.5, y + 0.5, false, map.terrain[a[1] * map.width + a[0]] === 'coast');
+          }
+        }
+      }
+    }
+  }
+  return pieces;
 }
 
 // Smooth noise from 0 to 1: a value on a coarse lattice every `cell` tiles,
@@ -60,46 +206,6 @@ export function groundShade(x, y) {
   return 0.94 + (Math.round(t * (LEVELS - 1)) * 0.12) / (LEVELS - 1);
 }
 
-// A thin strip inside a tile, given in tile units (u across x, v across y).
-function strip(path, x, y, u0, v0, u1, v1) {
-  const a = tileToWorld(x + u0, y + v0);
-  const b = tileToWorld(x + u1, y + v0);
-  const c = tileToWorld(x + u1, y + v1);
-  const d = tileToWorld(x + u0, y + v1);
-  path.moveTo(a.x, a.y);
-  path.lineTo(b.x, b.y);
-  path.lineTo(c.x, c.y);
-  path.lineTo(d.x, d.y);
-  path.closePath();
-}
-
-// How many tiles each water tile is from land (1 or 2), for the shallows. 0 elsewhere.
-export function shallowsOf(map) {
-  const near = new Uint8Array(map.width * map.height);
-  for (let y = 0; y < map.height; y++) {
-    for (let x = 0; x < map.width; x++) {
-      if (isLand(map, x, y)) continue;
-      let best = 0;
-      for (let dy = -2; dy <= 2 && best !== 1; dy++) {
-        for (let dx = -2; dx <= 2; dx++) {
-          if (!isLand(map, x + dx, y + dy)) continue;
-          const d = Math.max(Math.abs(dx), Math.abs(dy));
-          if (best === 0 || d < best) best = d;
-        }
-      }
-      near[y * map.width + x] = best;
-    }
-  }
-  return near;
-}
-
-// The shallows are the same every time for a given island, so they are worked out once.
-const shallowsMemo = new WeakMap();
-function shallowsFor(map) {
-  if (!shallowsMemo.has(map)) shallowsMemo.set(map, shallowsOf(map));
-  return shallowsMemo.get(map);
-}
-
 // The part of the map a painter covers: the given range of tiles kept on the
 // map, or the whole map. { x0, y0, x1, y1 }, both ends included.
 function tilesToPaint(map, range) {
@@ -107,29 +213,32 @@ function tilesToPaint(map, range) {
   return { x0: Math.max(0, range.x0), y0: Math.max(0, range.y0), x1: Math.min(map.width - 1, range.x1), y1: Math.min(map.height - 1, range.y1) };
 }
 
+// The cliff is shaded by the way each piece of it faces: lit toward +y, in shade toward +x.
+const CLIFF_TONES = 5;
+const cliffTone = (i) => mix(CLIFF_SHADE, CLIFF_LIT, i / (CLIFF_TONES - 1));
+
 // Works out every shape of the ground once. paint(ctx, scale) then fills them;
 // `scale` is the zoom of the context, so thin lines stay thin.
 // With a `range` of tiles, only that part of the map is worked out, which is
 // quick enough to do afresh for a close-up view.
 export function createTerrainPainter(map, colors, range = null) {
-  const shallows = shallowsFor(map);
   const area = tilesToPaint(map, range);
 
-  // 1. Shallows: paler water close to the shore.
-  const shallowPaths = [new Path2D(), new Path2D()];
-  // 2. The edge of the island: a short cliff on the two sides facing the
-  //    viewer, with a line of foam at its foot, and foam where the far sides
-  //    meet the water. A soft wash of white lies a little out from every shore.
-  const cliffLit = new Path2D();
-  const cliffShade = new Path2D();
+  // 1. The shore: shallows, a wash of white a little out from it, a short
+  //    cliff where it faces the viewer with foam at its foot, and foam on the
+  //    water's edge where it faces away.
+  const shoreLines = []; // [ax, ay, bx, by] in world pixels, at the water's edge
+  const cliffs = Array.from({ length: CLIFF_TONES }, () => new Path2D());
   const cliffFoot = new Path2D();
   const lip = new Path2D();
   const foam = new Path2D();
   const wash = new Path2D();
   const wetSand = new Path2D();
-  // 3. The tiles, in broad soft patches of lighter and darker ground.
+  const landShape = new Path2D();
+  // 2. The ground, in layers from the beach up, each in broad soft patches of
+  //    lighter and darker ground, with its edges rounded.
   const fills = new Map();
-  // 4. Small details that say what each ground is.
+  // 3. Small details that say what each ground is.
   const furrows = new Path2D();
   const tufts = new Path2D();
   const tuftsLight = new Path2D();
@@ -138,70 +247,92 @@ export function createTerrainPainter(map, colors, range = null) {
   const bushes = new Path2D();
   const bushesLit = new Path2D();
   const stones = new Path2D();
-  const origin = tileToWorld(0, 0);
-  // Moves a line on an edge out over the water, `by` pixels, toward the tile (dx, dy).
-  const outward = (dx, dy, by) => {
-    const p = tileToWorld(dx, dy);
-    const len = Math.hypot(p.x - origin.x, p.y - origin.y);
-    return { x: ((p.x - origin.x) / len) * by, y: ((p.y - origin.y) / len) * by };
-  };
-  const shoreLine = (path, a, b, shift) => {
-    path.moveTo(a.x + shift.x, a.y + shift.y);
-    path.lineTo(b.x + shift.x, b.y + shift.y);
-  };
 
+  // The shore.
+  const TILE_SIDE = Math.SQRT1_2 * 64; // one tile along the ground, in pixels of the stretched picture
+  for (const { a, b, nx, ny, sand: onSand } of shorePieces(map, area)) {
+    const A = world(a);
+    const B = world(b);
+    // Which way the piece faces, on screen.
+    let ox = (nx - ny) * 32;
+    let oy = (nx + ny) * 16;
+    const olen = Math.hypot(ox, oy) || 1;
+    ox /= olen;
+    oy /= olen;
+    const facing = nx + ny; // above 0: toward the viewer, so its cliff shows
+    const line = (path, dx, dy) => {
+      path.moveTo(A.x + dx, A.y + dy);
+      path.lineTo(B.x + dx, B.y + dy);
+    };
+    if (facing > 0.001) {
+      const lit = Math.max(0, Math.min(1, ny / facing));
+      const cliff = cliffs[Math.round(lit * (CLIFF_TONES - 1))];
+      cliff.moveTo(A.x, A.y); cliff.lineTo(B.x, B.y); cliff.lineTo(B.x, B.y + CLIFF); cliff.lineTo(A.x, A.y + CLIFF); cliff.closePath();
+      cliffFoot.moveTo(A.x, A.y + CLIFF - 2); cliffFoot.lineTo(B.x, B.y + CLIFF - 2); cliffFoot.lineTo(B.x, B.y + CLIFF); cliffFoot.lineTo(A.x, A.y + CLIFF); cliffFoot.closePath();
+      line(lip, 0, 0.5);
+    }
+    // Foam lies at the foot of the cliff where it faces the viewer, and at the
+    // water's edge where the shore faces away. Round a curve it moves smoothly
+    // from one to the other, so the line of foam does not break.
+    const down = Math.max(0, Math.min(1, facing / 0.4));
+    line(foam, ox * (1 - down), oy * (1 - down) + CLIFF * down);
+    line(wash, ox * 5, oy * 5 + CLIFF * down);
+    if (onSand) line(wetSand, 0, 0);
+    const drop = facing > 0.001 ? CLIFF : 0;
+    shoreLines.push([A.x, A.y + drop, B.x, B.y + drop]);
+  }
+
+  // The ground, layer by layer: every kind of ground in the order the data
+  // lists them, each over all the kinds that come before it. So the beach lies
+  // under everything, grass over the beach, and so on, and where a layer's
+  // corner is rounded off, the one beneath shows through.
+  const order = Object.keys(colors).filter((t) => t !== 'water');
+  const rank = new Map(order.map((t, i) => [t, i]));
+  const rankAt = (x, y) => (isLand(map, x, y) ? rank.get(map.terrain[y * map.width + x]) ?? 0 : -1);
+  // A tile whose four neighbours all lie in its own layer or above is never
+  // rounded, so nothing beneath it can show: it is drawn in its own layer only.
+  // Only tiles at the edge of a patch are drawn in the layers below theirs too.
+  // That keeps the work close to one shape per tile.
+  const lowest = (x, y) => {
+    const own = rankAt(x, y);
+    return FACING.some(([dx, dy]) => rankAt(x + dx, y + dy) < own) ? 0 : own;
+  };
+  // Only the tiles beside the water are needed to keep the wet sand on the land.
+  const nearWater = (x, y) => FACING.some(([dx, dy]) => !isLand(map, x + dx, y + dy)) || [[1, 1], [1, -1], [-1, 1], [-1, -1]].some(([dx, dy]) => !isLand(map, x + dx, y + dy));
+  order.forEach((kind, layer) => {
+    const inside = (x, y) => rankAt(x, y) >= layer;
+    const into = (x, y) => {
+      const shade = groundShade(x, y);
+      const key = `${layer}|${shade}`;
+      if (!fills.has(key)) fills.set(key, { path: new Path2D(), color: tone(colors[kind], shade) });
+      return fills.get(key).path;
+    };
+    for (let y = area.y0; y <= area.y1; y++) {
+      for (let x = area.x0; x <= area.x1; x++) {
+        if (inside(x, y)) {
+          if (layer < lowest(x, y)) continue;
+          const round = [0, 1, 2, 3].map((i) => {
+            const { a, b } = aroundCorner(x, y, i);
+            return !inside(...a) && !inside(...b);
+          });
+          roundedTile(into(x, y), x, y, round);
+          if (layer === 0 && nearWater(x, y)) roundedTile(landShape, x, y, round);
+          continue;
+        }
+        for (let i = 0; i < 4; i++) {
+          const { a, b, d } = aroundCorner(x, y, i);
+          if (!inside(...a) || !inside(...b) || !inside(...d)) continue;
+          fillet(into(...a), x, y, i);
+          if (layer === 0) fillet(landShape, x, y, i);
+        }
+      }
+    }
+  });
+
+  // The details.
   for (let y = area.y0; y <= area.y1; y++) {
     for (let x = area.x0; x <= area.x1; x++) {
       const terrain = map.terrain[y * map.width + x];
-      if (terrain === 'water') {
-        const level = shallows[y * map.width + x];
-        if (level) diamond(shallowPaths[level - 1], x, y);
-        continue;
-      }
-
-      const n = tileToWorld(x, y);
-      const e = tileToWorld(x + 1, y);
-      const s = tileToWorld(x + 1, y + 1);
-      const w = tileToWorld(x, y + 1);
-      const down = { x: 0, y: CLIFF };
-      if (!isLand(map, x, y + 1)) {
-        cliffLit.moveTo(w.x, w.y); cliffLit.lineTo(s.x, s.y); cliffLit.lineTo(s.x, s.y + CLIFF); cliffLit.lineTo(w.x, w.y + CLIFF); cliffLit.closePath();
-        cliffFoot.moveTo(w.x, w.y + CLIFF - 2); cliffFoot.lineTo(s.x, s.y + CLIFF - 2); cliffFoot.lineTo(s.x, s.y + CLIFF); cliffFoot.lineTo(w.x, w.y + CLIFF); cliffFoot.closePath();
-        shoreLine(lip, w, s, { x: 0, y: 0.5 });
-        shoreLine(foam, w, s, down);
-        const o = outward(0, 1, 5);
-        shoreLine(wash, w, s, { x: o.x, y: o.y + CLIFF });
-      }
-      if (!isLand(map, x + 1, y)) {
-        cliffShade.moveTo(s.x, s.y); cliffShade.lineTo(e.x, e.y); cliffShade.lineTo(e.x, e.y + CLIFF); cliffShade.lineTo(s.x, s.y + CLIFF); cliffShade.closePath();
-        cliffFoot.moveTo(s.x, s.y + CLIFF - 2); cliffFoot.lineTo(e.x, e.y + CLIFF - 2); cliffFoot.lineTo(e.x, e.y + CLIFF); cliffFoot.lineTo(s.x, s.y + CLIFF); cliffFoot.closePath();
-        shoreLine(lip, s, e, { x: 0, y: 0.5 });
-        shoreLine(foam, s, e, down);
-        const o = outward(1, 0, 5);
-        shoreLine(wash, s, e, { x: o.x, y: o.y + CLIFF });
-      }
-      // The far sides have no cliff to show, only foam where land meets water.
-      if (!isLand(map, x, y - 1)) {
-        shoreLine(foam, n, e, outward(0, -1, 1));
-        shoreLine(wash, n, e, outward(0, -1, 5));
-      }
-      if (!isLand(map, x - 1, y)) {
-        shoreLine(foam, n, w, outward(-1, 0, 1));
-        shoreLine(wash, n, w, outward(-1, 0, 5));
-      }
-      // Sand darkened by the waves, just inside the water's edge.
-      if (terrain === 'coast') {
-        if (!isLand(map, x, y + 1)) strip(wetSand, x, y, 0, 0.84, 1, 1);
-        if (!isLand(map, x + 1, y)) strip(wetSand, x, y, 0.84, 0, 1, 1);
-        if (!isLand(map, x, y - 1)) strip(wetSand, x, y, 0, 0, 1, 0.16);
-        if (!isLand(map, x - 1, y)) strip(wetSand, x, y, 0, 0, 0.16, 1);
-      }
-
-      const shade = groundShade(x, y);
-      const key = `${terrain}|${shade}`;
-      if (!fills.has(key)) fills.set(key, { path: new Path2D(), color: tone(colors[terrain], shade) });
-      diamond(fills.get(key).path, x, y);
-
       if (terrain === 'fertile') {
         for (const v of [0.25, 0.5, 0.75]) {
           const a = tileToWorld(x + 0.12, y + v);
@@ -255,7 +386,7 @@ export function createTerrainPainter(map, colors, range = null) {
     }
   }
 
-  const furrowColor = tone(colors.fertile, 0.82);
+  const furrowColor = tone(colors.fertile ?? colors.grass, 0.82);
   const tuftColor = tone(colors.grass, 0.78);
   const tuftLightColor = tone(colors.grass, 1.14);
   const sandColor = tone(colors.coast, 0.84);
@@ -267,19 +398,37 @@ export function createTerrainPainter(map, colors, range = null) {
     paint(ctx, scale = 1) {
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
-      ctx.fillStyle = SHALLOW[1];
-      ctx.fill(shallowPaths[1]);
-      ctx.fillStyle = SHALLOW[0];
-      ctx.fill(shallowPaths[0]);
+      // The shallows: wide soft strokes along the shore, drawn on a picture
+      // stretched to twice its height and squashed back, so each band is as
+      // wide in tiles whichever way the shore runs.
+      if (shoreLines.length) {
+        ctx.save();
+        ctx.scale(1, 0.5);
+        ctx.beginPath();
+        for (const [ax, ay, bx, by] of shoreLines) {
+          ctx.moveTo(ax, ay * 2);
+          ctx.lineTo(bx, by * 2);
+        }
+        for (const { reach, color } of SHALLOWS) {
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2 * reach * TILE_SIDE;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
 
       ctx.strokeStyle = WASH;
       ctx.lineWidth = 2.6;
       ctx.stroke(wash);
 
-      ctx.fillStyle = CLIFF_LIT;
-      ctx.fill(cliffLit);
-      ctx.fillStyle = CLIFF_SHADE;
-      ctx.fill(cliffShade);
+      cliffs.forEach((path, i) => {
+        const color = cliffTone(i);
+        ctx.fillStyle = color;
+        ctx.fill(path);
+        ctx.strokeStyle = color; // closes hairline gaps between the pieces
+        ctx.lineWidth = 0.8 / scale;
+        ctx.stroke(path);
+      });
       ctx.fillStyle = CLIFF_FOOT;
       ctx.fill(cliffFoot);
       ctx.strokeStyle = FOAM;
@@ -294,8 +443,13 @@ export function createTerrainPainter(map, colors, range = null) {
         ctx.stroke(path);
       }
 
-      ctx.fillStyle = wetSandColor;
-      ctx.fill(wetSand);
+      // Sand darkened by the waves, just inside the water's edge.
+      ctx.save();
+      ctx.clip(landShape);
+      ctx.strokeStyle = wetSandColor;
+      ctx.lineWidth = 7;
+      ctx.stroke(wetSand);
+      ctx.restore();
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
       ctx.lineWidth = 1;
       ctx.stroke(lip);
@@ -512,9 +666,15 @@ export function paintWater(ctx, view, camera, time) {
   });
 }
 
-// Roads that join up: each road tile is a pad in the middle with an arm
-// toward every neighbouring road or building. The shapes are rebuilt only
-// when a road or building is added or removed.
+// Roads that join up, drawn as a band along the middle of each road tile
+// toward every neighbouring road or building. Where a road turns, it bends in
+// a curve instead of a corner, so a road laid in steps reads as a smooth bend.
+// The shapes are rebuilt only when a road or building is added or removed.
+//
+// A band of the same width on screen is the same width in tiles whichever way
+// the road runs, because both directions of the tile grid slope equally.
+export const ROAD_WIDTH = 17;      // pixels at zoom 1: 0.6 of a tile
+const ROAD_EDGE_WIDTH = 21;       // the darker verge, 0.74 of a tile
 export function createRoadPainter(color) {
   let stamp = null;
   let lastState = null;
@@ -522,43 +682,76 @@ export function createRoadPainter(color) {
 
   function build(state) {
     const map = state.map;
-    const edge = new Path2D();
-    const surface = new Path2D();
+    const middle = new Path2D();
+    const squares = new Path2D();
+    const driveVerge = new Path2D();
+    const drive = new Path2D();
     const pebbles = new Path2D();
-    const joins = (x, y) => x >= 0 && y >= 0 && x < map.width && y < map.height && (state.roads[y * map.width + x] === 1 || state.occupancy[y * map.width + x] !== 0);
-    const rect = (path, x, y, u0, v0, u1, v1) => {
-      const a = tileToWorld(x + u0, y + v0);
-      const b = tileToWorld(x + u1, y + v0);
-      const c = tileToWorld(x + u1, y + v1);
-      const d = tileToWorld(x + u0, y + v1);
-      path.moveTo(a.x, a.y);
-      path.lineTo(b.x, b.y);
-      path.lineTo(c.x, c.y);
-      path.lineTo(d.x, d.y);
-      path.closePath();
-    };
+    const on = (x, y) => x >= 0 && y >= 0 && x < map.width && y < map.height;
+    const isRoad = (x, y) => on(x, y) && state.roads[y * map.width + x] === 1;
+    const isBuilding = (x, y) => on(x, y) && state.roads[y * map.width + x] !== 1 && state.occupancy[y * map.width + x] !== 0;
+    const at = (tx, ty) => tileToWorld(tx, ty);
     let count = 0;
     for (let y = 0; y < map.height; y++) {
       for (let x = 0; x < map.width; x++) {
         if (!state.roads[y * map.width + x]) continue;
         count++;
-        for (const [path, inset] of [[edge, 0.13], [surface, 0.2]]) {
-          const lo = inset;
-          const hi = 1 - inset;
-          rect(path, x, y, lo, lo, hi, hi);
-          if (joins(x + 1, y)) rect(path, x, y, hi - 0.01, lo, 1.01, hi);
-          if (joins(x - 1, y)) rect(path, x, y, -0.01, lo, lo + 0.01, hi);
-          if (joins(x, y + 1)) rect(path, x, y, lo, hi - 0.01, hi, 1.01);
-          if (joins(x, y - 1)) rect(path, x, y, lo, -0.01, hi, lo + 0.01);
+        const c = at(x + 0.5, y + 0.5);
+        const sides = FACING.filter(([dx, dy]) => isRoad(x + dx, y + dy));
+        // A road that runs past a building needs no drive; one that ends at it does.
+        const drives = sides.length > 1 ? [] : FACING.filter(([dx, dy]) => isBuilding(x + dx, y + dy));
+        const edge = ([dx, dy]) => at(x + 0.5 + dx / 2, y + 0.5 + dy / 2);
+        // The pieces of this tile's road, each from a to b, bending round c when `bend`.
+        // It bends only between two roads at a corner, and not where the road
+        // fills the corner too (a square of road tiles).
+        const pieces = [];
+        const turn = sides.length === 2 && sides[0][0] + sides[1][0] !== 0 && sides[0][1] + sides[1][1] !== 0;
+        if (turn && !isRoad(x + sides[0][0] + sides[1][0], y + sides[0][1] + sides[1][1])) pieces.push({ a: edge(sides[0]), b: edge(sides[1]), bend: c });
+        else if (sides.length === 2 && !turn) pieces.push({ a: edge(sides[0]), b: edge(sides[1]) });
+        else for (const side of sides) pieces.push({ a: c, b: edge(side) });
+        if (pieces.length === 0) pieces.push({ a: c, b: c });
+        // A short straight drive to each building at the end of the road, square
+        // at the building's end so it stops at the edge of the plot.
+        for (const [dx, dy] of drives) {
+          for (const [path, half] of [[driveVerge, 0.37], [drive, 0.3]]) {
+            const ends = dx !== 0
+              ? [[0.5, 0.5 - half], [0.5 + dx / 2, 0.5 - half], [0.5 + dx / 2, 0.5 + half], [0.5, 0.5 + half]]
+              : [[0.5 - half, 0.5], [0.5 - half, 0.5 + dy / 2], [0.5 + half, 0.5 + dy / 2], [0.5 + half, 0.5]];
+            const points = ends.map(([u, v]) => at(x + u, y + v));
+            path.moveTo(points[0].x, points[0].y);
+            for (const p of points.slice(1)) path.lineTo(p.x, p.y);
+            path.closePath();
+          }
         }
+        // Where four road tiles meet round a corner, the corner is road too.
+        for (let i = 0; i < 4; i++) {
+          const { a, b, d } = aroundCorner(x, y, i);
+          if (!isRoad(...a) || !isRoad(...b) || !isRoad(...d)) continue;
+          const [px, py] = CORNER[i];
+          const ends = [[0.5, 0], [0, 0.5], [-0.5, 0], [0, -0.5]].map(([u, v]) => at(x + px + u, y + py + v));
+          squares.moveTo(ends[0].x, ends[0].y);
+          for (const p of ends.slice(1)) squares.lineTo(p.x, p.y);
+          squares.closePath();
+        }
+        for (const { a, b, bend } of pieces) {
+          middle.moveTo(a.x, a.y);
+          if (bend) middle.quadraticCurveTo(bend.x, bend.y, b.x, b.y);
+          else middle.lineTo(b.x + (a.x === b.x && a.y === b.y ? 0.01 : 0), b.y);
+        }
+        // A few pebbles, on the road itself.
         for (let i = 0; i < 3; i++) {
-          const p = tileToWorld(x + 0.3 + hash2(x, y, 60 + i) * 0.4, y + 0.3 + hash2(x, y, 70 + i) * 0.4);
-          pebbles.moveTo(p.x + 1, p.y);
-          pebbles.arc(p.x, p.y, 1, 0, Math.PI * 2);
+          const { a, b, bend } = pieces[Math.floor(hash2(x, y, 60 + i) * pieces.length)];
+          const t = 0.15 + hash2(x, y, 70 + i) * 0.7;
+          const u = 1 - t;
+          const mid = bend ?? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+          const px = u * u * a.x + 2 * u * t * mid.x + t * t * b.x + (hash2(x, y, 80 + i) - 0.5) * 9;
+          const py = u * u * a.y + 2 * u * t * mid.y + t * t * b.y + (hash2(x, y, 90 + i) - 0.5) * 5;
+          pebbles.moveTo(px + 1, py);
+          pebbles.arc(px, py, 1, 0, Math.PI * 2);
         }
       }
     }
-    return { edge, surface, pebbles, count };
+    return { middle, squares, driveVerge, drive, pebbles, count };
   }
 
   return {
@@ -574,10 +767,20 @@ export function createRoadPainter(color) {
         shapes = build(state);
       }
       if (shapes.count === 0) return;
-      ctx.fillStyle = tone(color, 0.7);
-      ctx.fill(shapes.edge);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      const verge = tone(color, 0.7);
+      ctx.strokeStyle = verge;
+      ctx.lineWidth = ROAD_EDGE_WIDTH;
+      ctx.stroke(shapes.middle);
+      ctx.fillStyle = verge;
+      ctx.fill(shapes.driveVerge);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = ROAD_WIDTH;
+      ctx.stroke(shapes.middle);
       ctx.fillStyle = color;
-      ctx.fill(shapes.surface);
+      ctx.fill(shapes.drive);
+      ctx.fill(shapes.squares);
       ctx.fillStyle = tone(color, 0.82);
       ctx.fill(shapes.pebbles);
     },
