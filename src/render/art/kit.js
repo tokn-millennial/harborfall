@@ -224,6 +224,26 @@ export function createKit(ctx, originX, originY) {
       poly([P(u1, v1, z), P(u1, v0, z), apex], tone(colorB, 0.72));
     },
 
+    // The same, in stripes of two colors running up to the point, like an awning.
+    stripedPyramid(u0, v0, u1, v1, z, rise, colorA, colorB, stripes = 6) {
+      const apex = P((u0 + u1) / 2, (v0 + v1) / 2, z + rise);
+      // Each face from corner a to corner b, with how much light it gets.
+      const faces = [
+        [[u0, v0], [u1, v0], 0.8],
+        [[u0, v0], [u0, v1], 0.95],
+        [[u0, v1], [u1, v1], 1.05],
+        [[u1, v1], [u1, v0], 0.72],
+      ];
+      for (const [[ua, va], [ub, vb], light] of faces) {
+        for (let i = 0; i < stripes; i++) {
+          const t0 = i / stripes;
+          const t1 = (i + 1) / stripes;
+          poly([P(ua + (ub - ua) * t0, va + (vb - va) * t0, z), P(ua + (ub - ua) * t1, va + (vb - va) * t1, z), apex], tone(i % 2 ? colorB : colorA, light), null);
+        }
+        line(P(ua, va, z), P(ub, vb, z), tone(colorA, light * 0.6), 0.8);
+      }
+    },
+
     // A thin upright post.
     post(u, v, z0, z1, color, width = 1.4) {
       line(P(u, v, z0), P(u, v, z1), color, width);

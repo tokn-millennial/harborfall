@@ -672,3 +672,13 @@ Phase 31 changed only `src/render/art/kit.js` and `src/render/art/buildings.js`.
 - The bakery's oven mouth depends on `working`, which the bakery already declared in `ART_USES`. The farm's ears depend on `progress`, already declared. Nothing new changes a stored picture's key.
 - **Measured:** drawing every building in all four looks takes about 1.5 times as long as before (about 25 to 59 ms for the whole set in the hidden test pane, against 15 to 43). Pictures are drawn once per zoom step, so this is paid once. Frame times are the same within the noise, measured old and new in turns.
 - A test aid in the scratchpad drew every building large in one picture (a "gallery"); it is not part of the project.
+
+## 35. People, and the rest of the buildings
+
+Phase 32 changed `src/render/art/actors.js`, `src/render/art/buildings.js` and `src/render/art/kit.js`.
+
+- **People** in `actors.js`: `drawPerson` draws one person from small shapes (`torso`, `head`, arms as round-ended strokes). Hat shapes are in `CLOTHES` (`hatShape`); `HAIR` and `SCARF` colors follow the person's look. Every look repeats after 20.
+- **Stored pictures of people.** A person is a dozen shapes and there may be dozens on screen, which measured at twice the old cost. So `person` keeps each look (kind of clothes, look, stride step) as a small picture, drawn at the sharpness of the canvas's current zoom (`sharpnessFor` from `sprites.js`), and throws them away when the zoom crosses a step. That brought the cost back to the old blocky people's or below (about 6 ms against 8 for 200 people). Where there is no `document` (the Node tests), people are drawn shape by shape, so the tests still see every shape.
+- `paintActors` saves and restores the canvas state, because people now set line widths and ends.
+- **The kit** gains `stripedPyramid` for the market's awnings.
+- **Measured:** frame times old and new overlap at normal zoom; close up, perhaps one to three milliseconds more, within the noise of the hidden test pane.

@@ -1,24 +1,29 @@
 // Draws the life on the map: walkers, carts, boats and trade ships. Each is a handful of
-// small rectangles, because there may be dozens on screen and they are tiny.
+// small shapes, because there may be dozens on screen and they are tiny.
 //
 // An actor's x and y are in tiles (see src/render/life.js). Its feet, wheels
 // or keel are drawn at that point on the ground.
 
 import { tileToWorld } from '../iso.js';
 import { CLIFF } from './terrain.js';
+import { tone } from './kit.js';
+import { sharpnessFor } from './sprites.js';
 
 const SKIN = '#e8c39e';
 const LEGS = '#3b2f2a';
 const SHADOW = 'rgba(15, 35, 20, 0.26)';
 const SIDE_SHADE = 'rgba(0, 0, 0, 0.18)'; // the right side of a figure, away from the sun
 const WATER_SHADOW = 'rgba(10, 40, 60, 0.25)';
-// Clothes by kind of resident: tunic colors, then the hat.
+// Clothes by kind of resident: tunic colors, then the hat and its shape:
+// a wide straw hat for Farmers, a flat cap for Workers, a tall hat for Artisans.
 const CLOTHES = {
-  farmer: { tunics: ['#b08a4a', '#8a9a5b', '#a8683e', '#c9b27a'], hat: '#e0c878' },
-  worker: { tunics: ['#3f6f9a', '#9a4a3f', '#5d5d80', '#4a7d6a'], hat: '#33343d' },
-  artisan: { tunics: ['#7d6fb3', '#5d6f8c', '#8c4f6f', '#3f7a6a'], hat: '#c9a55a' },
+  farmer: { tunics: ['#b08a4a', '#8a9a5b', '#a8683e', '#c9b27a'], hat: '#e0c878', hatShape: 'straw' },
+  worker: { tunics: ['#3f6f9a', '#9a4a3f', '#5d5d80', '#4a7d6a'], hat: '#33343d', hatShape: 'cap' },
+  artisan: { tunics: ['#7d6fb3', '#5d6f8c', '#8c4f6f', '#3f7a6a'], hat: '#c9a55a', hatShape: 'tall' },
 };
-const PLAIN = { tunics: ['#8c7a5c'], hat: '#5a4a3a' };
+const PLAIN = { tunics: ['#8c7a5c'], hat: '#5a4a3a', hatShape: 'cap' };
+const HAIR = ['#3b2a1e', '#6b4a2a', '#c9a35a', '#2a2422', '#8a4a2a'];
+const SCARF = ['#e8e0cc', '#c9506b', '#d9b45a', '#6f8fb0'];
 const CART = { body: '#8a5f3a', rim: '#6b4729', wheel: '#33271f' };
 const BOAT = { hull: '#7a5236', rim: '#a87a52', ripple: 'rgba(255, 255, 255, 0.5)', line: 'rgba(40, 40, 40, 0.7)' };
 
@@ -30,26 +35,147 @@ function groundShadow(ctx, x, y, rx, ry, color = SHADOW) {
   ctx.fill();
 }
 
-// One person standing at (x, y) in world pixels. `stride` moves the legs and arms.
+// A body from the shoulders (top) down to the waist or hem (bottom), wider at
+// the bottom by `flare` on each side, with round shoulders.
+function torso(ctx, x, top, bottom, half, flare) {
+  ctx.beginPath();
+  ctx.moveTo(x - half - flare, bottom);
+  ctx.lineTo(x - half, top + 1);
+  ctx.quadraticCurveTo(x - half, top, x - half + 1, top);
+  ctx.lineTo(x + half - 1, top);
+  ctx.quadraticCurveTo(x + half, top, x + half, top + 1);
+  ctx.lineTo(x + half + flare, bottom);
+  ctx.closePath();
+}
+
+// A head at (x, y), its middle, with hair, a headscarf or a hat.
+function head(ctx, x, y, clothes, look, scarf) {
+  ctx.fillStyle = SKIN;
+  ctx.beginPath();
+  ctx.arc(x, y, 1.55, 0, Math.PI * 2);
+  ctx.fill();
+  if (scarf) {
+    // A headscarf over the top of the head.
+    ctx.fillStyle = SCARF[look % SCARF.length];
+    ctx.beginPath();
+    ctx.arc(x, y - 0.1, 1.75, Math.PI * 1.02, Math.PI * 1.98);
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+  ctx.fillStyle = HAIR[look % HAIR.length];
+  ctx.beginPath();
+  ctx.arc(x, y - 0.2, 1.6, Math.PI, Math.PI * 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = clothes.hat;
+  if (clothes.hatShape === 'straw') {
+    ctx.beginPath();
+    ctx.ellipse(x, y - 1.1, 2.9, 0.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, y - 1.2, 1.4, Math.PI, Math.PI * 2);
+    ctx.fill();
+  } else if (clothes.hatShape === 'tall') {
+    ctx.fillRect(x - 2.2, y - 1.6, 4.4, 0.8);
+    ctx.fillRect(x - 1.3, y - 4, 2.6, 2.6);
+  } else {
+    ctx.beginPath();
+    ctx.arc(x, y - 0.9, 1.7, Math.PI, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(x - 0.4, y - 1.2, 2.6, 0.6); // the peak
+  }
+}
+
+// One person standing at (x, y) in world pixels. `stride` moves the legs and
+// arms. About half wear a long skirt and a headscarf instead of breeches and a hat.
+//
+// A person takes a dozen small shapes, and there may be dozens of people, so
+// in the browser each look is drawn once into a small picture and reused
+// (see personPicture). Where there is no canvas to keep pictures in, as in the
+// tests, people are drawn shape by shape.
 function person(ctx, x, y, clothes, look, stride) {
   const step = Math.floor(stride * 6) % 2;
+  const picture = personPicture(ctx, clothes, look, step);
+  if (picture) {
+    ctx.drawImage(picture.canvas, x - PERSON_BOX.left, y - PERSON_BOX.top, PERSON_BOX.width, PERSON_BOX.height);
+    return;
+  }
+  drawPerson(ctx, x, y, clothes, look, step);
+}
+
+// The space a person is drawn in, around their feet, in world pixels.
+const PERSON_BOX = { left: 4, top: 14, width: 8, height: 15 };
+// Every look repeats after this many: 4 tunics, 2 kinds of clothes, 5 hair colors, 4 scarves.
+const LOOKS = 20;
+const pictures = new Map();
+let picturesScale = 0;
+const makeCanvas = typeof document !== 'undefined' ? (w, h) => Object.assign(document.createElement('canvas'), { width: w, height: h }) : null;
+
+// The stored picture of a person, drawn sharp enough for the canvas's current
+// zoom, or null where pictures cannot be made.
+function personPicture(ctx, clothes, look, step) {
+  if (!makeCanvas || typeof ctx.getTransform !== 'function') return null;
+  const scale = sharpnessFor(Math.abs(ctx.getTransform().a));
+  if (scale !== picturesScale) {
+    pictures.clear();
+    picturesScale = scale;
+  }
+  const key = `${clothes.hatShape}|${clothes.hat}|${clothes.tunics.join()}|${look % LOOKS}|${step}`;
+  let picture = pictures.get(key);
+  if (!picture) {
+    const canvas = makeCanvas(Math.ceil(PERSON_BOX.width * scale), Math.ceil(PERSON_BOX.height * scale));
+    const g = canvas.getContext('2d');
+    g.setTransform(scale, 0, 0, scale, 0, 0);
+    drawPerson(g, PERSON_BOX.left, PERSON_BOX.top, clothes, look % LOOKS, step);
+    picture = { canvas };
+    pictures.set(key, picture);
+  }
+  return picture;
+}
+
+function drawPerson(ctx, x, y, clothes, look, step) {
   const tunic = clothes.tunics[look % clothes.tunics.length];
-  ctx.fillStyle = LEGS;
-  // One foot is always off the ground.
-  ctx.fillRect(x - 1.6, y - 2.6, 1.3, 2.6 - step);
-  ctx.fillRect(x + 0.3, y - 2.6, 1.3, 1.6 + step);
-  // Arms swing opposite to the legs.
-  ctx.fillStyle = tunic;
-  ctx.fillRect(x - 2.9, y - 6.6 + step * 0.6, 0.9, 3.2);
-  ctx.fillRect(x + 2, y - 6 - step * 0.6, 0.9, 3.2);
-  ctx.fillRect(x - 2.1, y - 7, 4.2, 4.4);
+  const skirt = look % 2 === 1;
+  if (skirt) {
+    // A long skirt to the ankles, its hem swinging a little.
+    ctx.fillStyle = LEGS;
+    ctx.fillRect(x - 1.4 + step * 0.4, y - 1, 1, 1);
+    ctx.fillRect(x + 0.4 - step * 0.4, y - 1, 1, 1);
+    ctx.fillStyle = tone(tunic, 0.78);
+    torso(ctx, x, y - 4.4, y - 0.8, 2.1, 0.9 + step * 0.2);
+    ctx.fill();
+  } else {
+    ctx.fillStyle = LEGS;
+    // One foot is always off the ground.
+    ctx.fillRect(x - 1.5, y - 3, 1.2, 3 - step);
+    ctx.fillRect(x + 0.3, y - 3, 1.2, 2 + step);
+  }
+  // Arms swing opposite to the legs, with a hand at the end of each.
+  ctx.strokeStyle = tunic;
+  ctx.lineWidth = 1;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x - 2.1, y - 6.6);
+  ctx.lineTo(x - 2.7, y - 4 + step * 0.6);
+  ctx.moveTo(x + 2.1, y - 6.6);
+  ctx.lineTo(x + 2.7, y - 4 - step * 0.6);
+  ctx.stroke();
   ctx.fillStyle = SKIN;
-  ctx.fillRect(x - 1.5, y - 9.6, 3, 2.6);
-  ctx.fillStyle = clothes.hat;
-  ctx.fillRect(x - 2, y - 10.6, 4, 1.3);
+  ctx.fillRect(x - 3.2, y - 3.8 + step * 0.6, 1, 1);
+  ctx.fillRect(x + 2.2, y - 3.8 - step * 0.6, 1, 1);
+  // The body, and a belt for those in breeches.
+  ctx.fillStyle = tunic;
+  torso(ctx, x, y - 7.3, y - 2.8, 2.1, 0.2);
+  ctx.fill();
+  if (!skirt) {
+    ctx.fillStyle = 'rgba(40, 28, 20, 0.55)';
+    ctx.fillRect(x - 2.2, y - 4.2, 4.5, 0.6);
+  }
+  // The side away from the sun.
   ctx.fillStyle = SIDE_SHADE;
-  ctx.fillRect(x + 0.4, y - 9.6, 1.1, 2.6);
-  ctx.fillRect(x + 0.6, y - 7, 1.5, 4.4);
+  ctx.fillRect(x + 0.5, y - 7.2, 1.9, 4.4);
+  head(ctx, x, y - 8.9, clothes, look, skirt);
 }
 
 function walker(ctx, a) {
@@ -58,14 +184,24 @@ function walker(ctx, a) {
   person(ctx, p.x, p.y, CLOTHES[a.tier] ?? PLAIN, a.look, a.stride);
 }
 
-// A round wheel with a hub.
+// A round wheel with spokes and a hub.
 function wheel(ctx, x, y) {
   ctx.fillStyle = CART.wheel;
   ctx.beginPath();
-  ctx.arc(x, y, 1.6, 0, Math.PI * 2);
+  ctx.arc(x, y, 1.8, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = CART.rim;
-  ctx.fillRect(x - 0.4, y - 0.4, 0.8, 0.8);
+  ctx.beginPath();
+  ctx.arc(x, y, 1.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = CART.wheel;
+  ctx.lineWidth = 0.4;
+  ctx.beginPath();
+  ctx.moveTo(x - 1.2, y);
+  ctx.lineTo(x + 1.2, y);
+  ctx.moveTo(x, y - 1.2);
+  ctx.lineTo(x, y + 1.2);
+  ctx.stroke();
 }
 
 function cart(ctx, a, goodColor) {
@@ -123,17 +259,27 @@ function boat(ctx, a, time) {
   ctx.fillRect(x - 9, y - 2.4, 18, 1.1);
   if (!a.manned) return;
   // The fisherman sits in the boat: no legs showing.
+  const fx = x - facing;
   ctx.fillStyle = CLOTHES.worker.tunics[0];
-  ctx.fillRect(x - 2.1 - facing, y - 6.6, 4.2, 4.2);
-  ctx.fillStyle = SKIN;
-  ctx.fillRect(x - 1.5 - facing, y - 9.2, 3, 2.6);
-  ctx.fillStyle = CLOTHES.farmer.hat;
-  ctx.fillRect(x - 2.2 - facing, y - 10.2, 4.4, 1.3);
+  torso(ctx, fx, y - 6.8, y - 2.4, 2.1, 0.3);
+  ctx.fill();
+  ctx.fillStyle = SIDE_SHADE;
+  ctx.fillRect(fx + 0.5, y - 6.7, 1.9, 4.3);
+  head(ctx, fx, y - 8.5, CLOTHES.farmer, 0, false);
   if (a.fishing) {
-    // A rod over the side, and its line down to the water.
-    ctx.fillStyle = BOAT.line;
-    for (let i = 0; i < 5; i++) ctx.fillRect(x + facing * (2 + i * 2) - 0.5, y - 6 - i * 0.9, 2, 0.8);
-    ctx.fillRect(x + facing * 11 - 0.3, y - 9.6, 0.6, 12);
+    // A rod bending out over the side, and its line down to the water.
+    ctx.strokeStyle = BOAT.line;
+    ctx.lineWidth = 0.7;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(fx + facing * 1.5, y - 4.5);
+    ctx.quadraticCurveTo(x + facing * 8, y - 11, x + facing * 11.5, y - 9.5);
+    ctx.stroke();
+    ctx.lineWidth = 0.35;
+    ctx.beginPath();
+    ctx.moveTo(x + facing * 11.5, y - 9.5);
+    ctx.lineTo(x + facing * 11.5, y + 2);
+    ctx.stroke();
   }
 }
 
@@ -213,10 +359,13 @@ function ship(ctx, a, time) {
 // Draws a list of actors, far to near as given. `goods` is rules.goods, for
 // the color of what a cart carries. `time` is in seconds, for bobbing.
 export function paintActors(ctx, actors, goods, time) {
+  // The figures set line widths and ends; put them back afterwards.
+  ctx.save();
   for (const a of actors) {
     if (a.kind === 'walker') walker(ctx, a);
     else if (a.kind === 'cart') cart(ctx, a, a.good === null ? null : goods[a.good]?.color ?? '#b9a47a');
     else if (a.kind === 'boat') boat(ctx, a, time);
     else if (a.kind === 'ship') ship(ctx, a, time);
   }
+  ctx.restore();
 }

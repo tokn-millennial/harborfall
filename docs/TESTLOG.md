@@ -2104,3 +2104,65 @@ Date: 2026-11-15. Status: approved by Colin with no changes ("Keep building", ta
 - **Fertile land** is still as it was (D366).
 
 **After the gate:** committed on your "Keep building". Not pushed.
+
+## Phase 32: A fifth art pass: people, and the rest of the buildings
+
+Date: 2026-11-15. Status: approved by Colin with no changes ("Commit everything and push to github").
+
+**Turns used:** 1 (your "Keep building"). Built by Claude Opus 5.5.
+
+**How I chose.** Phase 31 left the market, harbour, sheep farm, vineyard, fisherman and people as they were (D373). I drew the people, carts and boats large in a line-up, and those buildings in a gallery: the people were little rectangles with square heads, the fishing rod a staircase of blocks, the market three plain tents with an empty corner, the harbour a bare grey square, the sheep white blobs.
+
+**What was built** (`SPEC.md` section 33)
+- People with round heads, hair, hats by kind of resident, shaped bodies, and half in skirts and headscarves; a curved fishing rod; spoked wheels.
+- A market with striped awnings, baskets of goods, paving and a well.
+- A harbour with paving, a jetty, round bollards, a coiled rope, a crane with a jib, and a lantern.
+- Woolly sheep with legs, a hay rack and a trough; fish drying at the fisherman's; leafy vine rows with bunches of grapes.
+- Before-and-after pictures: `docs/screenshots/phase32-before-after-people.jpg`, `-buildings.jpg` and `-town.jpg`.
+
+**Automated tests: 632 pass, 0 fail.** 625 from before plus 7 new in `tests/art.test.js`: round heads and a hat for each kind of resident; half in skirts; a curved rod and spoked wheels; the market's striped awnings, baskets and well; the harbour's jetty, round bollards and lantern; sheep with legs, hay rack and trough; grapes in bunches and fish drying. No older test changed.
+
+**Did the tests mean anything?** Ten breaks, each caught:
+
+| Break | Tests that failed |
+|---|---|
+| Square heads again | 1 (only after I made the test look for a whole skin-colored circle; at first hair and hats, which are round too, passed it) |
+| Everyone in a cap | 1 |
+| Nobody in a skirt | 1 |
+| A straight rod | 1 (only after the test looked for a curve reaching out over the side; the shoulders are curves too) |
+| Plain awnings | 1 |
+| Stripes all one color | 1 |
+| No jetty | 1 |
+| Legless sheep | 1 |
+| Single grapes | 1 |
+| No fish drying | 1 |
+
+**Not tested automatically:** the stored pictures of people exist only in the browser. I checked them by eye at zoom 1.4 and 4.
+
+**Balance.** Nothing in the rules changed. The click-through game still wins at 28.92.
+
+**Browser checks** (my own copy on port 5174)
+
+| Check | How | Result |
+|---|---|---|
+| People, carts, boats, large | A line-up, before and after | See the picture. |
+| The buildings | A gallery, before and after | See the picture. |
+| Drawing 200 people | Phase 31's code and this phase's in turns | First version: about 20 ms against 9. After storing each look as a picture (D376): about 6 ms against 8. |
+| Frame times | Phase 31's code and this phase's in turns | Overlapping at normal zoom (22 to 29 ms against 24 to 27); close up 28 to 31 against 26 to 28, perhaps a little slower, within the noise. |
+| A whole game through the real buttons | UI playthrough on `?fresh&paused` | Pass: tick 0, won at 28.92. |
+| Random input | 2500 actions on `?fresh` and `?demo` | No errors. |
+| The error console | Read it | Empty. |
+
+**Found along the way**
+- Drawing people from shapes doubled their cost; stored pictures fixed it (D376).
+- The well was hidden under the awnings (D377).
+- The new figure code changed the canvas's line settings; `paintActors` now puts them back.
+
+**Decisions made:** 5 (D373 to D377).
+
+**Weak or unfinished**
+- **Judged by my eye.** People are about ten pixels tall at normal zoom, so the hats show more than the faces.
+- **Close up, frames may be a millisecond or two slower;** not measured on a visible window.
+- **Fertile land** is still as it was (D366).
+
+**After the gate:** committed on your "Commit everything and push to github", and pushed with Phases 27 to 31.

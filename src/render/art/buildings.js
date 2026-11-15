@@ -155,9 +155,16 @@ export function houseLook(id) {
 const chimneyMoved = (variant) => variant === 1 || variant === 3;
 
 // One sheep: a woolly body and a dark head.
-function sheep(g, u, v) {
-  g.oval(u, v, 2.6, 3.3, 2.3, '#f4f1e6');
-  g.dot(u + 0.1, v + 0.03, 3.4, 1.25, '#3b342c');
+// One sheep: four legs, a woolly body of overlapping puffs, a dark head.
+// `facing` is 1 to face right on screen, -1 to face left.
+function sheep(g, u, v, facing = 1) {
+  const p = g.P(u, v, 0);
+  for (const dx of [-1.6, -0.6, 0.8, 1.8]) g.line({ x: p.x + dx, y: p.y }, { x: p.x + dx, y: p.y - 2.4 }, '#3b342c', 0.7);
+  g.oval(u, v, 0, 3.6, 1.2, 'rgba(15, 35, 20, 0.22)');
+  for (const [dx, dy, r, c] of [[-1.4, -3.4, 1.9, '#e6e1d2'], [1.3, -3.3, 1.9, '#e6e1d2'], [-0.4, -4.3, 2.1, '#f6f3ea'], [0.6, -3.6, 2, '#f1ede2']]) {
+    g.poly(Array.from({ length: 10 }, (_, i) => ({ x: p.x + dx + Math.cos((i / 10) * Math.PI * 2) * r, y: p.y + dy + Math.sin((i / 10) * Math.PI * 2) * r * 0.8 })), c, null);
+  }
+  g.poly(Array.from({ length: 8 }, (_, i) => ({ x: p.x + facing * 3.2 + Math.cos((i / 8) * Math.PI * 2) * 1.2, y: p.y - 4 + Math.sin((i / 8) * Math.PI * 2) * 1 })), '#3b342c', null);
 }
 // An upright barrel with two hoops, standing at (u, v) on height z.
 function barrel(g, u, v, z = 0) {
@@ -248,6 +255,14 @@ export const BUILDING_ART = {
     g.post(0.62, 0.9, 0, 9, DARK_WOOD);
     g.line(g.P(0.12, 0.9, 9), g.P(0.62, 0.9, 9), DARK_WOOD, 1);
     g.poly([g.P(0.16, 0.9, 9), g.P(0.58, 0.9, 9), g.P(0.52, 0.9, 3), g.P(0.22, 0.9, 3.5)], 'rgba(220, 230, 235, 0.55)', 'rgba(80, 100, 110, 0.6)', 0.4);
+    // Fish hung up to dry on a second line, and a barrel for the catch.
+    g.line(g.P(0.12, 0.9, 7), g.P(0.12, 0.98, 7), DARK_WOOD, 0.6);
+    for (const u of [0.24, 0.34, 0.44, 0.54]) {
+      const top = g.P(u, 0.97, 8.4);
+      g.line(g.P(u, 0.97, 9), top, 'rgba(60, 45, 30, 0.7)', 0.3);
+      g.poly([{ x: top.x - 0.7, y: top.y }, { x: top.x + 0.7, y: top.y }, { x: top.x + 0.5, y: top.y + 3 }, { x: top.x, y: top.y + 3.8 }, { x: top.x - 0.5, y: top.y + 3 }], '#9fb3bd', 'rgba(50, 60, 70, 0.5)', 0.3);
+    }
+    barrel(g, 0.66, 0.08);
   },
 
   // A field of crop rows that ripen as the cycle runs, with a small barn.
@@ -387,7 +402,11 @@ export const BUILDING_ART = {
     planksLit(g, 0.14, 0.86, wall, 0.7, WOOD, 5);
     g.onLit(0.38, 0.62, 0, wall * 0.7, 0.7, DARK_WOOD);
     g.gable(0.14, 0.14, 0.86, 0.7, wall, h * 0.7, color, { axis: 'u', wall: WOOD, lines: 2 });
-    for (const [u, v] of [[1.3, 0.5], [1.62, 0.98], [0.6, 1.25], [1.15, 1.5], [0.35, 1.66]]) sheep(g, u, v);
+    // A hay rack and a water trough.
+    g.box(0.98, 0.2, 1.36, 0.36, 0, 4.5, WOOD, { top: '#d9bf6a' });
+    for (let i = 1; i < 6; i++) g.line(g.P(0.98 + i * 0.063, 0.36, 0.6), g.P(0.98 + i * 0.063, 0.36, 4.3), tone(WOOD, 0.7), 0.4);
+    g.box(0.2, 0.9, 0.56, 1.02, 0, 2.6, WOOD, { top: '#6fa6c8' });
+    for (const [u, v, facing] of [[1.3, 0.62, -1], [1.62, 1.02, 1], [0.66, 1.25, 1], [1.15, 1.52, -1], [0.38, 1.66, 1]]) sheep(g, u, v, facing);
     // The fence along the two near sides.
     for (let i = 0; i <= 4; i++) {
       g.post(0.08 + i * 0.46, 1.92, 0, 5, DARK_WOOD, 1);
@@ -434,7 +453,13 @@ export const BUILDING_ART = {
       g.box(u0, v, 1.88, v + 0.12, 0, 6, color, { top: tone(color, 1.15), outline: false });
       g.post(u0, v + 0.12, 0, 7, DARK_WOOD, 0.9);
       g.post(1.88, v + 0.12, 0, 7, DARK_WOOD, 0.9);
-      for (let k = 0; k < 3; k++) g.dot(u0 + 0.2 + k * ((1.88 - u0 - 0.4) / 2), v + 0.13, 3, 1.1, grape);
+      // Leaves bunching along the top of the row.
+      for (let u = u0 + 0.05; u < 1.86; u += 0.09) g.dot(u, v + 0.06, 6.3, 1.3, tone(color, 1.12 + hash2(Math.round(u * 50), i, 9) * 0.12));
+      // Bunches of grapes, three grapes over two.
+      for (let k = 0; k < 3; k++) {
+        const u = u0 + 0.2 + k * ((1.88 - u0 - 0.4) / 2);
+        for (const [du, dz] of [[-0.02, 3.4], [0.02, 3.4], [0, 2.3]]) g.dot(u + du, v + 0.13, dz, 0.85, grape);
+      }
     }
   },
 
@@ -500,8 +525,14 @@ export const BUILDING_ART = {
   // goods stacked ready for the ship.
   harbor(g, { h, color }) {
     g.ground(0.04, 0.04, 1.96, 1.96, STONE, 'rgba(70, 70, 60, 0.45)');
-    // Paving lines on the quay.
-    for (let i = 1; i < 4; i++) g.line(g.P(0.04, 0.04 + i * 0.48), g.P(1.96, 0.04 + i * 0.48), tone(STONE, 0.85), 0.5);
+    // Paving stones on the quay, laid in staggered rows.
+    for (let i = 1; i < 8; i++) g.line(g.P(0.04, 0.04 + i * 0.24), g.P(1.7, 0.04 + i * 0.24), tone(STONE, 0.86), 0.45);
+    for (let r = 0; r < 8; r++) {
+      for (let u = 0.04 + (r % 2 ? 0.17 : 0.34); u < 1.7; u += 0.34) g.line(g.P(u, 0.04 + r * 0.24), g.P(u, 0.04 + (r + 1) * 0.24), tone(STONE, 0.86), 0.45);
+    }
+    // A wooden jetty along the water's edge.
+    g.ground(1.7, 0.04, 1.96, 1.96, '#9a7350', 'rgba(60, 40, 25, 0.5)');
+    for (let v = 0.16; v < 1.96; v += 0.12) g.line(g.P(1.7, v), g.P(1.96, v), tone('#9a7350', 0.75), 0.45);
     // The harbourmaster's house at the back.
     const wall = h * 0.5;
     g.box(0.12, 0.12, 1.0, 0.8, 0, wall, PLASTER, { top: false, base: STONE, baseHeight: 1.8 });
@@ -513,11 +544,19 @@ export const BUILDING_ART = {
     // A flag on a pole beside the house.
     g.post(1.12, 0.22, 0, h * 1.15, DARK_WOOD, 1);
     g.poly([g.P(1.12, 0.22, h * 1.15), g.P(1.12, 0.62, h * 1.06), g.P(1.12, 0.22, h * 0.97)], '#c94f3d', 'rgba(60, 20, 15, 0.5)', 0.4);
-    // The loading crane: a post, an arm reaching out, and a hook on its rope.
-    g.post(1.62, 0.36, 0, h * 1.25, DARK_WOOD, 1.8);
-    g.line(g.P(1.62, 0.36, h * 1.2), g.P(1.62, 1.3, h * 1.05), DARK_WOOD, 1.4);
-    g.line(g.P(1.62, 1.3, h * 1.05), g.P(1.62, 1.3, h * 0.55), 'rgba(60, 45, 30, 0.8)', 0.5);
+    // The loading crane: a stout post on a stone base, a jib held by a brace,
+    // a pulley at its end, and a crate on the rope.
+    g.box(1.52, 0.28, 1.72, 0.48, 0, 3, STONE);
+    g.box(1.58, 0.34, 1.66, 0.42, 3, h * 1.25, DARK_WOOD);
+    g.line(g.P(1.62, 0.38, h * 1.22), g.P(1.62, 1.32, h * 1.12), DARK_WOOD, 1.6);
+    g.line(g.P(1.62, 0.38, h * 0.75), g.P(1.62, 0.9, h * 1.17), DARK_WOOD, 1);
+    g.dot(1.62, 1.3, h * 1.1, 1.3, '#4a3322');
+    g.line(g.P(1.62, 1.3, h * 1.1), g.P(1.62, 1.3, h * 0.62), 'rgba(60, 45, 30, 0.8)', 0.5);
     crate(g, 1.54, 1.22, 0.16, '#c29a66');
+    // A lantern on a post by the house.
+    g.post(1.08, 0.9, 0, h * 0.9, '#3b342c', 0.9);
+    g.box(1.05, 0.87, 1.11, 0.93, h * 0.82, h * 0.95, '#f2d68a', { outline: false });
+    g.line(g.P(1.04, 0.86, h * 0.96), g.P(1.12, 0.94, h * 0.96), '#3b342c', 1);
     // Goods waiting for the ship: crates, barrels and sacks along the front.
     crate(g, 0.16, 1.2, 0.24);
     crate(g, 0.44, 1.26, 0.18, '#c29a66');
@@ -527,24 +566,44 @@ export const BUILDING_ART = {
     barrel(g, 0.86, 1.56);
     g.oval(1.18, 1.62, 2, 2.6, 2, '#d8c79e');
     g.oval(1.32, 1.66, 2, 2.6, 2, '#cdbb8f');
-    // Bollards along the edge of the quay.
-    for (const v of [0.3, 0.9, 1.5]) g.post(1.9, v, 0, 3.5, '#4a4a46', 2);
+    // Bollards along the jetty, one with a mooring rope coiled round it.
+    for (const v of [0.3, 0.9, 1.5]) g.cylinder(1.88, v, 0, 3.5, 1.2, '#4a4a46');
+    g.oval(1.84, 0.95, 0.4, 2.4, 1.2, '#c9b27a');
   },
 
   // A paved square with three striped stalls.
   market(g, { h, color }) {
     g.ground(0.06, 0.06, 1.94, 1.94, PAVING, 'rgba(90, 75, 50, 0.4)');
     const cream = '#f3ead2';
+    // Paving stones.
+    for (let i = 1; i < 8; i++) {
+      g.line(g.P(0.06, 0.06 + i * 0.235), g.P(1.94, 0.06 + i * 0.235), tone(PAVING, 0.9), 0.4);
+      g.line(g.P(0.06 + i * 0.235, 0.06), g.P(0.06 + i * 0.235, 1.94), tone(PAVING, 0.93), 0.4);
+    }
+    // A stall: a counter with baskets of its goods along the front, posts, and a striped awning.
     const stall = (u0, v0, u1, v1, goods) => {
-      g.box(u0 + 0.04, v0 + 0.04, u1 - 0.04, v1 - 0.04, 0, h * 0.28, '#a67c52');
-      g.dot((u0 + u1) / 2 - 0.1, v1 - 0.12, h * 0.28 + 1, 1.5, goods);
-      g.dot((u0 + u1) / 2 + 0.1, v1 - 0.12, h * 0.28 + 1, 1.5, goods);
+      g.box(u0 + 0.04, v0 + 0.04, u1 - 0.04, v1 - 0.04, 0, h * 0.28, '#a67c52', { top: '#c29a6a' });
+      const n = Math.max(2, Math.round((u1 - u0) / 0.24));
+      for (let i = 0; i < n; i++) {
+        const u = u0 + 0.14 + ((u1 - u0 - 0.28) * i) / (n - 1);
+        g.cylinder(u, v1 - 0.14, h * 0.28, h * 0.28 + 1.6, 2.2, '#9a7a4a', { top: goods[i % goods.length] });
+      }
       for (const [u, v] of [[u0, v0], [u1, v0], [u0, v1], [u1, v1]]) g.post(u, v, 0, h * 0.6, DARK_WOOD, 1);
-      g.pyramid(u0 - 0.05, v0 - 0.05, u1 + 0.05, v1 + 0.05, h * 0.6, h * 0.45, color, cream);
+      g.stripedPyramid(u0 - 0.05, v0 - 0.05, u1 + 0.05, v1 + 0.05, h * 0.6, h * 0.45, color, cream, 6);
     };
-    stall(0.14, 0.14, 0.86, 0.74, '#d98c3a');
-    stall(1.12, 0.14, 1.86, 0.74, '#7fb069');
-    stall(0.5, 1.12, 1.5, 1.8, '#5aa7d6');
+    stall(0.14, 0.14, 0.86, 0.74, ['#d98c3a', '#e0c04a', '#b5503a']);
+    stall(1.12, 0.14, 1.86, 0.74, ['#7fb069', '#a8c25a', '#5d8f4a']);
+    stall(0.5, 1.12, 1.5, 1.8, ['#5aa7d6', '#e8e2d0', '#7d6fb3', '#d29a52']);
+    // A well in the open corner of the square, with a bucket on its rope.
+    const well = (u, v) => {
+      g.cylinder(u, v, 0, 4.2, 4.6, STONE, { top: '#3f6f8f' });
+      g.post(u - 0.15, v, 4, 11, DARK_WOOD, 1);
+      g.post(u + 0.15, v, 4, 11, DARK_WOOD, 1);
+      g.line(g.P(u - 0.17, v, 11), g.P(u + 0.17, v, 11), DARK_WOOD, 1);
+      g.line(g.P(u, v, 11), g.P(u, v, 6.5), 'rgba(60, 45, 30, 0.8)', 0.4);
+      g.box(u - 0.03, v - 0.03, u + 0.03, v + 0.03, 5, 6.6, '#8a5f3c', { outline: false });
+    };
+    well(1.72, 1.5);
   },
 };
 

@@ -482,3 +482,8 @@ You chose this phase ("Small polish") from the options I gave: difficulty settin
 | D370 | Workers' houses have two dormers, or one in the middle for the second and fourth looks. | It makes the four looks differ in shape, not only in color. | `townhouse`. |
 | D371 | Barrels stand upright, as round cylinders, everywhere. | The barrels lying down were drawn as flat ovals and read as rings on the ground. Upright, they read at once. | `barrel` and `cylinder`. |
 | D372 | The farm's crop is rows of stalks with ears once half grown. | Solid yellow bars read as boxes, not as a field. | `farm`. |
+| D373 | Your "Keep building" approved Phase 31 and started Phase 32: people, and the buildings Phase 31 left alone. | Phase 31's report listed those as not changed, and your requests had been about the art. No question needed. | Say so and I will take something else. |
+| D374 | Each kind of resident wears its own hat: straw for Farmers, a cap for Workers, a tall hat for Artisans. | You can tell who lives in a district by the people in its streets. | `CLOTHES` in `src/render/art/actors.js`. |
+| D375 | About half the people wear a long skirt and a headscarf. | A crowd of one figure repeated looks like a crowd of one figure. | `drawPerson`. |
+| D376 | People are kept as small stored pictures in the browser. | Drawn shape by shape they cost twice as much as before, about 0.1 ms each; stored, they cost less than the old blocky ones. | `personPicture` in `src/render/art/actors.js`. |
+| D377 | The market's well stands in the open corner of the square. | In the middle it was hidden under the awnings. | `market` in `src/render/art/buildings.js`. |

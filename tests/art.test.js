@@ -910,3 +910,83 @@ test('a farm grows stalks, which carry ears once the crop is half grown', () => 
   assert.equal(ears(0.2), 0, 'a young crop has ears');
   assert.ok(ears(0.9) > 100, 'a ripe crop has no ears');
 });
+
+// ---- people and the rest of the buildings (Phase 32) ------------------------------
+
+// What a canvas is asked to draw for one actor: every call, by name, with its arguments.
+function actorCalls(actor) {
+  const calls = [];
+  const state = {};
+  const ctx = new Proxy({}, {
+    get: (t, key) => (key in state ? state[key] : (...args) => { calls.push({ name: key, args, fill: state.fillStyle }); }),
+    set: (t, key, value) => { state[key] = value; return true; },
+  });
+  paintActors(ctx, [actor], createGame(loadData()).rules.goods, 1);
+  return calls;
+}
+const walkerOf = (tier, look) => ({ kind: 'walker', x: 10, y: 10, tier, look, stride: 0, dx: 1, dy: 0 });
+
+test('people have round heads, and each kind of resident wears its own hat', () => {
+  // A head: a whole circle, filled in skin color.
+  const heads = (calls) => calls.filter((c, i) => c.name === 'arc' && c.args[4] === Math.PI * 2 && calls[i + 1]?.name === 'fill' && calls[i + 1].fill === '#e8c39e').length;
+  for (const tier of ['farmer', 'worker', 'artisan']) assert.ok(heads(actorCalls(walkerOf(tier, 0))) >= 1, `a ${tier} has no round head`);
+  // A straw hat has a wide brim (an oval); a tall hat is two blocks; a cap has neither.
+  const ovals = (tier) => actorCalls(walkerOf(tier, 0)).filter((c) => c.name === 'ellipse').length;
+  const blocks = (tier) => actorCalls(walkerOf(tier, 0)).filter((c) => c.name === 'fillRect').length;
+  assert.ok(ovals('farmer') > ovals('worker'), 'Farmers wear no straw hat');
+  assert.ok(blocks('artisan') > blocks('worker'), 'Artisans wear no tall hat');
+});
+
+test('about half the people wear a long skirt and a headscarf', () => {
+  const skirt = (look) => {
+    const calls = actorCalls(walkerOf('worker', look));
+    const tunic = ['#3f6f9a', '#9a4a3f', '#5d5d80', '#4a7d6a'][look % 4];
+    return calls.some((c) => c.name === 'fill' && c.fill === tone(tunic, 0.78));
+  };
+  const wearing = Array.from({ length: 20 }, (_, look) => skirt(look)).filter(Boolean).length;
+  assert.equal(wearing, 10);
+  assert.notDeepEqual(actorCalls(walkerOf('worker', 0)).map((c) => c.name), actorCalls(walkerOf('worker', 1)).map((c) => c.name));
+});
+
+test('a fisherman fishes with a curved rod, and cart wheels have spokes', () => {
+  const rod = actorCalls({ kind: 'boat', x: 10, y: 10, dx: 1, dy: 0, look: 0, manned: true, fishing: true });
+  // The rod: a curve reaching well out beside the boat (the shoulders are curves too, but close in).
+  const boatX = tileToWorld(10, 10).x;
+  assert.ok(rod.some((c) => c.name === 'quadraticCurveTo' && Math.abs(c.args[2] - boatX) > 8), 'the rod is not curved');
+  const cart = actorCalls({ kind: 'cart', x: 10, y: 10, dx: 1, dy: 0, look: 0, stride: 0, good: null });
+  assert.ok(cart.filter((c) => c.name === 'stroke').length >= 2, 'the wheels have no spokes');
+});
+
+test('the market has striped awnings, baskets of goods and a well', () => {
+  const calls = kitCalls('market');
+  assert.equal(calls.filter((c) => c.name === 'stripedPyramid').length, 3);
+  assert.ok(calls.filter((c) => c.name === 'cylinder').length >= 8, 'too few baskets, or no well');
+  // A striped awning: each face in alternating colors.
+  const r = styledRecorder();
+  createKit(r.ctx, 0, 0).stripedPyramid(0, 0, 1, 1, 10, 8, '#c9506b', '#f3ead2', 6);
+  const fills = r.drawn.filter((d) => d.color !== undefined);
+  const reds = fills.filter((d) => /^rgb/.test(d.color) && Number(d.color.match(/\d+/)[0]) > Number(d.color.match(/\d+/g)[2]) + 40).length;
+  assert.ok(reds >= 12 && fills.length - reds >= 12, `${reds} red stripes of ${fills.length}`);
+});
+
+test('the harbour has a jetty, a crane with a jib, round bollards and a lantern', () => {
+  const calls = kitCalls('harbor', { h: 27.5 });
+  assert.ok(calls.some((c) => c.name === 'ground' && c.args[4] === '#9a7350'), 'no jetty');
+  assert.ok(calls.filter((c) => c.name === 'cylinder').length >= 6, 'bollards or barrels are not round');
+  assert.ok(calls.some((c) => c.name === 'box' && c.args[6] === '#f2d68a'), 'no lantern');
+});
+
+test('sheep have legs, and the pasture a hay rack and a trough', () => {
+  const calls = kitCalls('sheepfarm');
+  const legs = calls.filter((c) => c.name === 'line' && c.args[2] === '#3b342c').length;
+  assert.equal(legs, 5 * 4);
+  assert.ok(calls.some((c) => c.name === 'box' && c.args[7]?.top === '#d9bf6a'), 'no hay rack');
+  assert.ok(calls.some((c) => c.name === 'box' && c.args[7]?.top === '#6fa6c8'), 'no water trough');
+});
+
+test('the vineyard has bunches of grapes and the fisherman fish drying', () => {
+  const grapes = kitCalls('vineyard', { progress: 0.9 }).filter((c) => c.name === 'dot' && c.args[3] === 0.85).length;
+  assert.equal(grapes, 5 * 3 * 3, 'grapes are not in bunches of three');
+  const fish = kitCalls('fisherman').filter((c) => c.name === 'poly' && c.args[1] === '#9fb3bd').length;
+  assert.equal(fish, 4);
+});

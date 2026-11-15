@@ -822,3 +822,13 @@ Added in Phase 31. Only the look changed. No rule, number or data file changed, 
 - **Houses.** Farmers' cottages have a small porch over the door and a woodshed against the side. Workers' houses have dormer windows in the roof: two, or for some one in the middle. Artisans' houses have a tall gable over the door, rising from the wall, with a window.
 - **Workshops.** The warehouse has a loft door in a gable over its big doors, with a hoist and a sack on its rope. The bakery has a domed bread oven against its side, whose mouth glows while it bakes, and loaves on a bench by the door. The winery has an arched cellar door, a gable with a round window, a vine up the wall and barrels stacked by the wall. The weaver has a lean-to where the wool is kept. The farm's crop grows as rows of stalks that carry ears once half grown. The lumberjack has a chopping block with an axe in it; the sawmill has windows and sawdust by its door.
 - **Barrels** everywhere are round and stand upright.
+
+## 33. A fifth art pass: people, and the rest of the buildings
+
+Added in Phase 32. Only the look changed. No rule, number or data file changed, and saved games are untouched.
+
+- **People** have round heads, hair, shaped bodies with a belt, and arms with hands. Each kind of resident wears its own hat: a wide straw hat for Farmers, a flat cap for Workers, a tall hat for Artisans. About half wear a long skirt and a headscarf instead. Carters and fishermen are drawn the same way; a fisherman's rod now bends out over the side, and cart wheels have spokes.
+- **The market** has striped awnings, baskets of goods along each counter, paving stones and a well in its open corner.
+- **The harbour** has a paved quay, a wooden jetty along the water with round bollards and a coiled rope, a crane with a jib, a brace and a pulley, and a lantern by the harbourmaster's house.
+- **The sheep farm**'s sheep have woolly bodies, heads and legs, and the pasture has a hay rack and a water trough.
+- **The fisherman** hangs fish to dry beside the net and keeps a barrel for the catch. **The vineyard**'s rows are leafy along the top, with grapes in bunches.
