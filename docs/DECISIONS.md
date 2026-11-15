@@ -16,6 +16,7 @@ Every choice that was not spelled out in the brief is recorded here, with the re
 | Q8 | What the second island offers (Phase 22) | A new good the home island cannot make, which Artisans want. |
 | Q9 | When it opens (Phase 22) | After the win, so the first game stays as it is. |
 | Q10 | Wine strict, or filling houses (Phase 23, D317) | Keep it as it is: wine fills Artisan houses, 12 with it and 8 without. |
+| Q11 | What to build next (Phase 25) | Show how far carts reach, while placing. |
 
 ## Decisions I made (Phase 0)
 
@@ -441,3 +442,8 @@ You chose this phase ("Small polish") from the options I gave: difficulty settin
 | D330 | The bot's Artisans order sets no levels. | Measured: keeping 10 or 20 planks and 40 wood at home changed the second act by under a minute either way on four islands and three difficulties. The bot ships wood and planks only briefly. | `tools/bot/orders/artisans.json`. A build order can now set one: `{ "ship": "wood", "way": "out", "keep": 30 }`. |
 | D331 | "keeps 20" sits beside the good's name; where it is kept is said on hover. | Under the stocks it made each row three lines, and the panel scrolled 95 pixels at 800 high. Now 36. | `src/ui/infoPanel.js`. |
 | D332 | A test page that starts paused, `?fresh&paused`, and the click-through test stops the clock and says the tick it began at. | Two runs won at 29.52 and 29.35 instead of 28.92: the page's own clock had run a second or so before the script started. Nothing in the rules was wrong. | `src/main.js`, `tools/ui-playthrough.js`. |
+| D333 | You chose cart reach on the map for Phase 25 (Q11). | | |
+| D334 | Reach is shown on the roads, green or red, only while placing a producer, a warehouse or a road. | Carts follow roads, so a circle on the ground would mislead. Shown all the time it would clutter the map. | `showReach` in `src/ui/gameUi.js`. |
+| D335 | The tip gives the distance by the roads already built. | It cannot know the road you will lay next. It is exact for a building placed beside an existing road (a test checks it against the real haul). | `haulIfPlaced` in `src/ui/tools.js`. |
+| D336 | The top bar's text is a size smaller below 1460 pixels wide, and half a size more below 1380. | Measured on the demo town, the clock wrapped onto a second line at 1280. In Phase 23 I had measured the bar while it was still empty, because the hidden pane had not drawn yet, so my "fits at 1280" was wrong. | `ui.css`. |
+| D337 | When your server on port 5173 stopped, I ran my own on 5174 for my checks, and stopped it after. | Yours was not mine to start or stop. The app's preview launcher would only read its settings from inside your vault's `.obsidian` folder, where I must not write. | |

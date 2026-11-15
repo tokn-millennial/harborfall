@@ -66,6 +66,27 @@ export function recomputeHauls(game) {
   const { rules, state } = game;
   if (!rules.carts) return;
   const map = state.map;
+  const { dist, from } = roadReach(game);
+  for (const b of state.buildings) {
+    if (!b.production) continue;
+    const def = rules.buildings[b.type];
+    let best = null;
+    for (const [x, y] of perimeter(b.x, b.y, def.w, def.h)) {
+      if (!inBounds(map, x, y)) continue;
+      const i = tileIndex(map, x, y);
+      if (dist[i] === 0) continue;
+      if (!best || dist[i] < best.tiles) best = { from: from[i], tiles: dist[i] };
+    }
+    b.production.haul = best;
+  }
+}
+
+// How far every road tile is from the nearest warehouse by road, and which
+// warehouse that is. dist is 0 for a tile that is not road or not joined to
+// any warehouse; a road tile beside a warehouse is 1. Never changes the game.
+export function roadReach(game) {
+  const { rules, state } = game;
+  const map = state.map;
   const size = map.width * map.height;
   const dist = new Int32Array(size).fill(0);
   const from = new Int32Array(size).fill(0);
@@ -99,18 +120,7 @@ export function recomputeHauls(game) {
       }
     }
   }
-  for (const b of state.buildings) {
-    if (!b.production) continue;
-    const def = rules.buildings[b.type];
-    let best = null;
-    for (const [x, y] of perimeter(b.x, b.y, def.w, def.h)) {
-      if (!inBounds(map, x, y)) continue;
-      const i = tileIndex(map, x, y);
-      if (dist[i] === 0) continue;
-      if (!best || dist[i] < best.tiles) best = { from: from[i], tiles: dist[i] };
-    }
-    b.production.haul = best;
-  }
+  return { dist, from };
 }
 
 // A building has just been placed: a warehouse brings its carts.

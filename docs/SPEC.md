@@ -755,3 +755,11 @@ Added in Phase 24.
 - In the second island's harbour panel, a good that is carried shows "keeps 20" beside its name, with − and + in steps of 10, up to that island's storage room. Hovering over − or + says where it is kept: "Leave more at home".
 - The level stays when the order changes direction, and setting it can be undone.
 - A game saved before this phase keeps nothing back.
+
+## 26. How far carts reach, on the map
+
+Added in Phase 25. Nothing in the rules changed.
+
+- While you place a **producer, a warehouse or a road**, every road is tinted: **green** where a cart from a warehouse comes that far (30 road tiles), **red** where it is too far, or joined to no warehouse at all.
+- Placing a producer beside a road, the tip beside the pointer says how far it would be: "Sawmill: 40 coins, 5 wood. 20 road tiles from a warehouse." Too far, it says "Too far for carts: 41 road tiles. They come 30." in the warning colour.
+- The distance counts the roads as they are. Road you lay afterwards can shorten it.

@@ -3,7 +3,7 @@
 // preview always agrees with what a click will do. Tested in Node.
 
 import { HOME, islandOf } from '../sim/index.js';
-import { buildingAt, canPlace, canUpgrade, inMarketRange, siteReason } from '../sim/index.js';
+import { buildingAt, canPlace, canUpgrade, inMarketRange, roadReach, siteReason } from '../sim/index.js';
 import { MILLI } from '../sim/rules.js';
 
 // An L-shaped line of tiles from A to B: along the longer side first.
@@ -53,6 +53,47 @@ export function previewBuild(game, building, x, y) {
   const hints = [];
   if (!site && def.housingTier && !inMarketRange(game, x, y, def.w, def.h)) hints.push('no_market');
   return { building, x, y, w: def.w, h: def.h, ok: check.ok, reason: check.ok ? null : check.reason, siteOk: !site, hints };
+}
+
+// With carts: every road tile, and whether a cart from a warehouse can come
+// that far along it. { tiles: [{ x, y, tiles, reached }], reach } where tiles
+// is the road distance to the nearest warehouse (0 when joined to none) and
+// reached is true when a cart comes that far. Empty without carts.
+export function cartReachMap(game) {
+  const { rules, state } = game;
+  if (!rules.carts) return { tiles: [], reach: 0 };
+  const map = state.map;
+  const { dist } = roadReach(game);
+  const out = [];
+  for (let i = 0; i < state.roads.length; i++) {
+    if (!state.roads[i]) continue;
+    out.push({ x: i % map.width, y: Math.floor(i / map.width), tiles: dist[i], reached: dist[i] > 0 && dist[i] <= rules.carts.reachTiles });
+  }
+  return { tiles: out, reach: rules.carts.reachTiles };
+}
+
+// With carts: how far a building placed at (x, y) would be from a warehouse by
+// the roads as they are, in road tiles, or null when no road touches it.
+export function haulIfPlaced(game, building, x, y) {
+  const { rules, state } = game;
+  if (!rules.carts) return null;
+  const def = rules.buildings[building];
+  const map = state.map;
+  const { dist } = roadReach(game);
+  let best = null;
+  for (let dy = -1; dy <= def.h; dy++) {
+    for (let dx = -1; dx <= def.w; dx++) {
+      const edge = dx === -1 || dy === -1 || dx === def.w || dy === def.h;
+      const corner = (dx === -1 || dx === def.w) && (dy === -1 || dy === def.h);
+      if (!edge || corner) continue;
+      const tx = x + dx;
+      const ty = y + dy;
+      if (tx < 0 || ty < 0 || tx >= map.width || ty >= map.height) continue;
+      const d = dist[ty * map.width + tx];
+      if (d > 0 && (best === null || d < best)) best = d;
+    }
+  }
+  return best;
 }
 
 // Preview of laying road on a list of tiles, in order.

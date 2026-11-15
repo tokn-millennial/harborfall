@@ -1751,4 +1751,52 @@ Date: 2026-11-14. Status: approved by Colin with no changes (he asked to commit 
 - **The panel still scrolls a little** at 800 pixels high when every good is carried.
 - **Not done:** your notes from playing, and a Mac test.
 
-**After the gate:** committed on your "Commit the working tree changes with a sensible message." Not pushed.
+**After the gate:** committed on your "Commit the working tree changes with a sensible message." Pushed on your "keep buildingpush to github".
+
+## Phase 25: How far carts reach, on the map
+
+Date: 2026-11-15. Status: approved by Colin with no changes ("Commit and proceed").
+
+**Turns used:** 2 (your "keep buildingpush to github", your choice Q11, and your "Try again" after my test server stopped). Built by Claude Opus 5.5.
+
+**What was built** (`SPEC.md` section 26)
+- While placing a producer, warehouse or road: roads green where carts reach, red where they do not.
+- The placement tip says how many road tiles the building would be from a warehouse, or that it is too far.
+- The top bar fits one line again on a finished town at 1280 wide (D336).
+
+**Automated tests: 598 pass, 0 fail.** 593 from before plus 5 new in `tests/reach.test.js`, on a long hand-drawn island: the road distances, the green and red roads (including a road joined to nothing), the shown distance matching the real one after placing, the words, and a "too far" sawmill really being out of reach. No older test changed.
+
+**Did the tests mean anything?** Four breaks, each caught:
+
+| Break | Tests that failed |
+|---|---|
+| The shown distance one tile off | 1 |
+| The last tile of reach called too far | 1 |
+| Roads joined to nothing called reached | 1 |
+| The far end called near | 2 |
+
+**Balance.** Unchanged: standard 28.9, merchant 31.9, 100 Artisans 30.5 minutes after the win.
+
+**Browser checks** (on my own copy at port 5174, test pages only)
+
+| Check | How | Result |
+|---|---|---|
+| Green and red roads | Sawmill tool on the demo town, with a short road laid away from every warehouse | Pass: the loose road red, the town's roads green. See `docs/screenshots/phase25-cart-reach.jpg`. |
+| The distance in the tip | Hovered a sawmill site beside a road | Pass: "Sawmill: 40 coins, 5 wood. 20 road tiles from a warehouse.", the 20 predicted. |
+| Working it out each frame | Timed in the page | About 0.2 ms. |
+| The top bar on one line | Demo town at 1280, 1366, 1440 and 1920, with a frame drawn before measuring | Pass at all four. A made-up worst case, five-figure coins and all nine goods in three figures, fits from 1366 up but wraps the clock at 1280. |
+| A whole game through the real buttons | Click-through on `?fresh&paused` | Pass: started at tick 0, won at 28.92. |
+| The error console | Read it | Empty. |
+
+**Found along the way**
+- **My Phase 23 width check was wrong.** I measured the top bar before the hidden pane had drawn anything into it, so it was empty and seemed to fit. On a real town the clock wrapped at 1280. Fixed (D336), and the right way to measure is now in `ARCHITECTURE.md` section 28.
+- **Your server on port 5173 stopped** during this phase, not by me. I used my own copy on 5174 and stopped it after (D337). To play, start the game as usual.
+
+**Decisions made:** 5 (D333 to D337), and your choice as Q11.
+
+**Weak or unfinished**
+- **The worst case of the top bar** still wraps at 1280 (above).
+- **The distance ignores road you have yet to lay.**
+- **Nobody has played it.**
+
+**After the gate:** committed on your "Commit and proceed". Not pushed.

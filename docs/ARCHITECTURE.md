@@ -612,3 +612,9 @@ Phase 21 changed only `src/render/`, two files in `src/ui/` and `ui.css`. No rul
 - `state.ship.keep`: good to level, only for levels above 0. Kept apart from `state.ship.orders` so that orders saved before Phase 24 need no change; loading adds an empty `keep`.
 - `load` in `src/sim/ship.js` skips a good once its stock is at its level. Command `{ action: 'shipKeep', good, keep }`, 0 to 999, undoable.
 - **The test page `?fresh&paused`** opens with the clock stopped, and `tools/ui-playthrough.js` stops the clock when it starts and reports `startedAtTick`. Before this, a run started a second or two after the page opened ended differently.
+
+## 28. Cart reach on the map
+
+- `roadReach(game)` in `src/sim/carts.js` is the road search the carts already used, now shared: for every road tile, the distance to the nearest warehouse and which one. `recomputeHauls` uses it.
+- `cartReachMap` and `haulIfPlaced` in `src/ui/tools.js` turn it into tints and a distance for the building being placed; `haulText` in `src/ui/text.js` says it. `gameUi.js` draws them each frame while placing; working it out takes about 0.2 ms on the demo town.
+- **Measuring the top bar:** call `window.harborfall.ui.frame(0)` first. A hidden pane may not have drawn a frame yet, and then the bar is empty and seems to fit.

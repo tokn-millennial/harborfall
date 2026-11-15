@@ -44,6 +44,15 @@ export function shortfallText(game, cost, from = HOME) {
   return `Need ${parts.join(' and ')}${where}`;
 }
 
+// How far a building being placed would be from a warehouse by road, for the
+// tip beside the pointer: "8 road tiles from a warehouse." or "Too far for
+// carts: 41 road tiles. They come 30." null when there is nothing to say.
+export function haulText(rules, tiles) {
+  if (!rules.carts || tiles === null) return null;
+  if (tiles > rules.carts.reachTiles) return `Too far for carts: ${tiles} road tiles. They come ${rules.carts.reachTiles}.`;
+  return `${tiles} road ${tiles === 1 ? 'tile' : 'tiles'} from a warehouse.`;
+}
+
 // What your ship does with a good: the words on its order button.
 export const SHIP_WAY_TEXT = { off: 'Stays', out: 'Takes over', back: 'Brings home' };
 

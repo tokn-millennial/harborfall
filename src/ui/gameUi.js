@@ -14,8 +14,8 @@ import { createInfoPanel } from './infoPanel.js';
 import { createSpeedControls } from './speedControls.js';
 import { createWinScreen } from './winScreen.js';
 import { panelModel } from './panelModel.js';
-import { anchorFor, previewBuild, previewDemolish, previewRoad, previewUpgrade, rangeTiles, requiredTerrain, roadLine, terrainTiles } from './tools.js';
-import { clock, costText, milestoneMessage, reasonText, refundText, winMessage, tradeCallText } from './text.js';
+import { anchorFor, previewBuild, previewDemolish, previewRoad, previewUpgrade, rangeTiles, requiredTerrain, roadLine, terrainTiles, cartReachMap, haulIfPlaced } from './tools.js';
+import { clock, costText, milestoneMessage, reasonText, refundText, winMessage, tradeCallText, haulText } from './text.js';
 import { setText } from './dom.js';
 import { createAdvisor } from './advice.js';
 
@@ -27,6 +27,8 @@ const TINT = {
   roadNew: 'rgba(250, 232, 170, 0.85)',
   roadExisting: 'rgba(255, 255, 255, 0.3)',
   roadShort: 'rgba(245, 165, 36, 0.6)',
+  reached: 'rgba(80, 205, 120, 0.42)',   // a road a cart comes along
+  unreached: 'rgba(235, 80, 60, 0.5)',   // a road too far for carts, or joined to no warehouse
 };
 const SELECT = { mode: 'select', building: null };
 const MESSAGE_SECONDS = 3;
@@ -253,6 +255,13 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
     const overlay = { tints: [], fadeBuildings: placing, grid: placing };
     let tip = null; // { text, level } shown next to the pointer
 
+    // With carts: while placing a producer, a warehouse or road, every road is
+    // tinted by whether a cart can come that far along it.
+    const showReach = rules.carts && (tool.mode === 'road' || (tool.mode === 'build' && (rules.buildings[tool.building].production || rules.buildings[tool.building].category === 'storage')));
+    if (showReach) {
+      for (const t of cartReachMap(game).tiles) overlay.tints.push({ x: t.x, y: t.y, color: t.reached ? TINT.reached : TINT.unreached });
+    }
+
     // A building tied to a kind of ground lights that ground up for as long as
     // its tool is picked, so it is plain where it can go.
     if (tool.mode === 'build') {
@@ -294,7 +303,10 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
       } else if (def.requiresRoad && !touchesRoad(at.x, at.y, def.w, def.h)) {
         tip = { text: `${def.name}: remember to join it to a warehouse by road.`, level: 'warn' };
       } else {
-        tip = { text: `${def.name}: ${costText(rules, def.cost)}`, level: 'ok' };
+        // A producer beside a road: how far its goods go by cart.
+        const haul = def.production ? haulText(rules, haulIfPlaced(game, tool.building, at.x, at.y)) : null;
+        const far = haul !== null && haul.startsWith('Too far');
+        tip = { text: `${def.name}: ${costText(rules, def.cost)}${haul ? `. ${haul}` : ''}`, level: far ? 'warn' : 'ok' };
       }
     } else if (tool.mode === 'road' && active) {
       const here = groundTile(pointer.x, pointer.y);

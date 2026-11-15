@@ -13,7 +13,7 @@ import { saveGame, loadGame, SAVE_FORMAT } from './save.js';
 import { undoStatus } from './undo.js';
 import { staffing } from './staff.js';
 import { stepTrade, tradeSummary, tradeOrderReason } from './trade.js';
-import { cartsSummary, servedByCarts, stepCarts } from './carts.js';
+import { cartsSummary, roadReach, servedByCarts, stepCarts } from './carts.js';
 import { seaPath, shipHarbour, shipOrderReason, shipSummary, stepShip } from './ship.js';
 import { HOME, SECOND, islandAt, islandOf, secondIsOpen, hasSecondIsland, paysFrom, stockOf } from './islands.js';
 
@@ -21,7 +21,7 @@ export {
   createGame, execute, canPlace, siteReason, buildingAt, buildingById,
   countResidents, isSatisfied, getSummary, buildingIssue, inMarketRange, housesInRangeOf,
   saveGame, loadGame, SAVE_FORMAT, undoStatus, staffing, medalFor, tradeSummary, cartsSummary, servedByCarts,
-  houseCapacity, needCounts, shipSummary, seaPath, shipHarbour, HOME, SECOND, islandAt, islandOf, secondIsOpen, hasSecondIsland, paysFrom, stockOf,
+  roadReach, houseCapacity, needCounts, shipSummary, seaPath, shipHarbour, HOME, SECOND, islandAt, islandOf, secondIsOpen, hasSecondIsland, paysFrom, stockOf,
 };
 
 // The goods of the island a building stands on: { goods, storageCap }.

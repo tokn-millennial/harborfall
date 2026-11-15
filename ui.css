@@ -275,18 +275,25 @@ body.title-open #game { cursor: default; }
   #hud-main { gap: 6px 16px; }
 }
 @media (max-width: 1460px) {
-  .hud-goods { gap: 12px; }
-  .hud-pop { gap: 11px; }
-  #hud-main { gap: 6px 14px; }
-  .progress { width: 60px; }
+  #hud-main { font-size: 13px; }
+  .hud-big { font-size: 20px; }
+  .hud-goods { gap: 8px; }
+  .hud-pop { gap: 8px; }
+  #hud-main { gap: 6px 12px; }
+  .progress { width: 44px; }
 }
-/* The staff count joined the row in Phase 15: a little tighter still. */
+/* The staff count joined the row in Phase 15, and grapes and wine in Phase
+   23: a little tighter still. Measured on a finished town, whose numbers are
+   longer than a new game's. */
 @media (max-width: 1380px) {
-  .hud-goods { gap: 9px; }
-  .hud-pop { gap: 9px; }
-  #hud-main { gap: 6px 11px; }
-  .progress { width: 40px; }
-  .hud-good { gap: 3px; }
+  #hud-main { font-size: 12.5px; }
+  .hud-big { font-size: 19px; }
+  .hud-goods { gap: 5px; }
+  .hud-pop { gap: 5px; }
+  #hud-main { gap: 6px 8px; }
+  .progress { width: 20px; }
+  .hud-good { gap: 2px; }
+  .hud-goods, .hud-pop, .hud-time { padding-left: 7px; }
 }
 /* Eighteen tools must fit one row at 1280 wide, so they slim down in steps. */
 @media (max-width: 1600px) {
