@@ -1,6 +1,6 @@
 # Harborfall: Roadmap
 
-Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 29. Phases 0 to 17 by Claude Fable 5.2; Phases 18 to 29 by Claude Opus 5.5.
+Written 2026-11-11 at the end of Phase 7, and brought up to date at the end of Phase 30. Phases 0 to 17 by Claude Fable 5.2; Phases 18 to 30 by Claude Opus 5.5.
 
 This is a list of what could come next, in the order I would do it. **Nothing here is decided.** Every item is a proposal, and you choose. The working rule from the brief still stands: nothing gets built that you did not ask for.
 
@@ -8,8 +8,8 @@ Read `HANDOFF.md` first if you are picking the project up after a break.
 
 ## Where the project stands
 
-- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), undo with a first-game guide (Phase 11), a third kind of resident with a goal after the win (Phase 12), difficulty settings with two touches to the look (Phase 13), dust, chimney smoke and day and night (Phase 14), staff for buildings (Phase 15), closing a building for now (Phase 16), three scenarios with medals (Phase 17), a harbour with a trade ship (Phase 18), carts that carry goods by road (Phase 19), materials carried to workshops (Phase 20), an art and design pass (Phase 21), a second island with your own ship (Phase 22), grapes and wine from that island (Phase 23), a level your ship keeps back (Phase 24), cart reach shown while placing (Phase 25), a fourth scenario, the vintners (Phase 26), trade prices that move (Phase 27), a best time with an island number box (Phase 28), and rounded ground, smooth roads and varied houses (Phase 29).
-- **Proven by machines:** 616 automated tests pass. A bot wins in 28.9 minutes. A script wins through the real UI and ends in exactly the bot's game.
+- **Done:** the whole Version 1 slice from the brief (Phases 0 to 5), a polish pass (Phase 6), drawn art with a new theme (Phase 7), saving, a title screen and a choice of island (Phase 8), people, carts and boats on the map (Phase 9), sound (Phase 10), undo with a first-game guide (Phase 11), a third kind of resident with a goal after the win (Phase 12), difficulty settings with two touches to the look (Phase 13), dust, chimney smoke and day and night (Phase 14), staff for buildings (Phase 15), closing a building for now (Phase 16), three scenarios with medals (Phase 17), a harbour with a trade ship (Phase 18), carts that carry goods by road (Phase 19), materials carried to workshops (Phase 20), an art and design pass (Phase 21), a second island with your own ship (Phase 22), grapes and wine from that island (Phase 23), a level your ship keeps back (Phase 24), cart reach shown while placing (Phase 25), a fourth scenario, the vintners (Phase 26), trade prices that move (Phase 27), a best time with an island number box (Phase 28), rounded ground, smooth roads and varied houses (Phase 29), and natural forests and meadows (Phase 30).
+- **Proven by machines:** 619 automated tests pass. A bot wins in 28.9 minutes. A script wins through the real UI and ends in exactly the bot's game.
 - **Checked by you:** you played for about 40 minutes on 2026-11-12. The game runs smoothly and the figures move well.
 - **Still not known:** whether you won and how long it took, how the sounds are, whether the guide helps someone new, and how any of it works on a Mac.
 
@@ -52,7 +52,8 @@ Each phase so far took one long working session. The sizes compare with that.
 | 27 | **Done, unplayed.** Trade prices that move (part of D4) | Medium | The next of the options offered at Q11. |
 | 28 | **Done, unplayed.** Your best time on the standard island, and a box for an island number (leftovers of B2 and D5) | Small | Needed no choice from you. |
 | 29 | **Done, unplayed.** A second art pass: rounded ground, smooth roads, four house looks | Medium | You asked: "Improve the art more". |
-| 30 onward | Your notes from playing, or the rest of the list below | | What is left needs your say, and the game most needs a person to play it. |
+| 30 | **Done, unplayed.** A third art pass: forests and meadows | Small | You asked: "Make the art even better". |
+| 31 onward | Your notes from playing, or the rest of the list below | | What is left needs your say, and the game most needs a person to play it. |
 | Any time | Put it online (E1) | Small | Independent of the rest. Read the privacy note there first. |
 
 ---
@@ -223,10 +224,10 @@ These are not features. They are debts and loose ends, smallest first.
 
 One line is enough. For example:
 
-> Phase 30: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
+> Phase 31: I played a full game. It took 41 minutes. Notes: (your notes). Plan the fixes and show me the plan first.
 
 or
 
-> Phase 30: a way to lose (D5). Ask me what you need first.
+> Phase 31: a way to lose (D5). Ask me what you need first.
 
 The helper should then follow the working rules in `HANDOFF.md` section 6: plan first, one feature at a time, test everything itself, stop at the gate with the five-part report, and commit only after you approve.

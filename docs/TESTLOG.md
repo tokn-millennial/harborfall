@@ -1987,3 +1987,60 @@ Date: 2026-11-15. Status: approved by Colin with no changes (his next request, "
 - **Not touched:** the panels and title screen, the figures, the sea.
 
 **After the gate:** committed on your "Make the art even better". Not pushed.
+
+## Phase 30: A third art pass: forests and meadows
+
+Date: 2026-11-15. Status: approved by Colin with no changes (his next request, "Make the art even better. Focus on the buildings", moved on without changes; taken as approval as at D254). He did not take up D366, so fertile land is unchanged.
+
+**Turns used:** 1 (your "Make the art even better"). Built by Claude Opus 5.5.
+
+**How I chose.** Full-size pictures of the demo town again, at three zooms. After Phase 29 the forests stood out most (one thin pine per tile, in rows, in one shade), then the flat meadows, then the sea that stopped changing a short way out (D361).
+
+**What was built** (`SPEC.md` section 31)
+- Forests of two or three trees a tile in mixed sizes and shades, with leafy trees among the pines, a thinning edge and undergrowth.
+- Warm and cool patches across the meadows.
+- A sixth, faint band of shallows.
+- Before-and-after pictures: `docs/screenshots/phase30-before-after-town.jpg`, `-forest.jpg` and `-island.jpg`.
+
+**Automated tests: 619 pass, 0 fail.** 616 from before plus 3 new in `tests/art.test.js`: a forest tile's trees stand on it, two or three (fewer and smaller at the edge), in three shades, a fifth to a third leafy, far ones first; a tree drawn again beside a building matches the forest picture exactly, on an edge tile and an inner one; meadows have warm and cool patches, neighbours within one step, and the ground picture really paints warmer and cooler greens. Changed: one older test that recognises grass by its color now allows for warm and cool greens.
+
+**Did the tests mean anything?** Eight breaks, each caught:
+
+| Break | Tests that failed |
+|---|---|
+| One tree a tile, as before | 1 |
+| Trees wander off their tile | 1 |
+| Edge trees not smaller | 1 |
+| Trees in one shade | 1 |
+| Trees beside buildings not told about the forest's edge (they would jump) | 1 |
+| Trees drawn near-first | 1 |
+| Meadows in one green | 1 (only after I made the test measure warmth itself; at first the light and dark shades alone passed it) |
+| Warmth in big jumps | 2 |
+
+**Balance.** Nothing in the rules changed. The click-through game still wins at 28.92.
+
+**Browser checks** (my own copy on port 5174)
+
+| Check | How | Result |
+|---|---|---|
+| The look | Full-size pictures, far, normal and close, compared with Phase 29 | Better; see the three pictures. |
+| Frame times | Phase 29's code and this phase's in turns, each frame forced to finish | Overlapping: about 19 to 26 ms before, 19 to 30 after, in the slow hidden pane. Trees beside buildings, all 61 near the demo town drawn at once: about 4 ms more. |
+| Opening a game | Painting the whole island's ground | About 0.87 s against 0.6 s in the hidden pane, once. A close-up redraw costs the same as before. |
+| A whole game through the real buttons | UI playthrough on `?fresh&paused` | Pass: tick 0, won at 28.92. |
+| Random input | 2500 actions on `?fresh` and `?demo` | No errors. |
+| The error console | Read it | Empty. |
+
+**Found along the way**
+- The first meadow patches showed tile edges; finer steps fixed it, and a test then caught places that still jumped two steps (D364).
+- A yellowish leafy shade looked sickly (D363).
+- Trees beside buildings filled every color layer even when empty; now only those used.
+
+**Decisions made:** 6 (D361 to D366). One is a question for you: D366, whether fertile land should look like wild meadow.
+
+**Weak or unfinished**
+- **Judged by my eye.**
+- **Fertile land** is now the plainest part of the island from afar (D366).
+- **Opening a game is about a quarter of a second slower** in the test pane, and drawing a town ringed by forest costs a few milliseconds more a frame. Neither was measured on a real visible window.
+- **Not touched:** panels, figures, buildings other than houses.
+
+**After the gate:** committed on your "Make the art even better. Focus on the buildings". Not pushed.

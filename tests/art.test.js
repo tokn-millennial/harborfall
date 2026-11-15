@@ -11,7 +11,7 @@ import { createKit, tone, mix, hash2 } from '../src/render/art/kit.js';
 import { ART_USES, BUILDING_ART, LIVE_ART, artFor, artIdFor, artStateKey, houseLook } from '../src/render/art/buildings.js';
 import { sharpnessFor } from '../src/render/art/sprites.js';
 import { paintBox } from '../src/render/art/box.js';
-import { ROUND, createForestPainter, createRoadPainter, createTerrainPainter, gridLines, groundShade, paintGrid, paintTree, paintWater, shorePieces, waterBackground } from '../src/render/art/terrain.js';
+import { ROUND, WARMTH_LEVELS, createForestPainter, createRoadPainter, createTerrainPainter, grassWarmth, gridLines, groundShade, paintGrid, paintTree, paintTrees, paintWater, shorePieces, treesOnTile, waterBackground } from '../src/render/art/terrain.js';
 import { buildingVisual } from '../src/render/visuals.js';
 import { paintActors } from '../src/render/art/actors.js';
 import { paintDust } from '../src/render/art/dust.js';
@@ -61,13 +61,15 @@ globalThis.Path2D ??= class {
   closePath() {}
 };
 // How many points were handed to fill() or stroke() as ready-made shapes.
+const worldToTileOf = (wx, wy) => ({ x: (wx / 32 + wy / 16) / 2, y: (wy / 16 - wx / 32) / 2 });
 const shapePoints = (calls) => calls.reduce((sum, path) => sum + (path?.points?.length ?? 0), 0);
 
-// Whether an "rgb(r, g, b)" color is a light or dark shade of a hex color.
+// Whether an "rgb(r, g, b)" color is a light or dark, warm or cool shade of a
+// hex color. The kinds of ground in the tests are much further apart than this.
 function colorNear(rgb, hex) {
   const [r, g, b] = rgb.match(/\d+/g).map(Number);
   const [hr, hg, hb] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-  return Math.abs(r - hr) <= 14 && Math.abs(g - hg) <= 14 && Math.abs(b - hb) <= 14;
+  return Math.abs(r - hr) <= 26 && Math.abs(g - hg) <= 26 && Math.abs(b - hb) <= 26;
 }
 const validColor = (c) => typeof c !== 'string' || /^#[0-9a-f]{6}$/i.test(c) || /^rgba?\((\s*\d+(\.\d+)?\s*,){2,3}\s*\d+(\.\d+)?\s*\)$/.test(c);
 
@@ -735,4 +737,97 @@ test('roofs are lit at the ridge and darker toward the eaves, and laid in rows o
     for (const f of fades) assert.ok(brightness(f.color.stops[0]) > brightness(f.color.stops[1]), `axis ${axis}: lighter at the ridge`);
     assert.ok(strokes > 25, `axis ${axis}: rows and joints of tiles (${strokes} strokes)`);
   }
+});
+
+// ---- forests and meadows (Phase 29's second art pass, Phase 30) -----------------
+
+test('a forest tile has two or three trees standing on it, thinner and smaller at the edge', () => {
+  let inside = 0;
+  let edge = 0;
+  let insideSize = 0;
+  let edgeSize = 0;
+  let leafy = 0;
+  let trees = 0;
+  const tones = new Set();
+  for (let y = 0; y < 40; y++) {
+    for (let x = 0; x < 40; x++) {
+      for (const [isEdge, list] of [[false, treesOnTile(x, y, false)], [true, treesOnTile(x, y, true)]]) {
+        assert.ok(isEdge ? list.length >= 1 && list.length <= 2 : list.length >= 2 && list.length <= 3, `${list.length} trees on a tile`);
+        for (let i = 0; i < list.length; i++) {
+          const t = list[i];
+          // Every tree stands on its own tile, well inside its corners.
+          const at = worldToTileOf(t.cx, t.cy);
+          assert.ok(at.x > x + 0.1 && at.x < x + 0.9 && at.y > y + 0.1 && at.y < y + 0.9, `a tree at ${at.x.toFixed(2)}, ${at.y.toFixed(2)} is off tile ${x}, ${y}`);
+          // Far ones first, so a nearer tree covers the one behind.
+          if (i > 0) assert.ok(list[i - 1].cy <= t.cy);
+          tones.add(t.tone);
+          trees++;
+          if (t.leafy) leafy++;
+        }
+        if (isEdge) { edge += list.length; edgeSize += list.reduce((n, t) => n + t.size, 0); } else { inside += list.length; insideSize += list.reduce((n, t) => n + t.size, 0); }
+      }
+    }
+  }
+  assert.ok(edgeSize / edge < insideSize / inside - 0.1, 'trees at the edge are not smaller');
+  assert.ok(leafy / trees > 0.15 && leafy / trees < 0.35, `${Math.round((leafy / trees) * 100)}% of trees are leafy`);
+  assert.equal(tones.size, 3, 'trees come in one shade');
+  // The same every time.
+  assert.deepEqual(treesOnTile(12, 7, true), treesOnTile(12, 7, true));
+});
+
+test('a tree drawn again beside a building is drawn exactly as in the forest picture', () => {
+  const map = createGame(loadData()).state.map;
+  // An edge tile and an inner tile of forest.
+  const forest = (x, y) => x >= 0 && y >= 0 && x < map.width && y < map.height && map.terrain[y * map.width + x] === 'forest';
+  let edgeTile = null;
+  let innerTile = null;
+  for (let y = 0; y < map.height && !(edgeTile && innerTile); y++) {
+    for (let x = 0; x < map.width; x++) {
+      if (!forest(x, y)) continue;
+      const isEdge = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => !forest(x + dx, y + dy));
+      if (isEdge) edgeTile ??= { x, y };
+      else innerTile ??= { x, y };
+    }
+  }
+  for (const tile of [edgeTile, innerTile]) {
+    const a = recorder();
+    createForestPainter(map, { x0: tile.x, y0: tile.y, x1: tile.x, y1: tile.y }).paint(a.ctx);
+    const b = recorder();
+    paintTrees(b.ctx, [tile], map);
+    const pointsOf = (r) => JSON.stringify(r.shapes.flatMap((shape) => shape.points));
+    assert.equal(pointsOf(b), pointsOf(a), `the trees on ${tile.x}, ${tile.y} would jump when a building is near`);
+  }
+});
+
+test('meadows have broad warm and cool patches that change by small steps', () => {
+  const map = createGame(loadData()).state.map;
+  const seen = new Set();
+  for (let y = 0; y < map.height; y++) {
+    for (let x = 0; x < map.width; x++) {
+      const w = grassWarmth(x, y);
+      seen.add(w);
+      assert.ok(Math.abs(w) <= WARMTH_LEVELS);
+      // Next door is at most one step warmer or cooler, so no edge stands out.
+      for (const [nx, ny] of [[x + 1, y], [x, y + 1]]) assert.ok(Math.abs(grassWarmth(nx, ny) - w) <= 1, `a jump of warmth at ${x}, ${y}`);
+    }
+  }
+  assert.ok(seen.has(WARMTH_LEVELS - 1) && seen.has(-(WARMTH_LEVELS - 1)), 'the meadows are never warm or never cool');
+  // The ground picture paints grass in warm and cool colors, not one green.
+  const colors = {};
+  const game = createGame(loadData());
+  for (const [id, t] of Object.entries(game.rules.map.terrain)) colors[id] = t.color;
+  const r = styledRecorder();
+  createTerrainPainter(map, colors).paint(r.ctx, 1);
+  const greens = r.drawn.filter((d) => typeof d.color === 'string' && d.color.startsWith('rgb(') && colorNear(d.color, colors.grass));
+  // Warmth: how much redder than blue a green is, for its brightness. Lighter
+  // and darker shades of one green all have the same warmth; warm and cool
+  // patches do not.
+  const warmthOf = (color) => {
+    const [r, g, b] = color.match(/\d+/g).map(Number);
+    return (r - b) / (r + g + b);
+  };
+  const base = warmthOf(tone(colors.grass, 1));
+  const warmths = greens.map((d) => warmthOf(d.color));
+  assert.ok(Math.max(...warmths) > base + 0.025, 'the grass is never warmer');
+  assert.ok(Math.min(...warmths) < base - 0.025, 'the grass is never cooler');
 });

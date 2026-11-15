@@ -804,3 +804,12 @@ Added in Phase 29. Only the look changed. No rule, number or data file changed, 
 - **Roads bend.** Where a road turns a corner it curves instead, so a road laid in steps reads as a smooth bend and a winding country road looks like one. Four road tiles in a square still make a square of road. A road that runs past a building no longer sends a short arm into it; a road that ends at a building still has a short straight drive to it.
 - **Houses come in four looks**, chosen from the house's building number in a shuffled way, so neighbours built one after another do not repeat in order. Houses in a saved game may change look once, since there are now four looks, not three. That is all.
 - Speed is unchanged when playing. Building the picture of the ground when a game opens takes about 0.1 of a second instead of 0.03.
+
+## 31. A third art pass: forests and meadows
+
+Added in Phase 30. Only the look changed. No rule, number or data file changed, and saved games are untouched.
+
+- **Forests look like woods.** Each forest tile has two or three trees at loose places instead of one in the middle, so the trees no longer stand in rows. They come in mixed sizes and in three shades of pine and three of leafy tree, with about one leafy tree in five. At the forest's edge the trees are fewer, smaller and more often leafy, so a wood thins out into the meadow. Low dark undergrowth lies on the forest floor between them.
+- **Meadows have warm and cool patches**: broad sunny yellow-green rises and cool blue-green hollows, about twenty tiles across, changing so gradually that no tile's edge shows.
+- **The sea deepens further out**: a sixth, faint band of shallows reaches about three and a half tiles from the shore.
+- A forest tile is still one tile of forest: what can be built, and where a lumberjack works, are as before.

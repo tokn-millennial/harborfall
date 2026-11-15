@@ -18,6 +18,7 @@ const WASH = 'rgba(235, 250, 252, 0.28)';
 // The shallows: bands of paler water around every shore, widest and faintest
 // first. `reach` is how far out each band goes, in tiles.
 export const SHALLOWS = [
+  { reach: 3.4, color: 'rgba(140, 205, 220, 0.05)' },
   { reach: 2.4, color: 'rgba(150, 215, 225, 0.07)' },
   { reach: 1.9, color: 'rgba(150, 215, 225, 0.08)' },
   { reach: 1.4, color: 'rgba(150, 215, 225, 0.1)' },
@@ -206,6 +207,22 @@ export function groundShade(x, y) {
   return 0.94 + (Math.round(t * (LEVELS - 1)) * 0.12) / (LEVELS - 1);
 }
 
+// The warmth of a tile of grass: from -WARMTH_LEVELS (a cool, blue-green
+// hollow) to WARMTH_LEVELS (a warm, sunny yellow-green rise), in broad patches
+// larger than the light and dark ones, so a meadow is not one flat green. The
+// steps are small, so the edge between two tiles of a patch is hard to see.
+const GRASS_WARM = '#cdbf55';
+const GRASS_COOL = '#4a9783';
+export const WARMTH_LEVELS = 4;
+const WARMTH_STEP = 0.26 / WARMTH_LEVELS;
+// The noise changes by at most 0.075 a tile (a lattice every 20 tiles), so 12
+// levels across the whole range keeps neighbours within one step of each other.
+export function grassWarmth(x, y) {
+  const n = smoothNoise(x + 0.5, y + 0.5, 20, 17);
+  return Math.max(-WARMTH_LEVELS, Math.min(WARMTH_LEVELS, Math.round((n - 0.5) * 12)));
+}
+const warmed = (color, warmth) => (warmth === 0 ? color : mix(color, warmth > 0 ? GRASS_WARM : GRASS_COOL, Math.abs(warmth) * WARMTH_STEP));
+
 // The part of the map a painter covers: the given range of tiles kept on the
 // map, or the whole map. { x0, y0, x1, y1 }, both ends included.
 function tilesToPaint(map, range) {
@@ -247,6 +264,7 @@ export function createTerrainPainter(map, colors, range = null) {
   const bushes = new Path2D();
   const bushesLit = new Path2D();
   const stones = new Path2D();
+  const undergrowth = new Path2D();
 
   // The shore.
   const TILE_SIDE = Math.SQRT1_2 * 64; // one tile along the ground, in pixels of the stretched picture
@@ -303,8 +321,9 @@ export function createTerrainPainter(map, colors, range = null) {
     const inside = (x, y) => rankAt(x, y) >= layer;
     const into = (x, y) => {
       const shade = groundShade(x, y);
-      const key = `${layer}|${shade}`;
-      if (!fills.has(key)) fills.set(key, { path: new Path2D(), color: tone(colors[kind], shade) });
+      const warmth = kind === 'grass' ? grassWarmth(x, y) : 0;
+      const key = `${layer}|${shade}|${warmth}`;
+      if (!fills.has(key)) fills.set(key, { path: new Path2D(), color: tone(warmed(colors[kind], warmth), shade) });
       return fills.get(key).path;
     };
     for (let y = area.y0; y <= area.y1; y++) {
@@ -376,6 +395,14 @@ export function createTerrainPainter(map, colors, range = null) {
           stones.moveTo(p.x + 4.6, p.y + 1);
           stones.ellipse(p.x + 3.4, p.y + 1, 1.2, 0.8, 0, 0, Math.PI * 2);
         }
+      } else if (terrain === 'forest') {
+        // Undergrowth: low dark bushes and ferns on the forest floor, between the trees.
+        for (let i = 0; i < 3; i++) {
+          const p = tileToWorld(x + 0.15 + hash2(x, y, 110 + i) * 0.7, y + 0.15 + hash2(x, y, 120 + i) * 0.7);
+          const r = 2.5 + hash2(x, y, 130 + i) * 2.5;
+          undergrowth.moveTo(p.x + r, p.y);
+          undergrowth.ellipse(p.x, p.y, r, r * 0.55, 0, 0, Math.PI * 2);
+        }
       } else if (terrain === 'coast') {
         for (let i = 0; i < 4; i++) {
           const p = tileToWorld(x + 0.15 + hash2(x, y, 30 + i) * 0.7, y + 0.15 + hash2(x, y, 40 + i) * 0.7);
@@ -393,6 +420,7 @@ export function createTerrainPainter(map, colors, range = null) {
   const wetSandColor = tone(colors.coast, 0.86);
   const bushColor = tone(colors.forest ?? colors.grass, 0.85);
   const bushLitColor = tone(colors.grass, 0.95);
+  const undergrowthColor = tone(colors.forest ?? colors.grass, 0.82);
 
   return {
     paint(ctx, scale = 1) {
@@ -476,6 +504,8 @@ export function createTerrainPainter(map, colors, range = null) {
       ctx.fill(bushesLit);
       ctx.fillStyle = '#a7a39a';
       ctx.fill(stones);
+      ctx.fillStyle = undergrowthColor;
+      ctx.fill(undergrowth);
     },
   };
 }
@@ -527,66 +557,127 @@ export function paintGrid(ctx, map, range, zoom) {
   ctx.stroke(grid);
 }
 
-// Where a tree stands and how it looks, worked out from its tile alone.
-function treeShape(x, y) {
-  const c = tileToWorld(x + 0.5 + (hash2(x, y, 6) - 0.5) * 0.3, y + 0.5 + (hash2(x, y, 7) - 0.5) * 0.3);
-  return { cx: c.x, cy: c.y, size: 0.85 + hash2(x, y, 8) * 0.4, leafy: hash2(x, y, 9) < 0.22 };
+// The trees of a forest tile: two or three, at loose places, in mixed sizes
+// and shades, with now and then a round leafy tree among the pines. A tile at
+// the edge of the forest has fewer, smaller trees, more of them leafy, so a
+// wood thins out into the meadow instead of stopping at a line. All from
+// hash2, so a forest looks the same every time. `edge` says whether the tile
+// is at the edge of the forest.
+const TREE_TONES = 3;
+export function treesOnTile(x, y, edge = false) {
+  const count = edge ? 1 + (hash2(x, y, 31) < 0.45 ? 1 : 0) : 2 + (hash2(x, y, 31) < 0.4 ? 1 : 0);
+  const trees = [];
+  for (let k = 0; k < count; k++) {
+    // Spread out round the tile: each tree takes its own part of it.
+    const angle = (k / count) * Math.PI * 2 + hash2(x, y, 32) * 6.283;
+    const spread = count === 1 ? 0.12 : 0.24;
+    const u = 0.5 + Math.cos(angle) * spread + (hash2(x, y, 33 + k) - 0.5) * 0.16;
+    const v = 0.5 + Math.sin(angle) * spread + (hash2(x, y, 37 + k) - 0.5) * 0.16;
+    const c = tileToWorld(x + u, y + v);
+    const grown = hash2(x, y, 41 + k);
+    trees.push({
+      cx: c.x,
+      cy: c.y,
+      size: edge ? 0.6 + grown * 0.35 : 0.72 + grown * 0.5,
+      leafy: hash2(x, y, 45 + k) < (edge ? 0.38 : 0.16),
+      tone: Math.floor(hash2(x, y, 49 + k) * TREE_TONES),
+    });
+  }
+  // Far ones first, so a nearer tree covers the one behind it.
+  return trees.sort((a, b) => a.cy - b.cy);
 }
 
+// Whether a forest tile has a tile of something else beside it.
+const forestEdge = (map, x, y) => FACING.some(([dx, dy]) => {
+  const nx = x + dx;
+  const ny = y + dy;
+  return nx < 0 || ny < 0 || nx >= map.width || ny >= map.height || map.terrain[ny * map.width + nx] !== 'forest';
+});
+
+// Shades for pines and for leafy trees: [lit, shaded].
+const PINES = [[TREE.pine, TREE.pineShade], ['#3b7d47', '#295c35'], ['#265a37', '#1a4128']];
+const LEAVES = [[TREE.leaf, TREE.leafShade], ['#64a04a', '#4a7d38'], ['#78a346', '#5b7f35']];
+
 // Adds one tree's shapes to a set of paths, one path per color.
-function addTree(paths, x, y) {
-  const { cx, cy, size, leafy } = treeShape(x, y);
+function addTree(paths, { cx, cy, size, leafy, tone }) {
   paths.shadow.moveTo(cx + 13 * size, cy + 1);
   paths.shadow.ellipse(cx + 4 * size, cy + 1, 9 * size, 4 * size, 0, 0, Math.PI * 2);
   paths.trunk.rect(cx - 1.3, cy - 5 * size, 2.6, 6 * size);
+  // Which shades are in use, so the empty ones are not filled.
+  paths.used.add(`${leafy ? 'leaf' : 'pine'}${tone}`);
   if (leafy) {
-    // A round leafy tree.
-    paths.leafShade.moveTo(cx + 1.5 + 8.5 * size, cy - 13 * size);
-    paths.leafShade.arc(cx + 1.5, cy - 13 * size, 8.5 * size, 0, Math.PI * 2);
-    paths.leaf.moveTo(cx - 1.5 + 6.5 * size, cy - 15 * size);
-    paths.leaf.arc(cx - 1.5, cy - 15 * size, 6.5 * size, 0, Math.PI * 2);
+    // A round leafy tree: a shaded crown, a lit one up and to the left, and a highlight.
+    const [lit, shade] = [paths.leaf[tone], paths.leafShade[tone]];
+    shade.moveTo(cx + 1.5 + 8.5 * size, cy - 13 * size);
+    shade.arc(cx + 1.5, cy - 13 * size, 8.5 * size, 0, Math.PI * 2);
+    lit.moveTo(cx - 1.5 + 6.5 * size, cy - 15 * size);
+    lit.arc(cx - 1.5, cy - 15 * size, 6.5 * size, 0, Math.PI * 2);
+    paths.glint.moveTo(cx - 3 + 2.6 * size, cy - 18 * size);
+    paths.glint.arc(cx - 3, cy - 18 * size, 2.6 * size, 0, Math.PI * 2);
     return;
   }
   // A pine: three tiers, lit on the left and shaded on the right.
+  const [lit, shade] = [paths.pine[tone], paths.pineShade[tone]];
   for (let tier = 0; tier < 3; tier++) {
     const base = cy - (4 + tier * 7) * size;
     const top = base - 11 * size;
     const half = (9.5 - tier * 2.2) * size;
-    paths.pineShade.moveTo(cx, top);
-    paths.pineShade.lineTo(cx + half, base);
-    paths.pineShade.lineTo(cx, base);
-    paths.pineShade.closePath();
-    paths.pine.moveTo(cx, top);
-    paths.pine.lineTo(cx - half, base);
-    paths.pine.lineTo(cx, base);
-    paths.pine.closePath();
+    shade.moveTo(cx, top);
+    shade.lineTo(cx + half, base);
+    shade.lineTo(cx, base);
+    shade.closePath();
+    lit.moveTo(cx, top);
+    lit.lineTo(cx - half, base);
+    lit.lineTo(cx, base);
+    lit.closePath();
   }
 }
 
-const newTreePaths = () => ({ shadow: new Path2D(), trunk: new Path2D(), pineShade: new Path2D(), pine: new Path2D(), leafShade: new Path2D(), leaf: new Path2D() });
+const newTreePaths = () => ({
+  shadow: new Path2D(),
+  trunk: new Path2D(),
+  pine: PINES.map(() => new Path2D()),
+  pineShade: PINES.map(() => new Path2D()),
+  leaf: LEAVES.map(() => new Path2D()),
+  leafShade: LEAVES.map(() => new Path2D()),
+  glint: new Path2D(),
+  used: new Set(),
+});
 
 function fillTreePaths(ctx, paths) {
   ctx.fillStyle = TREE.shadow;
   ctx.fill(paths.shadow);
   ctx.fillStyle = TREE.trunk;
   ctx.fill(paths.trunk);
-  ctx.fillStyle = TREE.pineShade;
-  ctx.fill(paths.pineShade);
-  ctx.fillStyle = TREE.pine;
-  ctx.fill(paths.pine);
-  ctx.fillStyle = TREE.leafShade;
-  ctx.fill(paths.leafShade);
-  ctx.fillStyle = TREE.leaf;
-  ctx.fill(paths.leaf);
+  PINES.forEach(([lit, shade], i) => {
+    if (!paths.used.has(`pine${i}`)) return;
+    ctx.fillStyle = shade;
+    ctx.fill(paths.pineShade[i]);
+    ctx.fillStyle = lit;
+    ctx.fill(paths.pine[i]);
+  });
+  LEAVES.forEach(([lit, shade], i) => {
+    if (!paths.used.has(`leaf${i}`)) return;
+    ctx.fillStyle = shade;
+    ctx.fill(paths.leafShade[i]);
+    ctx.fillStyle = lit;
+    ctx.fill(paths.leaf[i]);
+  });
+  if (LEAVES.some((_, i) => paths.used.has(`leaf${i}`))) {
+    ctx.fillStyle = 'rgba(255, 255, 220, 0.16)';
+    ctx.fill(paths.glint);
+  }
 }
 
 // A few trees drawn together. Used for the trees that stand close to a
 // building and so have to be drawn in order with it. `tiles` is a list of
-// { x, y }, far to near.
-export function paintTrees(ctx, tiles) {
+// { x, y }, far to near; `map`, when given, says which are at the forest's edge.
+export function paintTrees(ctx, tiles, map = null) {
   if (tiles.length === 0) return;
   const paths = newTreePaths();
-  for (const tile of tiles) addTree(paths, tile.x, tile.y);
+  for (const tile of tiles) {
+    for (const tree of treesOnTile(tile.x, tile.y, map ? forestEdge(map, tile.x, tile.y) : false)) addTree(paths, tree);
+  }
   fillTreePaths(ctx, paths);
 }
 
@@ -614,7 +705,7 @@ export function createForestPainter(map, range = null) {
       depth = x + y;
       rows.push(newTreePaths());
     }
-    addTree(rows[rows.length - 1], x, y);
+    for (const tree of treesOnTile(x, y, forestEdge(map, x, y))) addTree(rows[rows.length - 1], tree);
   }
   return {
     count: tiles.length,

@@ -652,3 +652,13 @@ Phase 29 changed only `src/render/art/terrain.js`, `src/render/art/buildings.js`
 - **Roads** in `createRoadPainter`: one path along the middle of the roads, stroked twice (a darker verge 21 pixels wide, then the surface 17 pixels wide), with round joins. A road tile with two road neighbours at a corner gets a curve, unless the tile in that corner is road too. Drives to buildings are straight-edged shapes, only where the road ends. Where four road tiles meet round a corner, a small square fills the middle.
 - **House looks.** `HOUSE_LOOKS` (4) and `houseLook(id)` are in `src/render/art/buildings.js`. The look comes from `hash2` of the building number. Roof and wall colors per look are tints mixed into the data's color.
 - **Measured** in the browser (forcing each frame to finish): the same frame times as before, about 15 to 22 milliseconds in the hidden test pane, old and new in turns. The whole-island ground picture takes about 93 ms to work out instead of 31; a close-up part 7 ms instead of 1.
+
+## 33. Forests and meadows
+
+Phase 30 changed only `src/render/art/terrain.js` and one line of `src/render/renderer.js`.
+
+- `treesOnTile(x, y, edge)` gives the trees of a forest tile, far ones first: two or three (one or two at the edge), placed round the tile's middle, with a size, a shade (one of three) and whether it is leafy. `forestEdge` says whether a forest tile has another kind of ground beside it. The forest picture and the trees drawn again beside buildings (`paintTrees(ctx, tiles, map)`) both use them, so a tree never jumps when a building is placed near it; a test checks the two draw the same.
+- Tree shades are in `PINES` and `LEAVES`. A set of tree paths remembers which shades it used and fills only those.
+- `grassWarmth(x, y)`, from -4 to 4, comes from smooth noise on a lattice every 20 tiles. Neighbouring tiles differ by at most one step (a test checks every pair on the island). The grass color is mixed toward `GRASS_WARM` or `GRASS_COOL` by 0.065 a step, then lit or shaded as before, so ground fills are keyed by layer, shade and warmth.
+- Undergrowth on forest tiles is part of the ground painter's details.
+- **Measured** in the hidden test pane: frame times old and new overlap (about 19 to 30 ms in both). Drawing all 61 forest tiles near the demo town's buildings at once costs about 4 ms more than before; that is the browser painting more trees, not working them out (1.0 ms against 0.6). Painting the whole island's ground once when a game opens takes about 0.87 s against 0.6 s in that pane, mostly the extra meadow colors; a close-up costs about the same as before.

@@ -377,7 +377,7 @@ export function createRenderer(canvas, rules) {
     let trees = [];
     let people = [];
     const drawWaiting = () => {
-      if (trees.length) paintTrees(ctx, trees);
+      if (trees.length) paintTrees(ctx, trees, state.map);
       if (people.length) paintActors(ctx, people, rules.goods, time);
       trees = [];
       people = [];
