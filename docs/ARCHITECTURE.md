@@ -631,3 +631,12 @@ Phase 21 changed only `src/render/`, two files in `src/ui/` and `ui.css`. No rul
 - `priceFactorMilli` and `currentPrice` in `src/sim/trade.js` give the price at the next call: the pull is cut by `keepPerCall` first, as the call will cut it. `stepTrade` takes those prices, then cuts the pull, then trades, then adds what it sold and bought.
 - `rules.tradePrices` is null when the entry is gone, and prices are then fixed as before.
 - A ninth round in `addedLater`: `{ "config": ["tradePrices"] }`. The stamp of Phases 23 to 26 is `4ee7c364766b8ba6`.
+
+## 31. Best times and island numbers
+
+- Best times live where the scenario ones do (`src/platform/records.js`, the storage key `harborfall.scenarios`). The standard island's are kept as `standard:easy`, `standard:normal` and `standard:hard`, which cannot clash with a scenario id.
+- `recordIdFor(game, standardSeed)` in `src/ui/titleModel.js` picks the record a game counts toward: the scenario's id, the standard island's on the game's difficulty, or null. `main.js` calls it once and reports the win from its frame loop, as before.
+- `titleModel` gains `standardBest` (difficulty id to text or null) and `island` ({ min, max, confirm }). `islandNumberFrom(text)` turns what was typed into a number or null; it accepts only digits, so "1e3", "3.5" and "-5" are refused.
+- The title screen resolves `{ choice: 'island', seed, difficulty }` for an island by number, and `chooseGame` makes `createGame(data, { seed, difficulty })`, as the random island does.
+- The box is a text box with the number keyboard, not a number box, because a number box lets "1e3" through and hides what it refused.
+- No save format or rules change, so the rules stamp is unchanged.

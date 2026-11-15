@@ -28,7 +28,7 @@ Harborfall is a small Anno-style city builder for desktop browsers. The owner is
 
 ## Commands
 
-- `node --test` runs all tests (605 at the end of Phase 27).
+- `node --test` runs all tests (611 at the end of Phase 28).
 - Before measuring anything on screen, call `window.harborfall.ui.frame(0)`: a hidden pane may not have drawn yet, and an empty top bar always seems to fit.
 - Port 5173 is Colin's server. If it is down, serve a copy on another port (`PORT=5174 node serve.mjs`, in the background) and stop it after.
 - Run the click-through test on `?fresh&paused`, so it starts at tick 0. Its result reports `startedAtTick`. They must all pass before a gate.

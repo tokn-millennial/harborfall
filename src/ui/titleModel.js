@@ -5,10 +5,34 @@
 //            { ok: true, game } or { ok: false, reason }
 //   canSave  whether this browser lets the game save at all
 //   rules    any game's rules, for the difficulties and scenarios to offer (optional)
-//   records  the player's best scenario times (optional; see platform/records.js)
+//   records  the player's best times (optional; see platform/records.js)
 
 import { getSummary } from '../sim/index.js';
 import { clock, medalName, medalTimesText, scenarioGoalText } from './text.js';
+
+// The record of the standard island on one difficulty.
+export const standardRecordId = (difficulty) => `standard:${difficulty ?? 'normal'}`;
+
+// Which best time a game counts toward, or null for none: a scenario's own, or
+// the standard island's on the game's difficulty. Other islands keep no record,
+// because their times say nothing about each other. `standardSeed` is the
+// standard island's number (data/map.json).
+export function recordIdFor(game, standardSeed) {
+  if (game.rules.scenario) return game.rules.scenario;
+  return game.rules.map.seed === standardSeed ? standardRecordId(game.rules.difficulty) : null;
+}
+
+// Island numbers that can be typed on the title screen.
+export const ISLAND_NUMBERS = { min: 1, max: 999999 };
+
+// What was typed in the island box: the island number, or null if it is not a
+// whole number in range. Spaces around it are allowed.
+export function islandNumberFrom(text) {
+  const trimmed = String(text ?? '').trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const seed = Number(trimmed);
+  return seed >= ISLAND_NUMBERS.min && seed <= ISLAND_NUMBERS.max ? seed : null;
+}
 
 const SAVE_PROBLEM = {
   rules_changed: 'The rules of the game have changed since your game was saved, so it cannot be continued. If you changed a data file, changing it back brings your game back.',
@@ -19,7 +43,9 @@ const SAVE_PROBLEM = {
 const REPLACE_WARNING = 'Press again. This replaces your saved game.';
 
 // One line about a game in progress: "28:34 played, 64 of 100 Workers, 312 coins".
-export function savedGameLine(game) {
+// `standardSeed` is the standard island's number: a game on another island
+// says which, so it can be found again.
+export function savedGameLine(game, standardSeed = null) {
   const summary = getSummary(game);
   const tierName = game.rules.tiers[summary.win.tier].name;
   const parts = [
@@ -33,6 +59,7 @@ export function savedGameLine(game) {
   // The difficulty is only worth saying when it is not the usual one.
   const { difficulty, defaultDifficulty, difficulties } = game.rules;
   if (difficulty && difficulty !== defaultDifficulty) parts.push(difficulties.find((d) => d.id === difficulty)?.name ?? difficulty);
+  if (!scenario && standardSeed !== null && game.rules.map.seed !== standardSeed) parts.push(`island ${game.rules.map.seed}`);
   return parts.join(', ');
 }
 
@@ -46,7 +73,7 @@ export function titleModel({ saved, canSave, rules = null, records = null }) {
   if (!canSave) notices.push('This browser is not letting the game save. A game will be lost when you close or refresh the page.');
 
   const buttons = [];
-  if (usable) buttons.push({ id: 'continue', label: 'Continue', detail: savedGameLine(saved.game), confirm: null });
+  if (usable) buttons.push({ id: 'continue', label: 'Continue', detail: savedGameLine(saved.game, rules?.map.seed ?? null), confirm: null });
   buttons.push({ id: 'new', label: 'New game', detail: 'The standard island', confirm });
   buttons.push({ id: 'random', label: 'New game on a random island', detail: 'A different island every time', confirm });
 
@@ -71,6 +98,13 @@ export function titleModel({ saved, canSave, rules = null, records = null }) {
         confirm,
       };
     }),
+    // The best time on the standard island, per difficulty: shown under New game.
+    standardBest: Object.fromEntries((rules?.difficulties.length ? rules.difficulties.map((d) => d.id) : [rules?.defaultDifficulty ?? null]).map((id) => {
+      const best = records?.best(standardRecordId(id)) ?? null;
+      return [id ?? 'normal', best ? `Your best: ${clock(best.ticks / rules.ticksPerSecond)}.` : null];
+    })),
+    // A new game on an island chosen by its number.
+    island: { ...ISLAND_NUMBERS, confirm },
     footnote: canSave ? 'Your game saves itself in this browser as you play.' : null,
   };
 }

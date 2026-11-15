@@ -1,4 +1,5 @@
-// Remembers the player's best time in each scenario. Like the save slot, it is
+// Remembers the player's best time in each scenario, and on the standard island
+// on each difficulty (as "standard:normal" and so on). Like the save slot, it is
 // handed a storage box and never fails if the box does. It is not part of the
 // game state: it belongs to the player, not to any one game.
 

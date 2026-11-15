@@ -1876,3 +1876,52 @@ Date: 2026-11-15. Status: approved by Colin with no changes ("Keep going, just k
 - **The ship's call message does not say prices moved.** The panel does.
 
 **After the gate:** committed on your "Keep going, just keep going." Not pushed.
+
+## Phase 28: Your best time, and an island by number
+
+Date: 2026-11-15. Status: approved by Colin with no changes (his next request, "Improve the art more", moved on without changes; taken as approval as at D254).
+
+**Turns used:** 1 (your "Keep going, just keep going."). Built by Claude Opus 5.5.
+
+**What was built** (`SPEC.md` section 29)
+- Your best time on the standard island, per difficulty, shown on the New game button.
+- A box on the title screen to type an island number and play it.
+- The Continue button names the island when it is not the standard one.
+
+**Automated tests: 611 pass, 0 fail.** 605 from before plus 6 new in `tests/title.test.js`: which games count toward which record; the New game button's best time per difficulty; what counts as an island number; the island box warns before replacing a saved game; the Continue line names the island; an island by number is the same island every time. No older test changed.
+
+**Did the tests mean anything?** Seven breaks, each caught:
+
+| Break | Tests that failed |
+|---|---|
+| Random islands set the standard record | 1 |
+| The difficulty is ignored | 1 |
+| No range check on the number | 1 |
+| Decimals and "1e3" accepted | 1 |
+| The Continue line does not name the island | 1 |
+| The best time is never shown | 1 |
+| The island box replaces a saved game at one press | 1 |
+
+**Balance.** No rules changed. Nothing to measure.
+
+**Browser checks** (my own copy on port 5174; its storage is separate from your game on 5173, and I emptied it afterwards)
+
+| Check | How | Result |
+|---|---|---|
+| Best time on New game | Two records put in storage, then Easy, Hard and Normal picked | Pass: "Your best: 28:53." on Normal, "43:20" on Hard, nothing on Easy. |
+| A bad island number | Typed "3.5", then "abc", and pressed Enter | Pass after a fix (D352): "Type a whole number from 1 to 999999." The first version was too faint to read. |
+| A good island number | Typed 42, picked Hard, pressed Play | Pass: a new game on island 42, Hard, and saved. |
+| Continue names the island | Back to the title screen | Pass: "0:07 played, 0 of 100 Workers, 351 coins, Hard, island 42". Play then asked "Press again. This replaces your saved game." |
+| A real win sets the record | A New game on the standard island, won by the bot inside the page | Pass: kept as 28:55, and the title screen then said "The standard island. Your best: 28:55." |
+| The error console | Read it | Empty. |
+
+**Found along the way:** the warning under the island box was nearly invisible (D352). Also, the browser pane was hidden during the record check, which stops the page's drawing loop, and the record is filed from that loop; a screenshot made it run. Not a problem in a visible window.
+
+**Decisions made:** 6 (D347 to D352).
+
+**Weak or unfinished**
+- **Nobody has set a record by hand.** The bot did, inside the page.
+- **There is no list of best times** beyond the one on each button, and no way to clear them other than clearing the browser's storage.
+- **Records from before this phase:** none existed for the standard game, so a game you won before today has no time kept.
+
+**After the gate:** committed on your "Improve the art more". Not pushed.

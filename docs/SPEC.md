@@ -784,3 +784,13 @@ Added in Phase 27 (`config.json`, "tradePrices").
 - A call trades at the prices it starts with, and those are the prices the harbour panel shows beforehand, with ↓ when below normal and ↑ when above.
 - However far prices move, buying a good back always costs more than selling it earned: at the lowest price, buying is still dearer than selling at the highest. The data checks refuse settings that would break this.
 - A game saved before this phase loads with every price at normal.
+
+## 29. Your best time, and an island by number
+
+Added in Phase 28. Both are on the title screen. Neither changes the rules.
+
+- **Your best time on the standard island** is kept for each difficulty. When you win a game there, its time is kept if it beats the one before, and New game shows it: "The standard island. Your best: 28:55." Picking Easy, Normal or Hard on the title screen shows that difficulty's best.
+- Only games begun from the title screen set a record, as with scenarios. The time is the game time at the win, as on the win screen. A game already won when it was saved does not count again.
+- Random islands keep no record, because their times say nothing about each other. The standard island chosen by its number (1407) counts as the standard island.
+- **"Or island number"** under the difficulty buttons: type a whole number from 1 to 999999 and press Play or Enter, for a new game on that island at the difficulty picked above. The same number always makes the same island, so an island you liked can be played again or shared. Anything else is answered with "Type a whole number from 1 to 999999." Like any new game it must be pressed twice when it would replace a saved game.
+- A saved game on an island other than the standard one says which on the Continue button: "…, 351 coins, Hard, island 42". The ? panel in the game already names the island.

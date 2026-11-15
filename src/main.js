@@ -26,7 +26,7 @@ import { createCamera, MAX_ZOOM, MIN_ZOOM } from './render/camera.js';
 import { createRenderer } from './render/renderer.js';
 import { createGameUi } from './ui/gameUi.js';
 import { clock, medalTimesText, scenarioGoalText } from './ui/text.js';
-import { titleModel } from './ui/titleModel.js';
+import { recordIdFor, titleModel } from './ui/titleModel.js';
 import { showTitle } from './ui/titleScreen.js';
 
 // The longest stretch of real time one frame may account for. Long enough that
@@ -74,7 +74,7 @@ async function chooseGame({ data, standard, store, renderer, audio, records }) {
   requestAnimationFrame(paint);
 
   document.body.classList.add('title-open');
-  const { choice, difficulty, scenario } = await showTitle(byId('title'), titleModel({ saved, canSave: store.working, rules: standard.rules, records }), { demoHref: './?demo' });
+  const { choice, difficulty, scenario, seed: chosenSeed } = await showTitle(byId('title'), titleModel({ saved, canSave: store.working, rules: standard.rules, records }), { demoHref: './?demo' });
   document.body.classList.remove('title-open');
   showing = false;
   audio.play('pick');
@@ -83,6 +83,7 @@ async function chooseGame({ data, standard, store, renderer, audio, records }) {
   // A scenario brings its own island, start and goal. It is not played on a difficulty.
   if (choice === 'scenario') return { game: createGame(data, { scenario }), view: null };
   if (choice === 'new') return { game: difficulty === standard.rules.difficulty ? standard : createGame(data, { difficulty }), view: null };
+  if (choice === 'island') return { game: createGame(data, { seed: chosenSeed, difficulty }), view: null };
   let seed = data.map.seed;
   while (seed === data.map.seed) seed = 1 + Math.floor(Math.random() * LARGEST_RANDOM_SEED);
   return { game: createGame(data, { seed, difficulty }), view: null };
@@ -229,7 +230,9 @@ async function start() {
     }
   }
 
-  // A scenario already won when it was loaded has had its time recorded before.
+  // Best times are kept for each scenario, and for the standard island on each
+  // difficulty. A game already won when it was loaded has had its time recorded before.
+  const recordId = recordIdFor(game, data.map.seed);
   let recorded = game.state.won;
   let last = performance.now();
   function frame(now) {
@@ -237,10 +240,10 @@ async function start() {
     last = now;
     ui.frame(dt);
     guide?.frame(dt);
-    // A scenario won: keep the time if it is the player's best.
-    if (scenario && game.state.won && !recorded) {
+    // A game won: keep the time if it is the player's best.
+    if (recordId && game.state.won && !recorded) {
       recorded = true;
-      records.report(scenario.id, game.state.wonAtTick, getSummary(game).win.medal);
+      records.report(recordId, game.state.wonAtTick, getSummary(game).win.medal);
     }
     requestAnimationFrame(frame);
   }

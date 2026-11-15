@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import { loadData } from '../src/platform/loadData.node.js';
 import { createSaveStore, SAVE_KEY } from '../src/platform/saveStore.js';
 import { createGame, loadGame, saveGame } from '../src/sim/index.js';
-import { savedGameLine, titleModel } from '../src/ui/titleModel.js';
+import { createRecords } from '../src/platform/records.js';
+import { islandNumberFrom, recordIdFor, savedGameLine, standardRecordId, titleModel } from '../src/ui/titleModel.js';
 import { runBot } from '../tools/bot/bot.js';
 import { loadOrder } from '../tools/tune.mjs';
 import { snapshot } from './helpers.js';
@@ -178,4 +179,77 @@ test('a browser that will not save is said plainly', () => {
   assert.match(model.notices[0], /not letting the game save/);
   assert.equal(model.footnote, null);
   assert.deepEqual(ids(model), ['new', 'random']);
+});
+
+// ---- the standard island's best time, and an island by number (Phase 28) ----------
+
+test('a game counts toward the standard best time only on the standard island, per difficulty', () => {
+  const data = loadData();
+  const seed = data.map.seed;
+  assert.equal(recordIdFor(createGame(data), seed), 'standard:normal');
+  assert.equal(recordIdFor(createGame(data, { difficulty: 'easy' }), seed), 'standard:easy');
+  assert.equal(recordIdFor(createGame(data, { difficulty: 'hard' }), seed), 'standard:hard');
+  // The standard island typed in by its number is the same island, so it counts.
+  assert.equal(recordIdFor(createGame(data, { seed, difficulty: 'hard' }), seed), 'standard:hard');
+  // Any other island keeps no record.
+  assert.equal(recordIdFor(createGame(data, { seed: 42 }), seed), null);
+  // A scenario keeps its own.
+  assert.equal(recordIdFor(createGame(data, { scenario: 'fishing-village' }), seed), 'fishing-village');
+  assert.equal(standardRecordId(null), 'standard:normal');
+});
+
+test('the New game button shows the best time on the standard island for each difficulty', () => {
+  const { rules } = createGame(loadData());
+  const records = createRecords(fakeStorage());
+  records.report(standardRecordId('normal'), 17330, null);
+  records.report(standardRecordId('hard'), 26000, null);
+  records.report(standardRecordId('normal'), 18000, null); // slower: not a new best
+  const model = titleModel({ saved: null, canSave: true, rules, records });
+  assert.deepEqual(model.standardBest, { easy: null, normal: 'Your best: 28:53.', hard: 'Your best: 43:20.' });
+  // No records at all: nothing to show, and nothing breaks.
+  assert.deepEqual(titleModel({ saved: null, canSave: true, rules }).standardBest, { easy: null, normal: null, hard: null });
+  // A scenario's record is not the standard one.
+  const other = createRecords(fakeStorage());
+  other.report('fishing-village', 6000, 'gold');
+  assert.equal(titleModel({ saved: null, canSave: true, rules, records: other }).standardBest.normal, null);
+});
+
+test('an island number must be a whole number from 1 to 999999', () => {
+  assert.equal(islandNumberFrom('1407'), 1407);
+  assert.equal(islandNumberFrom(' 42 '), 42);
+  assert.equal(islandNumberFrom('1'), 1);
+  assert.equal(islandNumberFrom('999999'), 999999);
+  for (const bad of ['', '   ', '0', '1000000', '-5', '3.5', '1e3', 'abc', '12a', null, undefined]) {
+    assert.equal(islandNumberFrom(bad), null, `${JSON.stringify(bad)} was taken as an island`);
+  }
+});
+
+test('the island box is offered, and warns before replacing a saved game like any new game', () => {
+  const { rules } = createGame(loadData());
+  const fresh = titleModel({ saved: null, canSave: true, rules });
+  assert.deepEqual(fresh.island, { min: 1, max: 999999, confirm: null });
+  const saved = titleModel({ saved: { ok: true, game: createGame(loadData()) }, canSave: true, rules });
+  assert.equal(saved.island.confirm, 'Press again. This replaces your saved game.');
+});
+
+test('the Continue line names the island when it is not the standard one', () => {
+  const data = loadData();
+  const other = createGame(data, { seed: 42 });
+  assert.match(savedGameLine(other, data.map.seed), /, island 42$/);
+  assert.doesNotMatch(savedGameLine(createGame(data), data.map.seed), /island/);
+  // Without the standard number to compare with, nothing is added.
+  assert.doesNotMatch(savedGameLine(other), /island/);
+  // The title model passes it in.
+  const { rules } = createGame(data);
+  const model = titleModel({ saved: { ok: true, game: other }, canSave: true, rules });
+  assert.match(model.buttons[0].detail, /, island 42$/);
+});
+
+test('an island chosen by number is the same island every time, and differs from the standard one', () => {
+  const data = loadData();
+  const a = createGame(data, { seed: 42 });
+  const b = createGame(data, { seed: 42 });
+  assert.deepEqual(snapshot(a), snapshot(b));
+  assert.notDeepEqual(a.state.map.terrain, createGame(data).state.map.terrain);
+  assert.equal(a.state.map.seed, 42);
 });
