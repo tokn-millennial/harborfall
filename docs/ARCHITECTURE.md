@@ -702,3 +702,11 @@ Phase 34 added `src/render/lamps.js` and changed `src/render/life.js`, `src/rend
 - **Lamps**: `lampSpots(state)` in `lamps.js` (no canvas, tested in Node) gives where lamps stand. The renderer keeps them until a road or building changes, as the road painter does, and puts each lamp in view among the people, so lamps and buildings overlap in the right order. `lamp` in `actors.js` draws one; `paintLampLights` adds the halo, glass and road light at night.
 - **A hidden lamp's light**: lamp light is added after the night tint, so it would show through a building in front. The renderer skips a lamp whose lantern lies inside `roofOutline` of a nearer building: its walls and its roof up to a ridge across the middle. A whole box was tried first and hid lamps that were plainly visible beside a roof's sloping end.
 - **Measured** in the hidden test pane, Phase 33's code and this phase's in turns: frame times overlap, though this phase may be one to three milliseconds slower, mostly at night.
+
+## 38. Roads that follow the pointer
+
+Phase 35 changed `src/ui/tools.js`, `src/ui/gameUi.js`, `src/ui/buildMenu.js` and `index.html`. Nothing in `src/sim/` changed: the `road` command already took any list of tiles.
+
+- `extendRoadPath(path, tile)` in `tools.js` (pure, tested in Node) adds the tile under the pointer to the road being dragged: joined with `roadLine` if the pointer skipped tiles, and cut back to an earlier tile if the pointer returned to it. It returns a new list and never changes the one it was given.
+- `gameUi.js` keeps the path in `roadDrag.path` and extends it on every pointer move. `draggedRoad()` gives the tiles to preview and to build: the path, or with Shift held (`straightRoad`) `roadLine` from start to end.
+- The UI playthrough drags only straight runs, which come out the same either way, so it is unchanged.

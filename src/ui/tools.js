@@ -34,6 +34,23 @@ export function roadLine(ax, ay, bx, by, flip = false) {
   return tiles;
 }
 
+// A road dragged out along the pointer's way: the tiles it has crossed, in
+// order, as [[x, y], ...] starting where the drag began. `tile` is the tile
+// now under the pointer. Going back over the road takes it back to there, so
+// a wobble can be undone without letting go. A jump of more than one tile (a
+// quick move) is joined up with one bend, so the road never has a gap or
+// runs corner to corner.
+export function extendRoadPath(path, tile) {
+  const last = path[path.length - 1];
+  if (last[0] === tile.x && last[1] === tile.y) return path;
+  let out = path;
+  for (const [x, y] of roadLine(last[0], last[1], tile.x, tile.y).slice(1)) {
+    const back = out.findIndex(([px, py]) => px === x && py === y);
+    out = back >= 0 ? out.slice(0, back + 1) : [...out, [x, y]];
+  }
+  return out;
+}
+
 // Where a building's top-left tile goes so the building is centred on the
 // pointer. (gx, gy) is the fractional ground position under the pointer.
 export function anchorFor(def, gx, gy) {

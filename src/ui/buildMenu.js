@@ -51,7 +51,7 @@ export function createBuildMenu(root, hintRoot, game, { onPick, onUndo = () => {
   for (const [id, def] of Object.entries(rules.buildings)) {
     const tool = { mode: def.category === 'road' ? 'road' : 'build', building: id };
     const blurb = buildingBlurb(rules, id);
-    if (def.category === 'road') blurb.push('Hold Shift while dragging to flip the corner.');
+    if (def.category === 'road') blurb.push('Drag to lay it along your path; hold Shift for a straight line.');
     const group = def.category === 'road' || def.category === 'storage' ? 'move' : def.category === 'house' || def.category === 'market' ? 'live' : 'make';
     const entry = add(tool, def.name, costText(rules, def.cost), blurb, def.key, null, group);
     const picture = el('canvas', 'tool-picture');

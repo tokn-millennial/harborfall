@@ -2277,3 +2277,47 @@ Date: 2026-11-15. Status: approved by Colin with no changes ("Commit and push. K
 - **Fertile land** is still as it was (D366).
 
 **After the gate:** committed and pushed on your "Commit and push. Keep going".
+
+## Phase 35: Roads that follow the pointer
+
+Date: 2026-11-17. Status: approved by Colin with no changes ("Commit and push").
+
+**Turns used:** 2 (your "Commit and push. Keep going", and "Try again" after my turn stopped partway; the code and checks were already done, and this turn finished the docs). Built by Claude Opus 5.5.
+
+**How I chose.** From the roadmap's upkeep list: "Roads bend once per drag. A drag that follows the pointer's path would be nicer." It needs no choice from you and is something you do all game (D388).
+
+**What was built** (`SPEC.md` section 36)
+- A dragged road follows the tiles the pointer crosses; going back takes it back; quick moves are joined with one bend.
+- Shift gives a straight line with one bend, as before without Shift.
+- The help panel and the Road button's note say so.
+
+**Automated tests: 642 pass, 0 fail.** 639 from before plus 3 new in `tests/ui.test.js`: a drag follows an S bend after bend; a quick move is joined with no gap or diagonal step and no tile twice; going back takes the road back, and the given path is never changed. No older test changed.
+
+**Did the tests mean anything?** Three breaks, each caught:
+
+| Break | Tests that failed |
+|---|---|
+| Going back adds tiles instead of taking them away | 1 |
+| Quick moves leave gaps | 1 |
+| The old straight line with one bend | 1 |
+
+**Browser checks** (my own copy on port 5174)
+
+| Check | How | Result |
+|---|---|---|
+| An S-shaped drag through the real UI | Pointer events, several moves per tile, on `?fresh&paused` | Laid exactly the nine tiles of the S. |
+| The same drag with Shift held | Same | Laid the straight line with one bend; two of its tiles were forest, and the note said "Built 7 of 9 road tiles", as it should. |
+| A whole game through the real buttons | UI playthrough on `?fresh&paused` (14 road drags) | Pass: tick 0, won at 28.92. |
+| Random input | 2500 actions on `?fresh` twice (seeds 1 and 2) and once on `?demo` | No errors. |
+| The error console | Read it | Empty. |
+
+**Found along the way:** when the window lost focus, the old code still cleared the removed "flip" setting by its old name, which would have raised an error. Fixed before any check ran.
+
+**Decisions made:** 3 (D388 to D390).
+
+**Weak or unfinished**
+- **Not tried by hand.** The drag was tested with made-up pointer events, which move more evenly than a real hand.
+- **A road dragged in a loop back across itself is cut at the crossing.** That is the "going back" rule; a loop needs two drags.
+- **Fertile land** is still as it was (D366).
+
+**After the gate:** committed and pushed on your "Commit and push".

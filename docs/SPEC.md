@@ -266,7 +266,7 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 - Markets and lumberjacks show the area they reach.
 - Picking Farm or Fisherman lights up every tile of the ground it needs. The ? panel has a key to the ground colors.
 - Click to place. The tool stays picked, so you can place several.
-- Road: click for one tile, or drag for an L-shaped line. Hold Shift while dragging to put the corner on the other side. The note shows the tile count and cost.
+- Road: click for one tile, or drag to lay a road along the way you drag (since Phase 35; see section 36). Hold Shift while dragging for a straight line with one bend. The note shows the tile count and cost.
 - Upgrade: pick it, then click any house marked with a green ▲. One click per house.
 - Demolish: pick it, then click a road once or a building twice. The second click must come within 4 seconds. The note shows what you get back.
 - Undo: press Z, Ctrl+Z or the Undo button to take back your last build, road, upgrade or demolish. Everything it cost comes back, and a demolished building returns exactly as it was, residents and all. It works on your last action only, and for 30 seconds of game time after it (`undoSeconds` in `config.json`). The time does not run out while the game is paused. An undo cannot itself be undone. The button shows what it would take back.
@@ -848,3 +848,13 @@ Added in Phase 34. Only the look changed: walkers and lamps are decoration, and 
 
 - **Errands.** About half the people who step out of a house now have somewhere to go: a workshop or the market. They walk the shortest way there by road and go in. The rest stroll the streets as before. A town that has just been opened starts with some already on their way.
 - **Street lamps** stand along the streets: on every third road tile with a building beside it, at the edge of the road on the building's side. Roads across open country have none. By day the glass is pale; from dusk it is lit, and at night each lamp shines with a halo and a pool of light on the road. A lamp behind a nearer building is hidden by it, light and all. With day and night switched off the lamps are lit, like the windows.
+
+## 36. Roads that follow the pointer
+
+Added in Phase 35. Only how roads are laid changed: the cost and rules of a road tile are as before.
+
+- **Dragging with Road picked lays the road along the tiles the pointer crosses**, in order, so a winding road, an S or a road round a hill is one drag. Before, a drag made one straight line with a single bend.
+- **Going back over the road takes it back** to that point while still dragging, so a wobble can be undone without letting go.
+- **A quick move that skips tiles** is joined with one bend, so the road never has a gap and never runs corner to corner.
+- **Holding Shift** gives a straight line with one bend from where the drag began to the pointer, the old way, for long straight roads. (The old "Shift flips the corner" is gone; the same road can be drawn by dragging that way.)
+- As before, tiles that cannot take a road (forest, water, a building) are skipped and the note says how many were built.

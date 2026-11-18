@@ -14,7 +14,7 @@ import { createInfoPanel } from './infoPanel.js';
 import { createSpeedControls } from './speedControls.js';
 import { createWinScreen } from './winScreen.js';
 import { panelModel } from './panelModel.js';
-import { anchorFor, previewBuild, previewDemolish, previewRoad, previewUpgrade, rangeTiles, requiredTerrain, roadLine, terrainTiles, cartReachMap, haulIfPlaced } from './tools.js';
+import { anchorFor, extendRoadPath, previewBuild, previewDemolish, previewRoad, previewUpgrade, rangeTiles, requiredTerrain, roadLine, terrainTiles, cartReachMap, haulIfPlaced } from './tools.js';
 import { clock, costText, milestoneMessage, reasonText, refundText, winMessage, tradeCallText, haulText } from './text.js';
 import { setText } from './dom.js';
 import { createAdvisor } from './advice.js';
@@ -45,14 +45,16 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
 
   let tool = SELECT;
   let selectedId = null;
-  let roadDrag = null;      // { start: {x, y}, end: {x, y} } while a road is being dragged out
+  let roadDrag = null;      // { start: {x, y}, end: {x, y}, path: [[x, y], ...] } while a road is being dragged out
   let messageTimer = 0;
   let winShown = state.won; // a game loaded already won (the demo town) does not announce it
   const milestonesShown = state.milestones.map((tick) => tick !== null); // nor goals already reached
   let shipNewsTick = state.trade?.last?.tick ?? null; // a call made before this game was opened is old news
   const terrainCache = {};  // terrain name -> its tiles, for highlighting where a building may go
   let armed = null;         // { id, seconds }: a building clicked once with Demolish, waiting for the second click
-  let flipCorner = false;   // Shift is held: put a dragged road's corner on the other side
+  let straightRoad = false; // Shift is held: a dragged road runs straight, with one bend, instead of following the pointer
+  // The tiles of the road being dragged: the pointer's way, or with Shift a straight line with one bend.
+  const draggedRoad = () => (straightRoad ? roadLine(roadDrag.start.x, roadDrag.start.y, roadDrag.end.x, roadDrag.end.y) : roadDrag.path);
   const advisor = createAdvisor(rules);
 
   // ---- panels ---------------------------------------------------------------
@@ -174,15 +176,18 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
     onDown: (x, y, button) => {
       if (button === 0 && tool.mode === 'road') {
         const t = groundTile(x, y);
-        roadDrag = { start: t, end: t };
+        roadDrag = { start: t, end: t, path: [[t.x, t.y]] };
       }
     },
     onMove: (x, y) => {
-      if (roadDrag) roadDrag.end = groundTile(x, y);
+      if (roadDrag) {
+        roadDrag.end = groundTile(x, y);
+        roadDrag.path = extendRoadPath(roadDrag.path, roadDrag.end);
+      }
     },
     onUp: (x, y, button, moved) => {
       if (roadDrag) {
-        const tiles = roadLine(roadDrag.start.x, roadDrag.start.y, roadDrag.end.x, roadDrag.end.y, flipCorner);
+        const tiles = draggedRoad();
         roadDrag = null;
         if (button !== 0) return;
         const result = execute(game, { action: 'road', tiles });
@@ -222,16 +227,16 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
   });
 
   window.addEventListener('keydown', (event) => {
-    if (event.key === 'Shift') flipCorner = true;
+    if (event.key === 'Shift') straightRoad = true;
     if (event.key === 'Escape') {
       if (tool.mode !== 'select') setTool(SELECT);
       else deselect();
     }
   });
   window.addEventListener('keyup', (event) => {
-    if (event.key === 'Shift') flipCorner = false;
+    if (event.key === 'Shift') straightRoad = false;
   });
-  window.addEventListener('blur', () => { flipCorner = false; });
+  window.addEventListener('blur', () => { straightRoad = false; });
   // Keep keyboard focus off the buttons, so Space always means pause.
   document.addEventListener('click', (event) => event.target.closest?.('button')?.blur());
 
@@ -310,7 +315,7 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
       }
     } else if (tool.mode === 'road' && active) {
       const here = groundTile(pointer.x, pointer.y);
-      const tiles = roadDrag ? roadLine(roadDrag.start.x, roadDrag.start.y, roadDrag.end.x, roadDrag.end.y, flipCorner) : [[here.x, here.y]];
+      const tiles = roadDrag ? draggedRoad() : [[here.x, here.y]];
       const preview = previewRoad(game, tiles);
       for (const t of preview.tiles) {
         const color = t.state === 'new' ? TINT.roadNew : t.state === 'existing' ? TINT.roadExisting : t.state === 'unaffordable' ? TINT.roadShort : TINT.bad;

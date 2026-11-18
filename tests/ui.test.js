@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { execute, buildingIssue } from '../src/sim/index.js';
 import { clock, costText, shortfallText, refundText, buildingBlurb, placementText, reasonText, issueLevel } from '../src/ui/text.js';
 import {
-  roadLine, anchorFor, previewBuild, previewRoad, previewDemolish, previewUpgrade, rangeTiles, requiredTerrain, terrainTiles,
+  roadLine, extendRoadPath, anchorFor, previewBuild, previewRoad, previewDemolish, previewUpgrade, rangeTiles, requiredTerrain, terrainTiles,
 } from '../src/ui/tools.js';
 import { panelModel } from '../src/ui/panelModel.js';
 import { createAdvisor } from '../src/ui/advice.js';
@@ -482,4 +482,37 @@ test('tips never change the game', () => {
   const before = snapshot(game);
   assert.ok(advisor.update(game));
   assert.equal(snapshot(game), before);
+});
+
+// ---- a road that follows the pointer (Phase 35) -----------------------------------
+
+// Drags along a list of tiles, as the pointer would cross them.
+const dragAlong = (tiles) => tiles.slice(1).reduce((path, [x, y]) => extendRoadPath(path, { x, y }), [tiles[0]]);
+const joined = (path) => path.every(([x, y], i) => i === 0 || Math.abs(x - path[i - 1][0]) + Math.abs(y - path[i - 1][1]) === 1);
+
+test('a dragged road follows the pointer, bend after bend', () => {
+  // An S: right, down, right, down.
+  const way = [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [3, 2], [4, 2], [4, 3]];
+  assert.deepEqual(dragAlong(way), way);
+  // Staying on a tile adds nothing.
+  assert.deepEqual(dragAlong([[0, 0], [0, 0], [1, 0], [1, 0]]), [[0, 0], [1, 0]]);
+});
+
+test('a quick move that skips tiles is joined with one bend, never corner to corner', () => {
+  const path = dragAlong([[0, 0], [1, 1], [4, 1], [4, 5]]);
+  assert.ok(joined(path), `a gap or a diagonal step in ${JSON.stringify(path)}`);
+  assert.deepEqual(path[0], [0, 0]);
+  assert.deepEqual(path[path.length - 1], [4, 5]);
+  assert.equal(new Set(path.map(String)).size, path.length, 'a tile laid twice');
+});
+
+test('going back over the road takes it back, so a wobble can be undone', () => {
+  assert.deepEqual(dragAlong([[0, 0], [1, 0], [2, 0], [3, 0], [2, 0]]), [[0, 0], [1, 0], [2, 0]]);
+  assert.deepEqual(dragAlong([[0, 0], [1, 0], [2, 0], [0, 0]]), [[0, 0]]);
+  // Back, then on in a new direction.
+  assert.deepEqual(dragAlong([[0, 0], [1, 0], [2, 0], [1, 0], [1, 1]]), [[0, 0], [1, 0], [1, 1]]);
+  // The path it is given is not changed.
+  const before = [[0, 0], [1, 0]];
+  extendRoadPath(before, { x: 0, y: 0 });
+  assert.deepEqual(before, [[0, 0], [1, 0]]);
 });
