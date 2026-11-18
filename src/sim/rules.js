@@ -83,7 +83,7 @@ export function withScenario(rawData, id = null) {
 // Keys that cannot make a saved game impossible: how things look, what they
 // are called, how long an undo lasts, and the first-game guide. A change to
 // one of these does not make an older saved game unusable.
-const LOOKS_ONLY = new Set(['visual', 'color', 'name', 'singular', 'key', 'title', 'undoSeconds', 'guide', 'addedLater', 'difficulties', 'defaultDifficulty', 'difficulty', 'about', 'scenarios', 'scenario', 'standardWin']);
+const LOOKS_ONLY = new Set(['visual', 'color', 'name', 'singular', 'key', 'title', 'undoSeconds', 'undoSteps', 'guide', 'addedLater', 'difficulties', 'defaultDifficulty', 'difficulty', 'about', 'scenarios', 'scenario', 'standardWin']);
 
 // Text that is the same for the same value whatever order its keys are in.
 export function stableText(value) {
@@ -332,6 +332,8 @@ export function compileRules(rawData) {
     milestones: (config.milestones ?? []).map((m) => ({ tier: m.tier, residents: m.residents, title: m.title ?? null })),
     // How long the last command can be undone. 30 seconds if the data does not say.
     undoTicks: Math.round((config.undoSeconds ?? 30) * ticksPerSecond),
+    // How many actions back Undo can go. 10 if the data does not say.
+    undoSteps: config.undoSteps ?? 10,
     map,
     stamp: rulesStamp(data),
     // The stamps these rules had before each step in config.addedLater, oldest

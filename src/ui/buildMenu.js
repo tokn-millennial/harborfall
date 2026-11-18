@@ -3,8 +3,8 @@
 // active tool. Each button shows its shortcut key.
 
 import { el, setText } from './dom.js';
-import { buildingBlurb, costText, shortfallText, undoLabel, upgradePathText } from './text.js';
-import { undoStatus } from '../sim/index.js';
+import { buildingBlurb, costText, redoLabel, shortfallText, undoLabel, upgradePathText } from './text.js';
+import { redoStatus, undoStatus } from '../sim/index.js';
 import { icon } from './icons.js';
 import { drawBuildingIcon } from '../render/art/icon.js';
 
@@ -16,7 +16,7 @@ const TAKEN_KEYS = new Set(['w', 'a', 's', 'd', 'c', '1', '2', '3', '4', '5']);
 // Keys for the tools that are not buildings. Building keys come from buildings.json.
 const TOOL_KEYS = { select: 'q', upgrade: 'u', demolish: 'x', undo: 'z' };
 
-export function createBuildMenu(root, hintRoot, game, { onPick, onUndo = () => {} }) {
+export function createBuildMenu(root, hintRoot, game, { onPick, onUndo = () => {}, onRedo = () => {} }) {
   const { rules } = game;
   const buttons = [];
   const byKey = new Map();
@@ -77,18 +77,34 @@ export function createBuildMenu(root, hintRoot, game, { onPick, onUndo = () => {
   demolish.button.prepend(el('span', 'tool-glyph', [icon('demolish', { size: 26 })]));
   // Undo is not a tool to pick: pressing it acts at once.
   const undoSeconds = Math.round(rules.undoTicks / rules.ticksPerSecond);
+  const steps = rules.undoSteps;
   const undo = undoSeconds > 0 ? add({ mode: 'undo', building: null }, 'Undo', 'Nothing yet', [
     'Takes back the last thing you built, upgraded or demolished, and gives back everything it cost.',
-    `Works for ${undoSeconds} seconds of game time after you act. Ctrl+Z does the same.`,
-  ], TOOL_KEYS.undo, () => onUndo()) : null;
+    steps > 1 ? `Press again to go further back, up to ${steps} steps.` : '',
+    `Each works for ${undoSeconds} seconds of game time after you act. Ctrl+Z does the same.`,
+  ].filter(Boolean), TOOL_KEYS.undo, () => onUndo()) : null;
   if (undo) {
     undo.button.prepend(el('span', 'tool-glyph', [icon('undo', { size: 26 })]));
     undo.costLine = undo.button.querySelector('.tool-cost');
+  }
+  // Redo does again what Undo took back. Like Undo, it acts at once.
+  const redo = undo ? add({ mode: 'redo', building: null }, 'Redo', 'Nothing yet', [
+    'Does again what Undo took back, at its full cost.',
+    'Doing anything new forgets what could be redone. Ctrl+Y or Ctrl+Shift+Z does the same.',
+  ], null, () => onRedo()) : null;
+  if (redo) {
+    redo.button.prepend(el('span', 'tool-glyph mirrored', [icon('undo', { size: 26 })]));
+    redo.costLine = redo.button.querySelector('.tool-cost');
   }
 
   window.addEventListener('keydown', (event) => {
     if (event.repeat) return;
     const key = event.key?.toLowerCase();
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && redo && (key === 'y' || (key === 'z' && event.shiftKey))) {
+      onRedo();
+      event.preventDefault();
+      return;
+    }
     if ((event.ctrlKey || event.metaKey) && !event.altKey && key === 'z' && undo) {
       onUndo();
       event.preventDefault();
@@ -109,6 +125,11 @@ export function createBuildMenu(root, hintRoot, game, { onPick, onUndo = () => {
         const status = undoStatus(game);
         setText(undo.costLine, undoLabel(rules, status));
         undo.button.classList.toggle('idle', !status.ok);
+      }
+      if (redo) {
+        const status = redoStatus(game);
+        setText(redo.costLine, redoLabel(rules, status));
+        redo.button.classList.toggle('idle', !status.ok);
       }
       const active = buttons.find((entry) => sameTool(entry.tool, activeTool));
       const shown = hovered ?? active;

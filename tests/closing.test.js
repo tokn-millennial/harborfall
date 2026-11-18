@@ -182,7 +182,7 @@ test('undoing a close or a reopen leaves the game exactly as it was', () => {
   game.state.undo = null;
   let before = snapshot(game);
   close(game, jack);
-  assert.deepEqual(undoStatus(game), { ok: true, kind: 'close', type: 'lumberjack', count: null, ticksLeft: 300 });
+  assert.deepEqual(undoStatus(game), { ok: true, kind: 'close', type: 'lumberjack', count: null, ticksLeft: 300, steps: 1 });
   assert.deepEqual(execute(game, { action: 'undo' }), { ok: true, undone: 'close' });
   assert.equal(snapshot(game), before);
 
@@ -359,7 +359,8 @@ test('the words for closing: the top bar, the undo button and refusals', () => {
   let text = staffText(game.rules, summary.staff, summary.closedProducers);
   assert.equal(text.value, '2 short');
   assert.match(text.title, /85% speed\. Build more houses, or close a building you can spare\. 1 building is closed and needs none\.$/);
-  assert.equal(undoLabel(game.rules, undoStatus(game)), 'Closing');
+  // After the word, how many steps Undo has waiting (the lumberjacks were just built).
+  assert.match(undoLabel(game.rules, undoStatus(game)), /^Closing \(\d+\)$/);
 
   close(game, jacks[1]);
   close(game, jacks[2]);
@@ -368,7 +369,7 @@ test('the words for closing: the top bar, the undo button and refusals', () => {
   assert.equal(text.value, '2 spare');
   assert.match(text.title, /full speed\. 3 buildings are closed and need none\.$/);
   reopen(game, jacks[2]);
-  assert.equal(undoLabel(game.rules, undoStatus(game)), 'Reopening');
+  assert.match(undoLabel(game.rules, undoStatus(game)), /^Reopening \(\d+\)$/);
   // With nothing closed the hover text does not mention closing at all.
   assert.doesNotMatch(staffText(game.rules, getSummary(richGame()).staff, 0).title, /closed/);
 

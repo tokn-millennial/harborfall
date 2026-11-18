@@ -269,7 +269,7 @@ All 120 paced games finished inside the 25 to 40 minute target. A slow player wi
 - Road: click for one tile, or drag to lay a road along the way you drag (since Phase 35; see section 36). Hold Shift while dragging for a straight line with one bend. The note shows the tile count and cost.
 - Upgrade: pick it, then click any house marked with a green ▲. One click per house.
 - Demolish: pick it, then click a road once or a building twice. The second click must come within 4 seconds. The note shows what you get back.
-- Undo: press Z, Ctrl+Z or the Undo button to take back your last build, road, upgrade or demolish. Everything it cost comes back, and a demolished building returns exactly as it was, residents and all. It works on your last action only, and for 30 seconds of game time after it (`undoSeconds` in `config.json`). The time does not run out while the game is paused. An undo cannot itself be undone. The button shows what it would take back.
+- Undo: press Z, Ctrl+Z or the Undo button to take back your last build, road, upgrade or demolish. Everything it cost comes back, and a demolished building returns exactly as it was, residents and all. Since Phase 36 it goes back up to 10 actions, newest first, and what was undone can be redone (section 37). Each action can be undone for 30 seconds of game time after it (`undoSeconds` in `config.json`). The time does not run out while the game is paused. The button shows what it would take back.
 - Every tool has a shortcut key, shown in the corner of its button. Building keys are set in `buildings.json`.
 - Right-click, Esc, or the same menu button again puts the tool away.
 
@@ -676,7 +676,7 @@ Added in Phase 21, an art and design pass. **No rule, number or balance changed.
 - Fishing boats and the trade ship cast a shadow on the water. The ship has a row of small windows and its sails are shaded on the far half.
 
 **The screens around the map**
-- The **tools** at the bottom come in groups, with a small gap and a faint line between: Select; Road and Warehouse; the buildings that make things; House and Market; Upgrade, Demolish and Undo.
+- The **tools** at the bottom come in groups, with a small gap and a faint line between: Select; Road and Warehouse; the buildings that make things; House and Market; Upgrade, Demolish, Undo and Redo.
 - The **top bar** comes in groups with faint lines between: coins; goods; people and the goal; the clock.
 - The names of goods on the top bar ("Wood") show only on screens wider than 2300 pixels. Since staff and cloth joined the bar it no longer fitted one line at 1920 with the names.
 - The title screen, the building panel and the win screen were not redesigned. They pick up the new ground behind them.
@@ -858,3 +858,14 @@ Added in Phase 35. Only how roads are laid changed: the cost and rules of a road
 - **A quick move that skips tiles** is joined with one bend, so the road never has a gap and never runs corner to corner.
 - **Holding Shift** gives a straight line with one bend from where the drag began to the pointer, the old way, for long straight roads. (The old "Shift flips the corner" is gone; the same road can be drawn by dragging that way.)
 - As before, tiles that cannot take a road (forest, water, a building) are skipped and the note says how many were built.
+
+## 37. Undo several steps, and Redo
+
+Added in Phase 36.
+
+- **Undo goes back one action at a time**, newest first, up to 10 actions (`undoSteps` in `config.json`). Each action can still only be undone within 30 seconds of game time of when you did it (`undoSeconds`), so older ones run out first. The Undo button names the next action it would take back, and from the second on how many are waiting: "Road, 5 tiles (3)".
+- **Redo** (the button beside Undo, or Ctrl+Y, or Ctrl+Shift+Z) does again what Undo took back, newest undone first, at its full cost, as if you had done it again. It names what it would do: "House", "Road, 1 tile", "Remove Sawmill". A redone action can be undone like any other.
+- **Doing anything new forgets what could be redone.**
+- A redo that cannot be done now (the money or goods are not there, or something is in the way) does nothing, says why, and stays waiting.
+- What can be undone and redone is saved with the game. A game saved before this phase loads with its last action undoable as before and nothing to redo.
+- `undoSteps` of 1 gives the old behaviour: only the last action. Neither setting is part of the rules stamp, so changing them never stops a saved game loading.

@@ -1,8 +1,9 @@
-// Undo: taking back the last thing the player did.
+// Undo: taking back what the player did, newest first, and Redo: doing it again.
 //
-// Only the last successful command can be undone, and only for a short time
-// (undoSeconds in config.json). Undoing is not the same as demolishing: it
-// puts things back as they were, at no cost.
+// The last few successful commands can be undone, one after another (undoSteps
+// in config.json), each only for a short time after it was done (undoSeconds).
+// Undoing is not the same as demolishing: it puts things back as they were, at
+// no cost.
 //   - a building just placed is removed and its whole cost returned
 //   - road just laid is lifted and its cost returned
 //   - a building just demolished is put back as it was, and what the demolish
@@ -10,10 +11,14 @@
 //   - a house just upgraded goes back to what it was, and the cost is returned
 //   - a producer just closed is open again, and one just reopened is closed
 //   - a trade order just changed is what it was, and so is an order for your ship
-// An undo cannot itself be undone.
+// An undone command can be done again with Redo, which simply carries out the
+// same command again, at its full cost. Doing anything else new forgets what
+// could be redone.
 //
-// What is needed to undo is kept in the state (state.undo), so it is saved
-// with the game and two games given the same commands still match exactly.
+// What is needed to undo is kept in the state (state.undo, the newest, and
+// state.undoOlder, the ones before it), and so are the commands to redo
+// (state.redo), so they are saved with the game and two games given the same
+// commands still match exactly.
 
 import { footprint, inBounds, tileIndex } from './grid.js';
 import { buildingById, removeBuilding } from './buildings.js';
@@ -27,10 +32,27 @@ const fail = (reason) => ({ ok: false, reason });
 const isCount = (n) => Number.isInteger(n) && n >= 0;
 
 // Called by a command that worked, with what would be needed to take it back.
-// With undoSeconds set to 0 nothing is kept, and Undo is off.
+// The record it replaces as the newest goes on the list of older ones, unless
+// it is too late to undo it (then so are all those before it). With
+// undoSeconds set to 0 nothing is kept, and Undo is off.
 export function remember(game, record) {
   const { rules, state } = game;
-  state.undo = rules.undoTicks > 0 ? { ...record, untilTick: state.tick + rules.undoTicks } : null;
+  if (rules.undoTicks <= 0) {
+    state.undo = null;
+    state.undoOlder = [];
+    return;
+  }
+  if (state.undo && state.tick <= state.undo.untilTick) state.undoOlder.push(state.undo);
+  else state.undoOlder = [];
+  while (state.undoOlder.length > Math.max(0, rules.undoSteps - 1)) state.undoOlder.shift();
+  state.undo = { ...record, untilTick: state.tick + rules.undoTicks };
+}
+
+// What Redo would do again: { ok: true, kind, type, count } or { ok: false, reason }.
+export function redoStatus(game) {
+  const r = game.state.redo?.[game.state.redo.length - 1] ?? null;
+  if (!r) return fail('nothing_to_redo');
+  return { ok: true, kind: r.kind, type: r.type ?? null, count: r.count ?? null, steps: game.state.redo.length };
 }
 
 // What an undo would do right now, without doing it. Never changes the game.
@@ -43,7 +65,9 @@ export function undoStatus(game) {
   const u = state.undo ?? null;
   if (!u) return fail('nothing_to_undo');
   if (state.tick > u.untilTick) return fail('undo_expired');
-  const status = { ok: true, kind: u.kind, type: null, count: null, ticksLeft: u.untilTick - state.tick };
+  // steps: how many undos in a row are waiting, this one included.
+  const steps = 1 + (state.undoOlder ?? []).filter((older) => state.tick <= older.untilTick).length;
+  const status = { ok: true, kind: u.kind, type: null, count: null, ticksLeft: u.untilTick - state.tick, steps };
   if (u.kind === 'place') status.type = buildingById(game, u.id)?.type ?? null;
   if (u.kind === 'demolish') status.type = u.building.type;
   if (u.kind === 'upgrade' || u.kind === 'close' || u.kind === 'reopen') status.type = buildingById(game, u.id)?.type ?? null;
@@ -80,6 +104,8 @@ export function undoLast(game) {
   const check = undoStatus(game);
   if (!check.ok) return check;
   const u = state.undo;
+  // What it was, for Redo: worked out before the undo changes it.
+  const redo = u.command ? { command: copy(u.command), kind: u.kind, type: check.type, count: check.count } : null;
 
   if (u.kind === 'place') {
     const building = buildingById(game, u.id);
@@ -143,8 +169,26 @@ export function undoLast(game) {
     return fail('nothing_to_undo');
   }
 
-  state.undo = null;
+  // The one before becomes the newest, and the command undone can be done again.
+  state.undo = state.undoOlder?.pop() ?? null;
+  if (redo) state.redo.push(redo);
   return { ok: true, undone: u.kind };
+}
+
+// { action: 'redo' }: carries out again the command undone last, through
+// `run` (the command itself, without forgetting what else could be redone).
+// If it cannot be done now (it is blocked, or there is not enough to pay),
+// nothing changes and it stays waiting.
+export function redoLast(game, run) {
+  const { state } = game;
+  const r = state.redo?.[state.redo.length - 1] ?? null;
+  if (!r) return fail('nothing_to_redo');
+  const before = state.undo;
+  const result = run(game, copy(r.command));
+  if (state.undo !== before && state.undo) state.undo.command = copy(r.command);
+  // A road that was only partly laid again has still been done again.
+  if (result.ok || state.undo !== before) state.redo.pop();
+  return result.ok ? { ...result, redone: r.kind } : result;
 }
 
 function countHome(game, category) {
@@ -174,11 +218,35 @@ function reconnecting(game, statuses, restore) {
   }
 }
 
-// For loading a saved game: the first thing wrong with a saved undo record, in
-// words, or null if it is one this file could have written.
+// For loading a saved game: the first thing wrong with the saved undo records
+// and redo list, in words, or null if they are ones this file could have written.
 export function undoProblem(rules, state) {
-  const u = state.undo;
-  if (u === null) return null;
+  if (!Array.isArray(state.undoOlder)) return 'the older undo records are not a list';
+  if (state.undoOlder.length > Math.max(0, rules.undoSteps - 1)) return 'there are more undo records than undoSteps allows';
+  for (const older of state.undoOlder) {
+    const problem = recordProblem(rules, state, older, false);
+    if (problem) return `an older ${problem.replace(/^the /, '')}`;
+  }
+  if (!Array.isArray(state.redo)) return 'the redo list is not a list';
+  for (const r of state.redo) {
+    if (r === null || typeof r !== 'object' || r.command === null || typeof r.command !== 'object') return 'a redo record holds no command';
+    if (!(KINDS[r.command.action] ?? []).includes(r.kind)) return 'a redo record holds a command that cannot be redone';
+  }
+  if (state.undo !== null && state.undo?.command !== undefined && (state.undo.command === null || typeof state.undo.command !== 'object' || !Object.hasOwn(KINDS, state.undo.command.action))) return 'the undo record holds a command that cannot be redone';
+  return recordProblem(rules, state, state.undo, true);
+}
+
+// The commands Redo can carry out again, and the kinds of undo record each can
+// leave (placing a road tile leaves road; demolishing a road tile, unroad).
+const KINDS = {
+  place: ['place', 'road'], road: ['road'], demolish: ['demolish', 'unroad'], upgrade: ['upgrade'],
+  close: ['close'], reopen: ['reopen'], trade: ['trade'], ship: ['ship'], shipKeep: ['shipKeep'],
+};
+
+// One undo record. `current`: it is the newest, so it must also agree with
+// the game as it stands.
+function recordProblem(rules, state, u, current) {
+  if (u === null) return current ? null : 'the undo record is not a record';
   if (typeof u !== 'object' || !isCount(u.untilTick)) return 'the undo record is not a record';
   const map = state.map;
   const given = (g) => g !== null && typeof g === 'object' && isCount(g.coinsMilli) && g.goods !== null && typeof g.goods === 'object'
@@ -208,6 +276,7 @@ export function undoProblem(rules, state) {
     const building = state.buildings.find((b) => b?.id === u.id);
     if (!building?.production) return 'the undo record closes something that is not a producer';
     if (!['no_road', ...STATUS].includes(u.status)) return 'the undo record for a closing is wrong';
+    if (!current) return null;
     return Boolean(building.production.closed) === (u.kind === 'close') ? null : 'the undo record for a closing does not match the building';
   }
   if (u.kind === 'road') {
@@ -228,7 +297,7 @@ export function undoProblem(rules, state) {
     if (u.carts !== undefined && !Array.isArray(u.carts)) return 'the undo record for a demolish holds wrong carts';
     const def = Object.hasOwn(rules.buildings, b.type) ? rules.buildings[b.type] : null;
     if (!def || def.category === 'road') return 'the undo record holds an unknown building';
-    if (!Number.isInteger(b.id) || b.id < 1 || b.id >= state.nextId || state.buildings.some((other) => other?.id === b.id)) return 'the undo record holds a building with a wrong number';
+    if (!Number.isInteger(b.id) || b.id < 1 || b.id >= state.nextId || (current && state.buildings.some((other) => other?.id === b.id))) return 'the undo record holds a building with a wrong number';
     if (!Number.isInteger(b.x) || !Number.isInteger(b.y)) return 'the undo record holds a building with no position';
     for (const [x, y] of footprint(b.x, b.y, def.w, def.h)) if (!inBounds(map, x, y)) return 'the undo record holds a building off the island';
     if (Boolean(def.production) !== Boolean(b.production) || Boolean(def.housingTier) !== Boolean(b.house)) return 'the undo record holds a building of the wrong kind';

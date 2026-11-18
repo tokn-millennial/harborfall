@@ -73,6 +73,9 @@ export function loadGame(rawData, save) {
   }
   // A save from before undo existed has no undo record. That is fine: there is nothing to undo.
   if (state !== null && typeof state === 'object' && state.undo === undefined) state.undo = null;
+  // A save from before Phase 36 can undo only its last action, and redo nothing.
+  if (state !== null && typeof state === 'object' && state.undoOlder === undefined) state.undoOlder = [];
+  if (state !== null && typeof state === 'object' && state.redo === undefined) state.redo = [];
   // A save from before carts existed: empty yards, and every warehouse's carts at home.
   const beforeCarts = older !== null && older.configAdded.includes('carts');
   const beforeMaterials = older !== null && older.configAdded.includes('materials');

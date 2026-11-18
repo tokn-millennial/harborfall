@@ -129,7 +129,16 @@ export function runSeconds(game, seconds) {
 }
 
 export const coins = (game) => game.state.coinsMilli / 1000;
-export const snapshot = (game) => JSON.stringify(game.state);
+// The game as it plays, as text: everything but the list of older undo records
+// and the list of commands to redo (Phase 36). Those are history, not the
+// island: an undo that puts the island back exactly still adds what it undid
+// to the redo list. Tests of undo and redo check those two lists on their own.
+export const snapshot = (game) => {
+  const { undoOlder, redo, ...rest } = game.state;
+  return JSON.stringify(rest);
+};
+// Everything, history included.
+export const fullSnapshot = (game) => JSON.stringify(game.state);
 
 // A connected market at (13,11), covering x 13..14, y 11..12. Its centre is (14,12).
 export function buildMarket(game) {

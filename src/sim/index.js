@@ -10,7 +10,7 @@ import { checkWin } from './win.js';
 import { getSummary, buildingIssue, medalFor } from './summary.js';
 import { stepHouses, upgradeReason, countResidents, isSatisfied, inMarketRange, housesInRangeOf, houseCapacity, needCounts } from './population.js';
 import { saveGame, loadGame, SAVE_FORMAT } from './save.js';
-import { undoStatus } from './undo.js';
+import { redoStatus, undoStatus } from './undo.js';
 import { staffing } from './staff.js';
 import { stepTrade, tradeSummary, tradeOrderReason } from './trade.js';
 import { cartsSummary, roadReach, servedByCarts, stepCarts } from './carts.js';
@@ -20,7 +20,7 @@ import { HOME, SECOND, islandAt, islandOf, secondIsOpen, hasSecondIsland, paysFr
 export {
   createGame, execute, canPlace, siteReason, buildingAt, buildingById,
   countResidents, isSatisfied, getSummary, buildingIssue, inMarketRange, housesInRangeOf,
-  saveGame, loadGame, SAVE_FORMAT, undoStatus, staffing, medalFor, tradeSummary, cartsSummary, servedByCarts,
+  saveGame, loadGame, SAVE_FORMAT, undoStatus, redoStatus, staffing, medalFor, tradeSummary, cartsSummary, servedByCarts,
   roadReach, houseCapacity, needCounts, shipSummary, seaPath, shipHarbour, HOME, SECOND, islandAt, islandOf, secondIsOpen, hasSecondIsland, paysFrom, stockOf,
 };
 

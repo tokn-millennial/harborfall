@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, execute, step } from '../src/sim/index.js';
 import { loadData } from '../src/platform/loadData.node.js';
-import { testGame, run, snapshot } from './helpers.js';
+import { testGame, run, snapshot, fullSnapshot } from './helpers.js';
 import { playMiniCity } from './scenario.js';
 
 test('two new games on the real island are identical', () => {
@@ -33,7 +33,7 @@ test('a different command timing gives a different game (the check above is not 
 test('the game state is plain data: a copy made through JSON carries on identically', () => {
   const original = testGame();
   playMiniCity(original);
-  const copy = { rules: original.rules, state: JSON.parse(snapshot(original)) };
+  const copy = { rules: original.rules, state: JSON.parse(fullSnapshot(original)) };
   assert.deepEqual(copy.state, original.state);
 
   for (const game of [original, copy]) {

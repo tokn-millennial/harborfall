@@ -32,7 +32,7 @@ const TINT = {
 };
 const SELECT = { mode: 'select', building: null };
 const MESSAGE_SECONDS = 3;
-const QUIET_ACTIONS = ['undo', 'close', 'reopen', 'trade', 'ship', 'shipKeep'];
+const QUIET_ACTIONS = ['undo', 'redo', 'close', 'reopen', 'trade', 'ship', 'shipKeep'];
 const CONFIRM_SECONDS = 4; // how long a first demolish click waits for the second
 
 // onSound(name) is told when something worth a sound happens: 'pick', 'place',
@@ -64,6 +64,9 @@ export function createGameUi({ game, camera, renderer, loop, canvas, elements, o
     onPick: setTool,
     onUndo: () => {
       if (act({ action: 'undo' }) && selectedId !== null && !buildingById(game, selectedId)) deselect();
+    },
+    onRedo: () => {
+      if (act({ action: 'redo' }) && selectedId !== null && !buildingById(game, selectedId)) deselect();
     },
   });
   const info = createInfoPanel(elements.info, {

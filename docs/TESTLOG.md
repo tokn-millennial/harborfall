@@ -2321,3 +2321,62 @@ Date: 2026-11-17. Status: approved by Colin with no changes ("Commit and push").
 - **Fertile land** is still as it was (D366).
 
 **After the gate:** committed and pushed on your "Commit and push".
+
+## Phase 36: Undo several steps, and Redo
+
+Date: 2026-11-17. Status: approved by Colin with no changes ("Commit and push").
+
+**Turns used:** 1 (your "Keep building"). Built by Claude Opus 5.5.
+
+**How I chose.** "Undoing more than the last action, and redo" was left over from Phase 11 (B3) and needs no choice from you (D391).
+
+**What was built** (`SPEC.md` section 37)
+- Undo goes back up to 10 actions, newest first, each within 30 seconds of when it was done.
+- Redo, a button beside Undo and Ctrl+Y or Ctrl+Shift+Z, does again what was undone, at full cost. Doing anything new forgets it.
+- Both buttons name what they would do and, from the second step on, how many steps are waiting.
+- Both lists are saved with the game; older saves load as before.
+
+**Automated tests: 652 pass, 0 fail.** 642 from before plus 10 new in `tests/undo.test.js`, and one rewritten:
+- rewritten: "only the last action can be undone" is now "undo goes back one action at a time, newest first";
+- new: a run of five different actions undoes exactly, step by step; undo reaches back `undoSteps` and no further (and `undoSteps` 1 is the old behaviour); older steps run out first; redo does the same again and can be undone; several redos in order, and a new action forgets them; a redo that cannot be done changes nothing and stays; both lists saved and working after loading; two games with the same undos and redos end the same; broken lists refused as damaged; a save from before this phase loads.
+
+Older tests changed: the shared `snapshot` helper leaves out the two new history lists (see ARCHITECTURE section 39); the undo status now has a step count; two label tests now expect the count, as "Road, 5 tiles (3)"; one test that copies the whole game uses `fullSnapshot`.
+
+**Did the tests mean anything?** Nine breaks, each caught at the first try:
+
+| Break | Tests that failed |
+|---|---|
+| Only the last action, as before | 7 |
+| No limit on steps | 1 |
+| Older steps kept after they run out | 10 |
+| Undo forgetting what it undid (no redo) | 4 |
+| A failed redo lost | 1 |
+| A new action keeping old redos | 1 |
+| Saved lists not checked | 1 |
+| Old saves not given the new lists | 1 |
+| No step count on the buttons | 2 |
+
+**Balance.** Nothing in the rules changed; the bot never undoes. The click-through game still wins at 28.92.
+
+**Browser checks** (my own copy on port 5174)
+
+| Check | How | Result |
+|---|---|---|
+| Undo, Redo and their keys | Two roads laid, then Ctrl+Z twice, Ctrl+Y, Ctrl+Shift+Z | Labels: "Road, 1 tile (2)", then "Road, 2 tiles" with Redo "Road, 1 tile", then nothing to undo with Redo "Road, 2 tiles (2)", then back again. All three road tiles back. |
+| The build menu still fits | Rows of buttons at 1280 and 1600 wide | One row at both; at 1280 it uses 1248 of 1280 pixels. |
+| A whole game through the real buttons | UI playthrough on `?fresh&paused` | Pass: tick 0, won at 28.92. |
+| Random input | 2500 actions on `?fresh` twice (seeds 1 and 3; 436 menu presses, Undo and Redo among them) and on `?demo` | No errors. |
+| The error console | Read it | Empty. |
+
+**Not seen:** a picture of the new button. The hidden test pane kept returning the same old screenshot, cut off above the build menu; the page itself confirmed the button is there and on top.
+
+**Found along the way:** my first check of saved undo lists refused a harmless state (older records with no newest one), which tests make on purpose; it was dropped.
+
+**Decisions made:** 6 (D391 to D396).
+
+**Weak or unfinished**
+- **Not tried by hand**, and the new button not seen in a picture.
+- **The build menu is nearly full** at 1280 pixels wide; one more button would wrap it below that width.
+- **Fertile land** is still as it was (D366).
+
+**After the gate:** committed and pushed on your "Commit and push".

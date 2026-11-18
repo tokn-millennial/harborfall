@@ -53,6 +53,8 @@
 
   "_undoSeconds": "How long, in game seconds, your last action can be taken back with Undo. 0 switches Undo off.",
   "undoSeconds": 30,
+  "_undoSteps": "How many of your last actions Undo can take back, one after another, newest first. Each still only within undoSeconds of when you did it. 1 is the last action only.",
+  "undoSteps": 10,
 
   "start": {
     "coins": 500,

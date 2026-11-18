@@ -209,6 +209,7 @@ const FIXED_REASONS = {
   yard_full: 'Waiting for a cart to collect its goods.',
   too_far: 'Too far from a warehouse by road. No cart comes this far.',
   nothing_to_undo: 'There is nothing to undo.',
+  nothing_to_redo: 'There is nothing to redo.',
   undo_expired: 'It is too late to undo that.',
   undo_spent: 'That cannot be undone: what it gave back has already been used.',
   unknown_command: 'That action is not understood.',
@@ -302,7 +303,25 @@ export function upgradePathText(rules) {
 // `status` is what undoStatus(game) returned.
 export function undoLabel(rules, status) {
   if (!status.ok) return status.reason === 'undo_expired' ? 'Too late' : 'Nothing yet';
+  const label = actionLabel(rules, status, 'undo');
+  // With more than one step waiting, how many.
+  return status.steps > 1 ? `${label} (${status.steps})` : label;
+}
+
+// What the Redo button would do again: "House", "Road, 5 tiles", "Remove Sawmill"...
+export function redoLabel(rules, status) {
+  if (!status.ok) return 'Nothing yet';
+  const label = actionLabel(rules, status, 'redo');
+  return status.steps > 1 ? `${label} (${status.steps})` : label;
+}
+
+// A few words for an action, as Undo takes it back or Redo does it again.
+function actionLabel(rules, status, way) {
   const name = status.type ? rules.buildings[status.type]?.name ?? 'Building' : null;
+  if (way === 'redo') {
+    if (status.kind === 'demolish') return `Remove ${name}`;
+    if (status.kind === 'unroad') return 'Remove road';
+  }
   if (status.kind === 'place') return name ?? 'Building';
   if (status.kind === 'road') return status.count === 1 ? 'Road, 1 tile' : `Road, ${status.count} tiles`;
   if (status.kind === 'demolish') return `${name} back`;
@@ -311,6 +330,7 @@ export function undoLabel(rules, status) {
   if (status.kind === 'close') return 'Closing';
   if (status.kind === 'reopen') return 'Reopening';
   if (status.kind === 'trade') return 'Trade order';
+  if (status.kind === 'ship' || status.kind === 'shipKeep') return 'Ship order';
   return 'Last action';
 }
 

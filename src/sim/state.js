@@ -52,6 +52,8 @@ export function createGame(rawData, options = {}) {
     second: createSecondStock(rules), // the second island's goods and storage room (see islands.js)
     ship: createShipState(rules), // your own ship between the islands, and what it carries each way (see ship.js)
     undo: null, // what is needed to take back the last command (see undo.js)
+    undoOlder: [], // the same for the commands before it, oldest first
+    redo: [], // commands undone, which Redo does again, the last undone at the end
   };
   const game = { rules, state };
 

@@ -710,3 +710,16 @@ Phase 35 changed `src/ui/tools.js`, `src/ui/gameUi.js`, `src/ui/buildMenu.js` an
 - `extendRoadPath(path, tile)` in `tools.js` (pure, tested in Node) adds the tile under the pointer to the road being dragged: joined with `roadLine` if the pointer skipped tiles, and cut back to an earlier tile if the pointer returned to it. It returns a new list and never changes the one it was given.
 - `gameUi.js` keeps the path in `roadDrag.path` and extends it on every pointer move. `draggedRoad()` gives the tiles to preview and to build: the path, or with Shift held (`straightRoad`) `roadLine` from start to end.
 - The UI playthrough drags only straight runs, which come out the same either way, so it is unchanged.
+
+## 39. Undo several steps, and redo
+
+Phase 36 changed `src/sim/undo.js`, `src/sim/commands.js`, `src/sim/state.js`, `src/sim/save.js`, `src/sim/rules.js`, `data/config.json`, and the build menu, text and help in `src/ui/` and `index.html`.
+
+- **State**: `state.undo` is still the newest record. `state.undoOlder` holds the ones before it, oldest first, at most `undoSteps - 1`. `state.redo` holds commands undone, the last undone at the end, each `{ command, kind, type, count }`.
+- **`remember`** pushes the record it replaces onto `undoOlder` while it can still be undone; if it is too late, so are all older ones, and the list is emptied.
+- **`execute`** in `commands.js` is now a thin wrapper round `run` (the old switch). After any command that leaves a new undo record, it stores the command in the record and empties `state.redo`. `undo` and `redo` are handled before `run`.
+- **`undoLast`** undoes the newest record as before, then makes the last older record the newest, and pushes the record's command onto `state.redo`. Records saved before Phase 36 have no command, so they can be undone but not redone.
+- **`redoLast(game, run)`** carries out the last redo command through `run`, so it does not empty the rest of the redo list, stores the command in the new undo record, and pops the redo only if something was done.
+- **Checking saves**: `undoProblem` checks both lists. The newest record is checked against the game as it stands; older ones for their shape only (a newer record may still stand on top of them, so for example a closing undone later need not match the building now). Redo entries must hold a command that can be redone and a kind that command can leave.
+- **Tests**: `snapshot` in `tests/helpers.js` now leaves out `undoOlder` and `redo`, the history, so tests that an undo puts the island back exactly still hold; `fullSnapshot` keeps everything, and the new tests use it for saving, loading and two games matching.
+- **`undoSteps`** is in `LOOKS_ONLY` in `rules.js`, like `undoSeconds`: not part of the rules stamp.

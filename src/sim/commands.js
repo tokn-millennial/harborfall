@@ -8,7 +8,7 @@ import { upgradeHouse, upgradeReason } from './population.js';
 import { canPlace } from './placement.js';
 import { pay, refund } from './economy.js';
 import { refresh } from './refresh.js';
-import { producerStatuses, remember, undoLast } from './undo.js';
+import { producerStatuses, redoLast, remember, undoLast } from './undo.js';
 import { syncProductionStatus } from './production.js';
 import { setTradeOrder, tradeOrderReason } from './trade.js';
 import { HOME, islandAt, islandOf, paysFrom } from './islands.js';
@@ -18,6 +18,22 @@ const fail = (reason) => ({ ok: false, reason });
 
 export function execute(game, command) {
   if (command === null || typeof command !== 'object') return fail('unknown_command');
+  if (command.action === 'undo') return undoLast(game);
+  if (command.action === 'redo') return redoLast(game, run);
+  // Anything else that changes the game is remembered with the command that
+  // did it, so it can be redone after an undo, and makes what was undone
+  // before it no longer redoable.
+  const before = game.state.undo;
+  const result = run(game, command);
+  if (game.state.undo !== before && game.state.undo) {
+    game.state.undo.command = JSON.parse(JSON.stringify(command));
+    game.state.redo = [];
+  }
+  return result;
+}
+
+// Carries out one command.
+function run(game, command) {
   switch (command.action) {
     case 'place': return place(game, command);
     case 'road': return road(game, command);
@@ -28,7 +44,6 @@ export function execute(game, command) {
     case 'trade': return trade(game, command);
     case 'ship': return ship(game, command);
     case 'shipKeep': return shipKeep(game, command);
-    case 'undo': return undoLast(game);
     default: return fail('unknown_command');
   }
 }

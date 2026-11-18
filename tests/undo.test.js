@@ -3,14 +3,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadData } from '../src/platform/loadData.node.js';
-import { canPlace, canUpgrade, createGame, execute, loadGame, saveGame, step, undoStatus } from '../src/sim/index.js';
+import { canPlace, canUpgrade, createGame, execute, loadGame, redoStatus, saveGame, step, undoStatus } from '../src/sim/index.js';
 import { rulesStamp } from '../src/sim/rules.js';
-import { reasonText, undoLabel } from '../src/ui/text.js';
+import { reasonText, redoLabel, undoLabel } from '../src/ui/text.js';
 import { createRng } from '../src/sim/rng.js';
-import { line, place, richGame, road, run, runSeconds, snapshot, testGame, withoutCarts } from './helpers.js';
+import { fullSnapshot, line, place, richGame, road, run, runSeconds, snapshot, testGame, withoutCarts } from './helpers.js';
 import { playMiniCity } from './scenario.js';
 
 const undo = (game) => execute(game, { action: 'undo' });
+const redo = (game) => execute(game, { action: 'redo' });
 
 // A working town on the test island with nothing waiting to be undone.
 function town() {
@@ -160,18 +161,216 @@ test('time does not run out while the game is paused', () => {
   assert.equal(undo(game).ok, true);
 });
 
-test('only the last action can be undone, an undo cannot be undone, and a failed action is not counted', () => {
+test('undo goes back one action at a time, newest first, and a failed action is not counted', () => {
   const { game } = town();
+  game.state.undo = null;
+  const start = snapshot(game);
   place(game, 'house', 20, 11);
+  const one = snapshot(game);
   place(game, 'house', 20, 13);
   // A failed command leaves the last real action as the one to undo.
   assert.equal(execute(game, { action: 'place', building: 'house', x: 0, y: 0 }).ok, false);
   assert.equal(execute(game, { action: 'demolish', x: 0, y: 0 }).ok, false);
   assert.equal(undoStatus(game).kind, 'place');
+  assert.equal(undoStatus(game).steps, 2);
   assert.equal(undo(game).ok, true);
-  assert.equal(game.state.buildings.some((b) => b.x === 20 && b.y === 13), false, 'the second house should be gone');
-  assert.equal(game.state.buildings.some((b) => b.x === 20 && b.y === 11), true, 'the first house should remain');
+  assert.equal(snapshot(game), one, 'the second house is not gone, or more went with it');
+  assert.equal(undoStatus(game).steps, 1);
+  assert.equal(undo(game).ok, true);
+  assert.equal(snapshot(game), start, 'the first house is not gone');
   assert.deepEqual(undo(game), { ok: false, reason: 'nothing_to_undo' });
+});
+
+// ---- several steps, and redo (Phase 36) ---------------------------------------------
+
+test('a run of different actions undoes exactly, step by step, back to the start', () => {
+  const { game, houses } = town();
+  game.state.undo = null;
+  const commands = [
+    { action: 'place', building: 'house', x: 20, y: 11 },
+    { action: 'road', tiles: line(14, 15, 18, 15) },
+    { action: 'demolish', x: houses[2].x, y: houses[2].y },
+    { action: 'place', building: 'house', x: 20, y: 13 },
+    { action: 'demolish', x: 16, y: 15 },
+  ];
+  const states = [snapshot(game)];
+  for (const command of commands) {
+    const result = execute(game, command);
+    assert.ok(result.ok, `${JSON.stringify(command)} failed: ${result.reason}`);
+    states.push(snapshot(game));
+  }
+  for (let i = commands.length - 1; i >= 0; i--) {
+    assert.equal(undo(game).ok, true, `undo of ${commands[i].action} refused`);
+    assert.equal(snapshot(game), states[i], `after undoing ${JSON.stringify(commands[i])} the game is not as it was`);
+  }
+  assert.equal(undoStatus(game).ok, false);
+});
+
+test('undo reaches back undoSteps actions, and no further', () => {
+  const { game } = town();
+  assert.equal(game.rules.undoSteps, 10);
+  for (let i = 0; i < 12; i++) road(game, [[14 + (i % 6), 15 + Math.floor(i / 6)]]);
+  assert.equal(undoStatus(game).steps, 10);
+  let undone = 0;
+  while (undo(game).ok) undone++;
+  assert.equal(undone, 10);
+  assert.equal(game.state.roads.filter(Boolean).length > 0, true);
+  // With undoSteps at 1, only the last action can be undone, as before Phase 36.
+  const one = testGame({ change: (data) => { data.config.undoSteps = 1; }, coins: 1000 });
+  road(one, [[14, 15]]);
+  road(one, [[15, 15]]);
+  assert.equal(undoStatus(one).steps, 1);
+  assert.equal(undo(one).ok, true);
+  assert.deepEqual(undo(one), { ok: false, reason: 'nothing_to_undo' });
+});
+
+test('each step still runs out on its own: older actions are too late first', () => {
+  const { game } = town();
+  game.state.undo = null;
+  road(game, [[14, 15]]);
+  runSeconds(game, 20);
+  road(game, [[15, 15]]);
+  runSeconds(game, 15);
+  // The first road was laid 35 seconds ago, the second 15.
+  assert.equal(undoStatus(game).steps, 1);
+  assert.equal(undo(game).ok, true);
+  assert.deepEqual(undo(game), { ok: false, reason: 'undo_expired' });
+});
+
+test('redo does an undone action again, at its full cost, and can itself be undone', () => {
+  const { game } = town();
+  game.state.undo = null;
+  const before = snapshot(game);
+  place(game, 'house', 20, 11);
+  const built = snapshot(game);
+  assert.deepEqual(redoStatus(game), { ok: false, reason: 'nothing_to_redo' });
+  assert.equal(undo(game).ok, true);
+  assert.equal(snapshot(game), before);
+  assert.equal(redoStatus(game).kind, 'place');
+  assert.equal(redoStatus(game).type, 'house');
+  const result = redo(game);
+  assert.equal(result.ok, true);
+  assert.equal(result.redone, 'place');
+  assert.equal(snapshot(game), built, 'redo did not do exactly the same again');
+  assert.deepEqual(redoStatus(game), { ok: false, reason: 'nothing_to_redo' });
+  // And the redone action is undone like any other.
+  assert.equal(undo(game).ok, true);
+  assert.equal(snapshot(game), before);
+});
+
+test('several undos can be redone in order, and doing anything new forgets them', () => {
+  const { game } = town();
+  game.state.undo = null;
+  place(game, 'house', 20, 11);
+  road(game, line(14, 15, 16, 15));
+  place(game, 'house', 20, 13);
+  const end = snapshot(game);
+  undo(game);
+  undo(game);
+  undo(game);
+  assert.equal(redoStatus(game).steps, 3);
+  assert.equal(redoStatus(game).kind, 'place');
+  redo(game);
+  assert.equal(redoStatus(game).kind, 'road');
+  assert.equal(redoStatus(game).count, 3);
+  redo(game);
+  redo(game);
+  assert.equal(snapshot(game), end);
+  // Undo twice, then do something else: nothing is left to redo.
+  undo(game);
+  undo(game);
+  assert.equal(redoStatus(game).steps, 2);
+  road(game, [[17, 15]]);
+  assert.deepEqual(redoStatus(game), { ok: false, reason: 'nothing_to_redo' });
+});
+
+test('a redo that cannot be done now changes nothing and stays waiting', () => {
+  const { game } = town();
+  place(game, 'house', 20, 11);
+  undo(game);
+  // With no money now, it cannot be paid for again.
+  game.state.coinsMilli = 0;
+  const before = fullSnapshot(game);
+  const result = redo(game);
+  assert.equal(result.ok, false);
+  assert.equal(fullSnapshot(game), before);
+  assert.equal(redoStatus(game).ok, true, 'the redo was lost');
+  game.state.coinsMilli = 5000 * 1000;
+  assert.equal(redo(game).ok, true);
+});
+
+test('the undo and redo lists are saved with the game, and work after loading', () => {
+  const { game } = town();
+  place(game, 'house', 20, 11);
+  place(game, 'house', 20, 13);
+  road(game, line(14, 15, 16, 15));
+  undo(game);
+  const loaded = loadGame(withoutCarts(loadData()), JSON.parse(JSON.stringify(saveGame(game))));
+  assert.equal(loaded.ok, true, loaded.detail);
+  assert.equal(fullSnapshot(loaded.game), fullSnapshot(game));
+  for (const g of [game, loaded.game]) {
+    redo(g);
+    undo(g);
+    undo(g);
+    undo(g);
+  }
+  assert.equal(fullSnapshot(loaded.game), fullSnapshot(game));
+});
+
+test('two games given the same commands, undos and redos included, end the same', () => {
+  const play = () => {
+    const { game } = town();
+    place(game, 'house', 20, 11);
+    road(game, line(14, 15, 18, 15));
+    undo(game);
+    run(game, 50);
+    redo(game);
+    undo(game);
+    undo(game);
+    redo(game);
+    run(game, 100);
+    return fullSnapshot(game);
+  };
+  assert.equal(play(), play());
+});
+
+test('a saved game with broken undo or redo lists is refused as damaged', () => {
+  const { game } = town();
+  place(game, 'house', 20, 11);
+  place(game, 'house', 20, 13);
+  undo(game);
+  const tampering = {
+    'older records that are not a list': (s) => { s.undoOlder = 'many'; },
+    'more older records than undoSteps allows': (s) => { s.undoOlder = Array.from({ length: 10 }, () => ({ kind: 'place', id: 3, untilTick: 5 })); },
+    'an older record of an unknown kind': (s) => { s.undoOlder = [{ kind: 'teleport', untilTick: 5 }]; },
+    'a redo list that is not a list': (s) => { s.redo = {}; },
+    'a redo with no command': (s) => { s.redo = [{ kind: 'place' }]; },
+    'a redo of an undo': (s) => { s.redo = [{ kind: 'undo', command: { action: 'undo' } }]; },
+    'a redo whose kind does not fit its command': (s) => { s.redo = [{ kind: 'upgrade', command: { action: 'place', building: 'house', x: 1, y: 1 } }]; },
+  };
+  for (const [what, tamper] of Object.entries(tampering)) {
+    const save = JSON.parse(JSON.stringify(saveGame(game)));
+    tamper(save.state);
+    const result = loadGame(withoutCarts(loadData()), save);
+    assert.equal(result.ok, false, `${what} was accepted`);
+    assert.equal(result.reason, 'damaged', what);
+  }
+});
+
+test('a game saved before Phase 36 loads with nothing older to undo and nothing to redo', () => {
+  const { game } = town();
+  place(game, 'house', 20, 11);
+  const save = JSON.parse(JSON.stringify(saveGame(game)));
+  delete save.state.undoOlder;
+  delete save.state.redo;
+  delete save.state.undo.command;
+  const loaded = loadGame(withoutCarts(loadData()), save);
+  assert.equal(loaded.ok, true, loaded.detail);
+  assert.deepEqual(loaded.game.state.undoOlder, []);
+  assert.deepEqual(loaded.game.state.redo, []);
+  // Its last action can still be undone, though not redone: the save does not say what it was.
+  assert.equal(undo(loaded.game).ok, true);
+  assert.deepEqual(redoStatus(loaded.game), { ok: false, reason: 'nothing_to_redo' });
 });
 
 test('a demolish cannot be undone once what it gave back has been used', () => {
@@ -198,7 +397,7 @@ test('checking what an undo would do never changes the game', () => {
   execute(game, { action: 'road', tiles: line(14, 15, 18, 15) });
   const before = snapshot(game);
   const status = undoStatus(game);
-  assert.deepEqual(status, { ok: true, kind: 'road', type: null, count: 5, ticksLeft: 300 });
+  assert.deepEqual(status, { ok: true, kind: 'road', type: null, count: 5, ticksLeft: 300, steps: 1 });
   assert.equal(snapshot(game), before);
 });
 
@@ -363,21 +562,31 @@ test('the Undo button says what it would take back', () => {
   assert.equal(undoLabel(rules, undoStatus(game)), 'Nothing yet');
   place(game, 'house', 20, 11);
   assert.equal(undoLabel(rules, undoStatus(game)), 'House');
+  // From the second step on, the label says how many steps are waiting.
   road(game, [[20, 15]]);
-  assert.equal(undoLabel(rules, undoStatus(game)), 'Road, 1 tile');
+  assert.equal(undoLabel(rules, undoStatus(game)), 'Road, 1 tile (2)');
   road(game, line(14, 15, 18, 15));
-  assert.equal(undoLabel(rules, undoStatus(game)), 'Road, 5 tiles');
+  assert.equal(undoLabel(rules, undoStatus(game)), 'Road, 5 tiles (3)');
   execute(game, { action: 'demolish', x: 13, y: 13 });
-  assert.equal(undoLabel(rules, undoStatus(game)), 'Sawmill back');
+  assert.equal(undoLabel(rules, undoStatus(game)), 'Sawmill back (4)');
   execute(game, { action: 'demolish', x: 20, y: 15 });
-  assert.equal(undoLabel(rules, undoStatus(game)), 'Road back');
+  assert.equal(undoLabel(rules, undoStatus(game)), 'Road back (5)');
+  // And Redo says what it would do again.
+  assert.equal(redoLabel(rules, redoStatus(game)), 'Nothing yet');
+  undo(game);
+  assert.equal(redoLabel(rules, redoStatus(game)), 'Remove road');
+  undo(game);
+  assert.equal(redoLabel(rules, redoStatus(game)), 'Remove Sawmill (2)');
+  redo(game);
+  redo(game);
+  assert.equal(undoLabel(rules, undoStatus(game)), 'Road back (5)');
   // The sawmill is gone, so hand over the planks an upgrade needs.
   for (let i = 0; i < 20000 && !canUpgrade(game, houses[1].id).ok; i++) {
     game.state.goods.planks = 20;
     step(game);
   }
   assert.equal(execute(game, { action: 'upgrade', id: houses[1].id }).ok, true);
-  assert.equal(undoLabel(rules, undoStatus(game)), 'Upgrade');
+  assert.equal(undoLabel(rules, undoStatus(game)), 'Upgrade (6)');
   run(game, 301);
   assert.equal(undoLabel(rules, undoStatus(game)), 'Too late');
 });
